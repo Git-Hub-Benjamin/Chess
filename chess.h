@@ -48,8 +48,8 @@ enum GamePiece{
     KNIGHT,
     BISHOP,
     ROOK,
-    QUEEN,
-    KING
+    KING,
+    QUEEN
 };
 
 enum Owner{
@@ -76,6 +76,7 @@ public:
     enum Owner currentTurn;
     bool gameover;
     GameSqaure GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
+    int test;
 
     ChessGame();
     void reset();

@@ -22,6 +22,7 @@ wchar_t piece_art_p2[7] = {' ', L'p', L'k', L'b', L'r', L'k', L'q'};
 
 
 void print_board(ChessGame &game){
+    
     std::wcout << L"    a   b   c   d   e   f   g   h\n" 
     << L"  +---+---+---+---+---+---+---+---+\n";
     for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
@@ -29,6 +30,12 @@ void print_board(ChessGame &game){
         for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
 
             // Get piece
+
+            // if(i == 5 && j == 1){
+            //     std::wcout << "Row 5, Col 1 --> " << piece_art_p1[game.GameBoard[5][1].piece] << std::endl;
+            //     std::wcout << "Current turn --> " << game.currentTurn << std::endl;
+            // }
+
             wchar_t piece;
             if(game.GameBoard[i][j].ownership == NONE)
                 piece = ' ';
@@ -37,6 +44,7 @@ void print_board(ChessGame &game){
             else
                 piece = piece_art_p2[game.GameBoard[i][j].piece];
 
+            
             // print section --> "| ♟ " ex.
             std::wcout << L"| " << piece << L" ";
         }
@@ -48,11 +56,6 @@ void print_board(ChessGame &game){
 
 int verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to){
 
-    game.GameBoard[to.pos.y][to.pos.x].piece == from.piece;
-    game.GameBoard[to.pos.y][to.pos.y].ownership == game.currentTurn;
-    game.GameBoard[from.pos.y][from.pos.x].ownership == NONE;
-    game.GameBoard[from.pos.y][from.pos.x].piece == OPEN;
-
     // we know from has a piece present
     //* SETUP
                                                 // -1  since we dont use OPEN (0)
@@ -60,8 +63,6 @@ int verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to){
     enum GamePiece piece = from.piece;
     struct Piece_moveset* PIECE_MOVESET = PIECE_MOVES[from.piece];
     bool VALID_MOVE = false;
-    std::cout << "this is a test" << std::endl;
-    fflush(stdout);
     
     // if its a pon, and its the player two turn then set this bc ptwo has
     // a different moveset for the pon
@@ -83,24 +84,16 @@ int verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to){
         }
     }
 
-    //std::cout << "Valid? --> " << VALID_MOVE << std::endl;
-
-    game.GameBoard[to.pos.y][to.pos.x].piece == from.piece;
-    game.GameBoard[to.pos.y][to.pos.y].ownership == game.currentTurn;
-    game.GameBoard[from.pos.y][from.pos.x].ownership == NONE;
-    game.GameBoard[from.pos.y][from.pos.x].piece == OPEN;
-
     if(!VALID_MOVE){
         std::cout << "Not valid move." << std::endl;
         return 1;
-    }else{
-        // Lets move the piece now
-        game.GameBoard[to.pos.y][to.pos.x].piece == from.piece;
-        game.GameBoard[to.pos.y][to.pos.y].ownership == game.currentTurn;
-        game.GameBoard[from.pos.y][from.pos.x].ownership == NONE;
-        game.GameBoard[from.pos.y][from.pos.x].piece == OPEN;
     }
-    
+
+    // Lets move the piece now
+    game.GameBoard[to.pos.y][to.pos.x].piece = from.piece;
+    game.GameBoard[to.pos.y][to.pos.x].ownership = from.ownership;
+    game.GameBoard[from.pos.y][from.pos.x].piece = OPEN;
+    game.GameBoard[from.pos.y][from.pos.x].ownership = NONE;    
 
     return 0;
 }
@@ -114,7 +107,7 @@ GameSqaure* moveConverter(ChessGame &game, std::string& move){
 
 char toLowercase(char ch){
     if(std::isupper(ch))
-        std::tolower(ch);
+        ch = std::tolower(ch);
     return ch;
 }
 
@@ -176,7 +169,6 @@ int getMove(ChessGame game, std::string& dst){
     return 0;
 }
 
-
 static bool running = true;
 
 int main()
@@ -185,7 +177,8 @@ int main()
     init_moveset();
 
     ChessGame Game;
-    print_board(Game);
+    //print_board(Game);
+
     std::string move;
     GameSqaure* movePiece;
     std::string moveTo;
@@ -196,13 +189,47 @@ int main()
     res = getMove(Game, moveTo);
     moveToSquare = moveConverter(Game, moveTo);
     res = verifyMove(Game, *movePiece, *moveToSquare);
+    // std::wcout << "Move from piece stats: " << "Piece: " << movePiece->piece << ", Owner: "
+    // << movePiece->ownership << ", Pos: (" << movePiece->pos.x << ", " << movePiece->pos.y << std::endl;
+    // std::wcout << "Move to square stats: " << "Piece: " << moveToSquare->piece << ", Owner: "
+    // << moveToSquare->ownership << ", Pos: (" << moveToSquare->pos.x << ", " << moveToSquare->pos.y << std::endl;
+
+
+    // Game.GameBoard[moveToSquare->pos.y][moveToSquare->pos.x].piece = movePiece->piece;
+    // Game.GameBoard[moveToSquare->pos.y][moveToSquare->pos.x].ownership = movePiece->ownership;
+    // Game.GameBoard[movePiece->pos.y][movePiece->pos.x].piece = OPEN;
+    // Game.GameBoard[movePiece->pos.y][movePiece->pos.x].ownership = NONE;
+
+    // std::wcout << "Move from piece stats: " << "Piece: " << movePiece->piece << ", Owner: "
+    // << movePiece->ownership << ", Pos: (" << movePiece->pos.x << ", " << movePiece->pos.y << std::endl;
+    // std::wcout << "Move to square stats: " << "Piece: " << moveToSquare->piece << ", Owner: "
+    // << moveToSquare->ownership << ", Pos: (" << moveToSquare->pos.x << ", " << moveToSquare->pos.y << std::endl;
+
     print_board(Game);
 
     return 0;
+    // std::cout << "Testing\n" << std::endl;
+    // fflush(stdout);
+    // std::cout.flush();
+
+    // std::string move;
+    // GameSqaure* movePiece;
+    // std::string moveTo;
+    // GameSqaure* moveToSquare;
+    // bool attemptToTake;
+    // int res = getMove(Game, move);
+    // movePiece = moveConverter(Game, move);
+    // res = getMove(Game, moveTo);
+    // moveToSquare = moveConverter(Game, moveTo);
+    // res = verifyMove(Game, *movePiece, *moveToSquare);
+    // print_board(Game);
+
+    // return 0;
 
     while(running)
     {
         ChessGame Game;
+        Game.test = 6969;
         // White alwalys go first
         bool* game_gameover = &Game.gameover;
         while(!*game_gameover)
@@ -254,7 +281,7 @@ int main()
                     attemptToTake = true;
 
                 // now verify that this move will be in bounds...
-                
+                verifyMove(Game, *movePiece, *moveToSquare);
             }
             // 
         }

@@ -1,8 +1,6 @@
 #include "chess.h"
 
 
-
-
 ChessGame::ChessGame(){
     gameover = false;
     init();
