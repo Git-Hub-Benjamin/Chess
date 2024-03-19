@@ -16,19 +16,19 @@ void print_wcout(wchar_t ch){
 void title_screen(){
     // menu when starting;
     std::wstring a = L"\n\n\n\n\n"
-					 L"|=====================================|\n"
-                     L"|                                     |\n"
-                     L"|               W-CHESS               |\n"
-                     L"|                                     |\n"
-                     L"|           1. Local Game             |\n"
-                     L"|                                     |\n"
-                     L"|           2. Online Game            |\n"
-                     L"|                                     |\n"
-                     L"|           3. Options                |\n"
-                     L"|                                     |\n"
-                     L"|           4. Quit                   |\n"
-                     L"|                                     |\n"
-                     L"|=====================================|\n"
+					 L"\t\t|=====================================|\n"
+                     L"\t\t|                                     |\n"
+                     L"\t\t|               W-CHESS               |\n"
+                     L"\t\t|                                     |\n"
+                     L"\t\t|           1. Local Game             |\n"
+                     L"\t\t|                                     |\n"
+                     L"\t\t|           2. Online Game            |\n"
+                     L"\t\t|                                     |\n"
+                     L"\t\t|           3. Options                |\n"
+                     L"\t\t|                                     |\n"
+                     L"\t\t|           4. Quit                   |\n"
+                     L"\t\t|                                     |\n"
+                     L"\t\t|=====================================|\n"
 					 L"\n--> ";
 
     for(int i = 0; i < a.length(); i++){
@@ -55,6 +55,8 @@ int get_menu_option(){
 
 int main()
 {		
+	online_game();
+	return 0;
 	while(running){
 		title_screen();
 		int opt = get_menu_option();

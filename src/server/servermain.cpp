@@ -8,8 +8,12 @@
 #include <mutex>
 #include <time.h>
 #include <unistd.h>
+#include <random>
+#include "server.h"
 
-#define MAX_PLAYER 8
+#define MAX_CLIENT 8
+std::mutex mtx;
+static Client* clients[MAX_CLIENT] = { nullptr };
 
 void handleOption(){
     // this should be a client only function so we need to refactor
@@ -24,71 +28,82 @@ std::wstring string_to_wstring(std::string &str){
     return std::wstring(str.begin(), str.end());
 }
 
-enum THREAD_STATUS{
-    WAITING,
-    PLAYING
-};
+void client_access_lock() { mtx.lock(); }
+void client_access_unlock() { mtx.unlock(); }
 
-class ChessClient{
-public:
-    int clientFD;
-    int ThreadIndex;
-    enum THREAD_STATUS status;
 
-    ChessClient(int fd, int index): clientFD(fd), ThreadIndex(index) {}
-};
 
-std::mutex mtx;
-static ChessClient* active_clients[MAX_PLAYER] = { nullptr };
+void client_dispatcher(){
+    client_access_lock();
+    int ready_clients = 0;
+    int ready_client_one_index = -1;
+    int ready_client_two_index = -1;
 
-void active_clients_add(ChessClient* setClient, int index){
-    mtx.lock();
-    active_clients[index] = setClient;
-    mtx.unlock();
+    for(int client_index = 0; client_index < MAX_CLIENT; client_index++){
+        if(clients[client_index] != nullptr && clients[client_index]->status == WAITING){
+            // found waiting client, increase count
+            ready_clients++;
+            if(ready_client_one_index < 0)
+                ready_client_one_index = client_index;
+            else
+                ready_client_two_index = client_index;
+        }
+        if(ready_clients == 2){
+            // send these two clients to a game
+            clients[ready_client_one_index]->status = PLAYING;
+            clients[ready_client_two_index]->status = PLAYING;
+
+            //! ADD NEW GAME, idk if i should pass Client or ChessClient
+            //std::thread new_game(clients[ready_client_one_index], clients[ready_client_two_index]);
+            ready_clients = 0;
+            ready_client_one_index = -1;
+            ready_client_two_index = -1;
+        }
+    }
+    client_access_unlock();
 }
 
-void player_waiting(ChessClient* client){
+void close_client(int index){
+    client_access_lock();
+    delete clients[index];
+    client_access_unlock();
+}
 
+int add_client(int client_fd){
+    client_access_lock();
+    int res = -1;
+    for(int client_index = 0; client_index < MAX_CLIENT; client_index++){
+        if(clients[client_index] == nullptr){
+            // found an open position
+            clients[client_index] = new Client{client_fd, client_index};
+            res = 0;
+            break; // need to unlock!
+        }
+    }
+    client_access_unlock();
+    return res;
+}
+
+void waiting_room(){
+    // random num setup
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(1, 100);
+    
+    // tracking 
+    int oldnum;
+    int newnum = dis(gen);
     while(true){
-        if(client->status == PLAYING){
-            
-            break;
-        }else{
-            // recv from client
-        }
-    }
+        oldnum = newnum;
+        newnum = dis(gen);
+        
+        for(int client_index; client_index < MAX_CLIENT; client_index++){
 
-    // Game over or disconnected
-}
-
-void schedule_clients(){
-    while(true)
-    {
-        int ready_clients = 0;
-        int ready_client_one_index = -1;
-        int ready_client_two_index = -1;
-        for(int i = 0; i < MAX_PLAYER; i++){
-            if(active_clients[i] != nullptr && active_clients[i]->status == WAITING){
-                // found a waiting client, increase count
-                ready_clients++;
-                if(ready_client_one_index == -1){
-                    ready_client_one_index = i;
-                }else{
-                    ready_client_two_index = i;
-                }
-            }
-            if(ready_clients == 2){
-                ready_clients = 0;
-                active_clients[ready_client_one_index]->status = PLAYING;
-                active_clients[ready_client_two_index]->status = PLAYING;
-                ready_client_one_index = -1;
-                ready_client_two_index = -1;
-            }
         }
-        std::this_thread::yield();
+
+        std::this_thread::sleep_for(std::chrono::seconds(3));
     }
 }
-
 
 //! cJSON functions input and output char*, we will work with std::string
 //! When we need to input into a cJSON we will use <stringobj>.c_str(), when
@@ -105,52 +120,56 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    if(listen(serverSocketFD, MAX_PLAYER) != 0){
+    if(listen(serverSocketFD, MAX_CLIENT) != 0){
         std::wcout << "Error listening." << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    // Server is setup now...
+    // thread for waiting room
+    //std::thread wroom(waiting_room);
 
-    // scheduler thread to run clients
-    std::thread client_scheduler(schedule_clients);
+    // Server is setup now...
 
     while(true)
     {
         struct sockaddr_in* clientAddress;
-        socklen_t client_addr_len = sizeof(clientAddress);
+        socklen_t client_addr_len = sizeof(*clientAddress);
         int clientSocketFD;
         if((clientSocketFD = accept(serverSocketFD, (struct sockaddr*)&clientAddress, &client_addr_len)) < 0){
             std::wcout << "Accept failed." << std::endl;
             continue;
         }
 
+        std::cout << "Accpeted." << std::endl;
+
         char buffer[1024];
-        recv(clientSocketFD, buffer, 1024, 0);
-        buffer[1023] = '\0';
 
-        while(true){
-            std::wcout << "Response: " << buffer << std::endl;
-            sleep(1); 
-        }
-
-        // look through active clients for a free position
-        int thread_id = -1;
-        for(int client_index = 0; client_index < MAX_PLAYER; client_index++){
-            if(active_clients[client_index] == nullptr){
-                // found an open position
-                thread_id = client_index;
-                ChessClient* new_player = new ChessClient{clientSocketFD, thread_id};
-                active_clients_add(new_player, thread_id);
-                std::thread new_thread(player_waiting, new_player);
+        while (true) {
+            int bytesReceived = recv(clientSocketFD, buffer, 1024, 0);
+            std::cout << "Bytes received: " << bytesReceived << std::endl;
+            if (bytesReceived <= 0) {
+                // Handle disconnection or error
+                std::cout << "Connection closed." << std::endl;
                 break;
             }
+            buffer[bytesReceived] = '\0'; // Null-terminate the received message
+            std::cout << "Message from client: " << buffer << std::endl;
+            std::string message = "From server";
+            send(clientSocketFD, message.c_str(), message.length(), 0);
+            std::cout << "Sent message." << std::endl;
         }
-        if(thread_id < 0){
+
+
+
+        // add client to server
+        int res = add_client(clientSocketFD);
+        if(res < 0){
             // technically this should never happen it would fail higher up
             std::wcout << L"Could not find free thread" << std::endl;
             // idk if we should fail or just continue lol
         }
+        // after adding client call dispatcher
+        client_dispatcher();
 
         continue;
     }
@@ -160,15 +179,15 @@ int main() {
 
     std::string custom = "Benjamin";
     // create json object
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "name", custom.c_str());
-    cJSON_AddNumberToObject(root, "age", 30);
+    // cJSON *root = cJSON_CreateObject();
+    // cJSON_AddStringToObject(root, "name", custom.c_str());
+    // cJSON_AddNumberToObject(root, "age", 30);
 
-    // convery the json object into a string, but we cant do directly to wstring
-    std::wstring myWstring = charP_to_wstring(cJSON_Print(root));   
-    std::string myString = cJSON_Print(root);
+    // // convery the json object into a string, but we cant do directly to wstring
+    // std::wstring myWstring = charP_to_wstring(cJSON_Print(root));   
+    // std::string myString = cJSON_Print(root);
 
-    std::wcout << "Json object --> " << myWstring << std::endl;
+    // std::wcout << "Json object --> " << myWstring << std::endl;
 
     // // Parse JSON string
     // cJSON *parsedRoot = cJSON_Parse(myString);

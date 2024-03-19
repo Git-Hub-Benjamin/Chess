@@ -91,10 +91,10 @@ void ChessGame::init(){
 
 void print_board(ChessGame &game){
     
-    std::wcout << L"    a   b   c   d   e   f   g   h\n" 
-    << L"  +---+---+---+---+---+---+---+---+\n";
+    std::wcout << L"\t\t    a   b   c   d   e   f   g   h\n" 
+    << L"\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
-        std::wcout << CHESS_BOARD_HEIGHT - i << L" ";
+        std::wcout << "\t\t" << CHESS_BOARD_HEIGHT - i << L" ";
         for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
 
             wchar_t piece;
@@ -110,9 +110,9 @@ void print_board(ChessGame &game){
             std::wcout << L"| " << piece << L" ";
         }
         std::wcout << L"| " << CHESS_BOARD_HEIGHT - i << std::endl;
-        std::wcout << L"  +---+---+---+---+---+---+---+---+" << std::endl;
+        std::wcout << L"\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
     }
-    std::wcout << L"    a   b   c   d   e   f   g   h\n";
+    std::wcout << L"\t\t    a   b   c   d   e   f   g   h\n";
 }
 
 //0; // Successful move

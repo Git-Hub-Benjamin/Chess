@@ -12,11 +12,27 @@ void online_game(){
         exit(EXIT_FAILURE);
     }
 
-    send(playerSocketFD, "Hello from chess client", sizeof("Hello from chess client"), 0);
+    char buffer[1024];
+
+    
+    
 
     while(true){
-        sleep(1);
-        std::wcout << "Waiting..." << std::endl;
+        
+        std::string message;
+        std::cin >> message;
+
+        if(message.length() == 1){
+            close(playerSocketFD);
+            break;
+        }
+        else
+            send(playerSocketFD, message.c_str(), message.length(), 0);
+        std::cout << "Message: " << message.c_str() << ", Length: " << message.length() << std::endl;
+        recv(playerSocketFD, buffer, sizeof(buffer), 0);
+        buffer[sizeof(buffer) - 1] = '\0'; // Ensure buffer is null-terminated
+        std::cout << "Message from server --> " << buffer << std::endl;
+        
     }
 }
 
