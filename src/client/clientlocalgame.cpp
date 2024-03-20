@@ -1,40 +1,4 @@
 #include "../chess.h"
-#include "../server/socket/socketutil.h"
-#include <unistd.h>
-
-void online_game(){
-    int playerSocketFD = createTCPIPv4Socket();     // server info
-    struct sockaddr_in* serverAddr = createIPv4Address("127.0.0.1", 2000);
-
-    int res = connect(playerSocketFD, (const sockaddr*)serverAddr, sizeof(*serverAddr));
-    if(res != 0){
-        std::wcout << "Connection to server failure." << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    char buffer[1024];
-
-    
-    
-
-    while(true){
-        
-        std::string message;
-        std::cin >> message;
-
-        if(message.length() == 1){
-            close(playerSocketFD);
-            break;
-        }
-        else
-            send(playerSocketFD, message.c_str(), message.length(), 0);
-        std::cout << "Message: " << message.c_str() << ", Length: " << message.length() << std::endl;
-        recv(playerSocketFD, buffer, sizeof(buffer), 0);
-        buffer[sizeof(buffer) - 1] = '\0'; // Ensure buffer is null-terminated
-        std::cout << "Message from server --> " << buffer << std::endl;
-        
-    }
-}
 
 void local_game(){
     //! Required

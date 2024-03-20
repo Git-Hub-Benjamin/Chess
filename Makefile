@@ -4,6 +4,11 @@ SERVER_FILES = ./src/server/servermain.cpp ./src/chessfunctionality.cpp #$(JSONL
 CLIENT_FILES = ./src/client/clientmain.cpp ./src/chessfunctionality.cpp ./src/client/chessclientgamemodes.cpp
 ZERO_OPTIMIZATION = -O0
 
+#test
+test:
+	clang++ main.cpp -g -o ./a.out -lncurses
+	./a.out
+
 #build run
 buru: game
 	./build/chess.out
