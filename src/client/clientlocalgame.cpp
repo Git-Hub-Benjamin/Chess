@@ -74,10 +74,8 @@ void local_game(){
             // After making the move we need to see if making this move made a path for the oppenent to put your king in check, so save the GameSquare
             // that we are updating, update it, then check the kings safety, if it makes the players king unsafe, then revert the move
 
-            GameSqaure copyOfSquareBeingMoved;
-            GameSqaure::copy(*movePiece, copyOfSquareBeingMoved);
-            GameSqaure copyOfSquareBeingMovedTo;
-            GameSqaure::copy(*moveToSquare, copyOfSquareBeingMovedTo);
+            GameSqaure copyOfSquareBeingMoved = *movePiece;
+            GameSqaure copyOfSquareBeingMovedTo = *moveToSquare;
 
             res = makeMove(Game, *movePiece, *moveToSquare); //! CAUSING SEGMENTATION FAULT, Maybe something to do with copy? it was working fine before...
             if(res == 2)

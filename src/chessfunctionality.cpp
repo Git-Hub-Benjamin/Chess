@@ -27,10 +27,6 @@ wchar_t piece_art_p2[7] = {' ', L'p', L'k', L'b', L'r', L'k', L'q'};
 
 // Class functions
 
-void GameSqaure::copy(GameSqaure& from, GameSqaure& to){
-    memcpy(&from, &to, sizeof(GameSqaure));
-}
-
 ChessGame::ChessGame(){
     gameover = false;
     init();
@@ -256,12 +252,10 @@ static bool validateMoveset(ChessGame &game, GameSqaure &from, GameSqaure &to){
         pointToMoveFrom.y += PIECE_MOVESET->moves[i].y;
 
         if(pointToMoveFrom.x == pointToGetTo.x && pointToMoveFrom.y == pointToGetTo.y){
-            // This move will work
-            return true;
-            break;
+            return true; // Yes! the piece can reach this gameSquare
         }
-    } // Valid Move
-    return false;
+    } 
+    return false; // No, the piece cannot reach this gameSquare
 }
 
 static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameSqaure &to){
@@ -273,8 +267,8 @@ static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameS
 
     if(std::abs(pawnFrom.pos.y - to.pos.y) == 2){
         std::wcout << "Pawn double advancing" << std::endl; 
-        return pawnClearPath(game, pawnFrom, to); // checking 2.
-
+        if(!pawnClearPath(game, pawnFrom, to)) // checking 2.
+            return false; 
         if(game.currentTurn == PONE){ // checking 1. and 3.
             if(pawnFrom.pos.y != 6 || piecePresent(game, {to.pos.x, to.pos.y}))
                 return false;
@@ -304,7 +298,7 @@ static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameS
 //* use this at the beggining of a turn to make sure that the oppenent didnt put you in check, and use this after your piece moves to make sure
 //* moving your piece did not put your king in check (kingSafe)
 
-bool kingSafe(ChessGame& game){
+bool kingSafe(ChessGame& game){ // Just checking the king square
     GameSqaure& kingToCheckSafteyFor = *game.KingPositions[game.currentTurn - 1];
 
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
@@ -330,6 +324,48 @@ bool kingSafe(ChessGame& game){
     return true; // KING IS SAFE
 }
 
+bool onBoard(Point& p){
+    return (p.x <= 7 && p.x >= 0 && p.y <= 7 && p.y >= 0);
+}
+
+// This will be called if kingSafe returns false, meaning the king is in check, we need to see if there is somewhere the king can go to get out of it
+
+bool checkMate(ChessGame &game){ // Checking everything around the king
+    GameSqaure& kingToCheckSafteyFor = *game.KingPositions[game.currentTurn - 1];
+    short kingPossibleMoves = KING_POSSIBLE_MOVES; // 8
+    struct Piece_moveset* KING_MOVESET = PIECE_MOVES[KING];
+    //bool KING_IN_CHECK_MATE = true; // ASSUME IT IS
+    
+    // Check each square around the King, if its not on the board SKIP it
+    // If its taken by a teammate then SKIP it, bc the king cant take own piece
+    // If its taken by an oppnent then we need to check if its a pawn OR knight
+    for(int i = 0; i < kingPossibleMoves; i++){
+        struct Point currGamePosCheck = kingToCheckSafteyFor.pos;
+        currGamePosCheck.x += KING_MOVESET->moves->x;
+        currGamePosCheck.y += KING_MOVESET->moves->y;
+        
+        if(!onBoard(currGamePosCheck))
+            continue; // Not on gameboard, king cant move here
+
+        GameSqaure& currGameSquareCheck = game.GameBoard[currGamePosCheck.y][currGamePosCheck.x];
+
+        if(currGameSquareCheck.ownership == game.currentTurn)
+            continue; // Piece at position is taken by team piece, cannot move here
+        
+        // Iterate over gameboard, find enemy pieces and see if any of them can reach the currentGameSquareCheck, if yes continue, if no, KING_CAN_MAKE_MOVE = true
+        // This is where I wish I had an array of player1 and player2 pieces, it would be more efficent to iterate over that than this
+        for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
+            for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
+                if(!validateMoveset(game, game.GameBoard[row][col], currGameSquareCheck)){ // checking if piece, can reach the currently surrounding king square
+                    return false; // There is an open spot that none of the enemies can reach, we CAN stop checking, or you could see how many open spots there are
+                    //KING_CAN_MAKE_MOVE = true; 
+                }
+            }
+        }
+    } // True, CheckMate
+    return true; // This determines if the game is over or not
+    //return KING_CAN_MAKE_MOVE; 
+}
 
 
 // 0 --> Valid

@@ -60,10 +60,11 @@ enum Owner{
 
 class GameSqaure{
 public:
+    GameSqaure(){}
+    GameSqaure(const GameSqaure& copy): ownership(copy.ownership), piece(copy.piece), pos(copy.pos){}
     struct Point pos;
     enum GamePiece piece;
     enum Owner ownership;
-    static void copy(GameSqaure& from, GameSqaure& to);
 };
 
 
