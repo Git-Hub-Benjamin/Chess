@@ -55,8 +55,6 @@ int get_menu_option(){
 
 int main()
 {		
-	online_game();
-	return 0;
 	while(running){
 		title_screen();
 		int opt = get_menu_option();
@@ -68,7 +66,7 @@ int main()
 
 		}else if(opt == 4){
 			if(Pawn1.moves == nullptr)
-				uninit_moveset();
+				uninit_moveset(); // free the heap memory in the moveset
 		}
 		// if anything else just run again
 	}

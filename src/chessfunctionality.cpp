@@ -27,6 +27,10 @@ wchar_t piece_art_p2[7] = {' ', L'p', L'k', L'b', L'r', L'k', L'q'};
 
 // Class functions
 
+void GameSqaure::copy(GameSqaure& from, GameSqaure& to){
+    memcpy(&from, &to, sizeof(GameSqaure));
+}
+
 ChessGame::ChessGame(){
     gameover = false;
     init();
@@ -45,12 +49,11 @@ void ChessGame::init(){
     {
         for(int col = 0; col < CHESS_BOARD_WIDTH; col++)
         {
+            enum GamePiece temp = OPEN;
             GameBoard[row][col].pos = {col, row};
             if(row < Y2) GameBoard[row][col].ownership = PTWO;
             if(row > Y5) GameBoard[row][col].ownership = PONE;
             if(row == Y0 || row == Y7){
-
-                enum GamePiece temp;
 
                 switch(col){
                     case X0:
@@ -83,6 +86,10 @@ void ChessGame::init(){
             }
             if(row == Y1 || row == Y6) 
                 GameBoard[row][col].piece = PAWN;
+
+            if(temp == KING){
+                KingPositions[row == Y0 ? 1 : 0] = &GameBoard[row][col]; // if Y0 then it is player2 King, it not then its player1 king
+            }
         }
     }
 }
@@ -115,6 +122,17 @@ void print_board(ChessGame &game){
     std::wcout << L"\t\t    a   b   c   d   e   f   g   h\n";
 }
 
+// 0 FREE
+// 1 PONE TAKEN
+// 2 PTWO TAKEN
+enum Owner piecePresent(ChessGame &game, struct Point p){
+    enum Owner owner = game.GameBoard[p.y][p.x].ownership;
+    if(owner == NONE && game.GameBoard[p.y][p.x].piece == OPEN)
+        return NONE;
+    return owner;
+    
+}
+
 //0; // Successful move
 //1; // Successful move piece taken
 //2; // Unsuccessful move
@@ -125,6 +143,9 @@ int makeMove(ChessGame &game, GameSqaure &from, GameSqaure &to){
     if(to.ownership != NONE && to.piece != OPEN){
         res = 1;
     }
+    
+    if(from.piece == KING)
+        game.KingPositions[game.currentTurn - 1] = &to; // if moving king, update the king position for the current player to the to gameSquare
 
     // Lets move the piece now
     game.GameBoard[to.pos.y][to.pos.x].piece = from.piece;
@@ -137,21 +158,92 @@ int makeMove(ChessGame &game, GameSqaure &from, GameSqaure &to){
 
 }
 
-// 0 --> Valid
-// 1 --> Invalid
-int verifyMove(enum Owner currentTurn, GameSqaure &from, GameSqaure &to){
+void validateMovePiece(ChessGame& game, GameSqaure& movePiece, std::wstring& retMsg){
+    retMsg = L"";
+    // if there is no piece at the point trying to move from
+    if(movePiece.piece == OPEN || movePiece.ownership == NONE){
+        retMsg = L"No piece present."; //! cannot move a piece of OPEN, cannot move an open square
+    }
 
+    // make sure piece belongs to current turn
+    if(movePiece.ownership != game.currentTurn){
+        retMsg =  L"Piece does not belong to you."; //! cannot move a square of the other players piece
+    }
+}
+
+void validateMoveToPiece(ChessGame& game, GameSqaure& moveToSquare, std::wstring& retMsg){
+    retMsg = L"";
+
+    if(moveToSquare.ownership == game.currentTurn){
+        retMsg = L"Cannot take own piece."; //! cannot take own piece
+        // hanlde castling later, its complex...
+    }
+}
+
+static bool rookClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
+    // Determine if moving along x or y axis
+    if(from.pos.x == to.pos.x){
+        // moving along Y axis
+        int amount_to_check = std::abs(from.pos.y - to.pos.y);
+        int direction = (from.pos.y - to.pos.y < 0) ? 1 : -1;
+
+        for(int i = 0; i < amount_to_check; i++){
+            struct Point temp = from.pos;
+            temp.y += (i * direction);
+            if(piecePresent(game, {temp.x, temp.y}))
+                return false; 
+        }
+    }else{
+        // moving along X axis
+        int amount_to_check = std::abs(from.pos.x - to.pos.x);
+        int direction = (from.pos.x - to.pos.x < 0) ? 1 : -1;
+
+        for(int i = 0; i < amount_to_check; i++){
+            struct Point temp = from.pos;
+            temp.x += (i * direction);
+            if(piecePresent(game, {temp.x, temp.y}))
+                return false; 
+        }
+    }
+    return true;
+}
+
+static bool bishopClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
+    int xdir = from.pos.x - to.pos.x < 0 ? -1 : 1;
+    int ydir = from.pos.y - to.pos.y < 0 ? -1 : 1;
+    int amount_of_check = std::abs(from.pos.x - to.pos.x); // i dont think this should matter which one you do
+    
+    for(int i = 0; i < amount_of_check; i++){
+        struct Point temp = from.pos;
+        temp.x += (i * xdir);
+        temp.y += (i * ydir);
+        if(piecePresent(game, {temp.x, temp.y}))
+            return false;
+    }
+    return true; 
+}
+
+static bool pawnClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
+    if(std::abs(from.pos.y - to.pos.y) == 2){
+        // check the 1 spot between
+        int direction = game.currentTurn == PONE ? -1 : 1;
+        if(piecePresent(game, {from.pos.x, from.pos.y + (2 * direction)}))
+            return false; // if there is a piece present then return false
+    }
+    return true;
+}
+
+static bool validateMoveset(ChessGame &game, GameSqaure &from, GameSqaure &to){
     // we know from has a piece present
     //* SETUP
                                                 // -1  since we dont use OPEN (0)
     short possibleMoveCounter = PIECE_MOVE_COUNTS[from.piece - 1];
     enum GamePiece piece = from.piece;
     struct Piece_moveset* PIECE_MOVESET = PIECE_MOVES[from.piece];
-    bool VALID_MOVE = false;
     
-    // if its a pon, and its the player two turn then set this bc ptwo has
+    // if its a pawn, and its the player two turn then set this bc ptwo has
     // a different moveset for the pon
-    if(currentTurn == PTWO) 
+    if(game.currentTurn == PTWO) 
         PIECE_MOVESET = PIECE_MOVES[0];
 
     struct Point pointToGetTo = to.pos; // make a copy of to
@@ -165,10 +257,108 @@ int verifyMove(enum Owner currentTurn, GameSqaure &from, GameSqaure &to){
 
         if(pointToMoveFrom.x == pointToGetTo.x && pointToMoveFrom.y == pointToGetTo.y){
             // This move will work
-            VALID_MOVE = true;
+            return true;
             break;
         }
+    } // Valid Move
+    return false;
+}
+
+static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameSqaure &to){
+    
+    // Rules of double advancing for pawns
+    // 1. Starting Position
+    // 2. Unobstructed Path
+    // 3. No Capturing
+
+    if(std::abs(pawnFrom.pos.y - to.pos.y) == 2){
+        std::wcout << "Pawn double advancing" << std::endl; 
+        return pawnClearPath(game, pawnFrom, to); // checking 2.
+
+        if(game.currentTurn == PONE){ // checking 1. and 3.
+            if(pawnFrom.pos.y != 6 || piecePresent(game, {to.pos.x, to.pos.y}))
+                return false;
+        }else{
+            if(pawnFrom.pos.y != 1 || piecePresent(game, {to.pos.x, to.pos.y}))
+                return false;
+        }
+    }else{
+        std::wcout << "Pawn moving 1 square" << std::endl;
+        // Now this section if for checking that pawn can only take an oppenents piece if moving diagonally
+        if(pawnFrom.pos.x == to.pos.x){ 
+            std::wcout << "Moving straight" << std::endl;
+            // moving forward 1, meaning it cant take pieces
+            if(piecePresent(game, {to.pos.x, to.pos.y}))
+                return false;
+        }else{
+            std::wcout << "Moving diagonally" << std::endl;
+            // moving diagonally, meaning it has to take a piece to do this
+            if(!piecePresent(game, {to.pos.x, to.pos.y}))
+                return false;
+        }
     }
+
+    return true; // Meaning this is a valid move
+}
+
+//* use this at the beggining of a turn to make sure that the oppenent didnt put you in check, and use this after your piece moves to make sure
+//* moving your piece did not put your king in check (kingSafe)
+
+bool kingSafe(ChessGame& game){
+    GameSqaure& kingToCheckSafteyFor = *game.KingPositions[game.currentTurn - 1];
+
+    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
+        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
+            GameSqaure& currentSquare = game.GameBoard[row][col];
+            // if its open or its the current players turn then we dont need to check against it
+            if(currentSquare.ownership == NONE || currentSquare.piece == OPEN || currentSquare.ownership == game.currentTurn)
+                continue;
+            
+            if(validateMoveset(game, currentSquare, kingToCheckSafteyFor)){ 
+                // if this returns true then it means that the currentSquare can actually attack the king, 
+                // BUT this doesnt apply for pawns, we need to pawns we need to do extra check for them 
+
+                if(currentSquare.piece == PAWN){ 
+                    if(pawnHelperDblAdvCapture(game, currentSquare, kingToCheckSafteyFor)){ // if this returns true then this is a valid attack from pawn
+                        return false; // KING IS NOT SAFE
+                    }
+                }
+                return false; // KING IS NOT SAFE
+            }
+        }
+    }
+    return true; // KING IS SAFE
+}
+
+
+
+// 0 --> Valid
+// 1 --> Invalid
+int verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to){
+
+    bool VALID_MOVE = validateMoveset(game, from, to);
+
+    std::wcout << "(AFTER MOVESET CHECK), VALID_MOVE --> " <<  (VALID_MOVE ? "true" : "false") << std::endl;
+
+    // Now verify if there is anything in path
+    // Dont have to check knight bc it can go through pieces, also king can only go one piece
+    switch(from.piece){
+        case(ROOK):
+            VALID_MOVE = rookClearPath(game, from, to);
+            break;
+        case(QUEEN):
+            VALID_MOVE = rookClearPath(game, from, to);
+            VALID_MOVE = bishopClearPath(game, from, to);
+            break;
+        case(BISHOP):
+            VALID_MOVE = bishopClearPath(game, from, to);
+            break;
+        case(PAWN): 
+            VALID_MOVE = pawnHelperDblAdvCapture(game, from, to);
+            break;
+        default:
+            break; // OPEN, KNIGHT, KING
+    }    
 
     if(!VALID_MOVE){
         return 1;

@@ -63,6 +63,7 @@ public:
     struct Point pos;
     enum GamePiece piece;
     enum Owner ownership;
+    static void copy(GameSqaure& from, GameSqaure& to);
 };
 
 
@@ -78,6 +79,7 @@ public:
     enum Owner currentTurn;
     bool gameover;
     GameSqaure GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
+    GameSqaure* KingPositions[2]; // 2 because there are 2 players, update king position in makeMove function whenever king moves (NOTE CASTLING TOO)
 
     ChessGame();
     void reset();
@@ -111,6 +113,9 @@ void init_moveset();
 void uninit_moveset();
 void print_board(ChessGame &game);
 int getMove(std::wstring& dst, bool firstMove);
+bool kingSafe(ChessGame& game);
 GameSqaure* moveConverter(ChessGame &game, std::wstring& move);
 int makeMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
-int verifyMove(enum Owner currentTurn, GameSqaure &from, GameSqaure &to);
+int verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
+void validateMovePiece(ChessGame& game, GameSqaure& movePiece, std::wstring& msg);
+void validateMoveToPiece(ChessGame& game, GameSqaure& moveToSquare, std::wstring& retMsg);

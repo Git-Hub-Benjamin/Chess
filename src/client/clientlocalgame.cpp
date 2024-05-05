@@ -18,16 +18,18 @@ void local_game(){
             std::wcout << "Player one's turn..." << std::endl;
         else
             std::wcout << "Player twos's turn..." << std::endl;
+        
+        if(!kingSafe(Game))
+            std::wcout << "Player " << (Game.currentTurn == PONE ? L"one" : L"two") << ", you are in check!" << std::endl; 
 
-        bool validMove = false;
-        while(!validMove)
+        while(true)
         {
             //? defined in the order of usage
             std::wstring move;
             GameSqaure* movePiece;
             std::wstring moveTo;
             GameSqaure* moveToSquare;
-            bool attemptToTake;
+
             int res = getMove(move, true);
             if(res != 0){
                 // handle
@@ -35,17 +37,14 @@ void local_game(){
             // move --> gamesquare pointer of the gameboard
             movePiece = moveConverter(Game, move);
 
-            // if there is no piece at the point trying to move from
-            if(movePiece->piece == OPEN || movePiece->ownership == NONE){
-                std::wcout << L"No piece present." << std::endl;
-                continue; //! cannot move a piece of OPEN, cannot move an open square
+            // Makes sure that the piece you selected to move is valid. (Not Open and Not oppenents piece)
+            std::wstring msg;
+            validateMovePiece(Game, *movePiece, msg);
+            if(msg.length() != 0){
+                std::wcout << msg << std::endl;
+                continue;
             }
-
-            // make sure piece belongs to current turn
-            if(movePiece->ownership != Game.currentTurn){
-                std::wcout << L"Piece does not belong to you." << std::endl;
-                continue; //! cannot move a square of the other players piece
-            }
+            
             // We know the move from square is valid now lets get the moveTo
 
             res = getMove(moveTo, false);
@@ -56,36 +55,48 @@ void local_game(){
             // moveTo --> gamesquare pointer to point on board
             moveToSquare = moveConverter(Game, moveTo);
 
-            // make sure that the movetosquare owner is not equal to the current turn
-            //? the only exception is for castling
-            if(moveToSquare->ownership == Game.currentTurn){
-                std::wcout << L"Cannot take own piece." << std::endl;
-                // hanlde castling later, its complex...
-                continue; //! cannot take own piece
+            // Makes sure that the piece you are moving to is not owned by your self, (ONLY EXCPETION IS CASTLING (IMPLEMENT LATER))
+            //? IMPLEMENT CASTLING
+            validateMoveToPiece(Game, *moveToSquare, msg);
+            if(msg.length() != 0){
+                std::wcout << msg << std::endl;
+                continue;
             }
-            
-            // if this is true then we know its trying to take a piece
-            if(moveToSquare->ownership != NONE)
-                attemptToTake = true;
 
-            // now verify that this move will be in bounds...
-            res = verifyMove(Game.currentTurn, *movePiece, *moveToSquare);
+            // Now we need to make sure that the piece can actually make this move
+            res = verifyMove(Game, *movePiece, *moveToSquare);
             if(res != 0){
                 //! Invalid move
                 std::wcout << L"Invalid move." << std::endl;
                 continue;
             }
 
-            validMove = true;
-            res = makeMove(Game, *movePiece, *moveToSquare);
-            if(res == 2){
-                continue; //! I dont know when makemove would return 2
-            }else{
-                if(res == 1)
-                    std::wcout << "Piece taken." << std::endl;
+            // After making the move we need to see if making this move made a path for the oppenent to put your king in check, so save the GameSquare
+            // that we are updating, update it, then check the kings safety, if it makes the players king unsafe, then revert the move
+
+            GameSqaure copyOfSquareBeingMoved;
+            GameSqaure::copy(*movePiece, copyOfSquareBeingMoved);
+            GameSqaure copyOfSquareBeingMovedTo;
+            GameSqaure::copy(*moveToSquare, copyOfSquareBeingMovedTo);
+
+            res = makeMove(Game, *movePiece, *moveToSquare); //! CAUSING SEGMENTATION FAULT, Maybe something to do with copy? it was working fine before...
+            if(res == 2)
+                continue; //! I dont know when makemove would return 2, but for later if i need it
+            else{
+                if(kingSafe(Game)){
+                    if(res == 0)
+                        std::wcout << "Piece moved." << std::endl;
+                    else
+                        std::wcout << "Piece taken." << std::endl;                    
+                }else{
+                    makeMove(Game, copyOfSquareBeingMoved, copyOfSquareBeingMovedTo); // Revert move
+                    continue;                                                         // Redo move
+                }
             }
+
+            break;
+            // Switch turns
         }
-        // Switch turns
         Game.currentTurn = Game.currentTurn == PONE ? PTWO : PONE;
     }
 }
