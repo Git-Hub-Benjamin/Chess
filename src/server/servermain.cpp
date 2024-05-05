@@ -1,6 +1,5 @@
 #include "../chess.h"
 #include "./socket/socketutil.h"
-#include "../../jsonlib/cJSON.h"
 #include <stdio.h>
 #include <string>
 #include <pthread.h> // may user thread
