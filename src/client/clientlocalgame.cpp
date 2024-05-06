@@ -22,10 +22,10 @@ void local_game(){
 
         if(!kingSafe(Game)){
             if(!checkMate(Game)){ // Check checkmate for the current players turn
-                std::wcout << "Player " << (Game.currentTurn == PONE ? L"one" : L"two") << ", you are in check!" << std::endl; 
+                std::wcout << "Player " << (Game.currentTurn == PONE ? "one" : "two") << ", you are in check!" << std::endl; 
             }else{
-                std::wcout << "Player " << (Game.currentTurn == PONE ? L"one" : L"two") << ", you got check mated!" << std::endl;
-                std::wcout << "Player " << (Game.currentTurn == PONE ? L"two" : L"one") << ", you win!!" << std::endl;
+                std::wcout << "Player " << (Game.currentTurn == PONE ? "one" : "two") << ", you got check mated!" << std::endl;
+                std::wcout << "Player " << (Game.currentTurn == PONE ? "two" : "one") << ", you win!!" << std::endl;
                 Game.gameover = true;
                 break;
             }
@@ -77,7 +77,7 @@ void local_game(){
             res = verifyMove(Game, *movePiece, *moveToSquare);
             if(res != 0){
                 //! Invalid move
-                std::wcout << L"Invalid move." << std::endl;
+                std::wcout << "Invalid move." << std::endl;
                 continue;
             }
 

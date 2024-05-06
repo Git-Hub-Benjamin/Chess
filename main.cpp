@@ -25,7 +25,7 @@ static std::mutex print;
 static char* strings[2] = {"Move piece: ", "To square: "};
 
 void time_turn_print() {
-    // Use a mutex to ensure thread safety when accessing std::cout
+    // Use a mutex to ensure thread safety when accessing std::wcout
     // static std::mutex mtx;
     // std::lock_guard<std::mutex> lock(mtx);
     print.lock();
@@ -50,9 +50,9 @@ void trackingNcurse() {
     while (true) {
         int ch = getch(); // blocking until key press
         if(ch == 10){ // checking for enter
-            std::wstring msg = L"\nSubmited";
+            std::string msg = "\nSubmited";
             if(turn_string.find("clear") != std::string::npos){
-                msg = L"\nCleared";
+                msg = "\nCleared";
                 clear_screen();
             }
             std::wcout << msg << std::endl;
@@ -81,7 +81,7 @@ void timer() {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         count--;
     }
-    std::cout << std::endl; // Print newline after countdown finishes
+    std::wcout << std::endl; // Print newline after countdown finishes
 }
 
 int main() {    
@@ -99,11 +99,10 @@ int main() {
     //     std::wcout << "Key pressed" << std::endl;
     // }
 
-    // Set the global locale to support UTF-8 encoding
-    std::locale::global(std::locale("en_US.UTF-8"));
+    
 
     // Output UTF-8 encoded wide characters
-    std::wcout << L"| ♜ | ♞ | ♝ | ♛ | ♚ | ♝ | ♞ | ♜ |" << std::endl;
+    std::wcout << "| ♜ | ♞ | ♝ | ♛ | ♚ | ♝ | ♞ | ♜ |" << std::endl;
 
 
     // std::thread timer_thread(timer);
@@ -288,7 +287,7 @@ int main() {
 //         // Perform action when the button is clicked
 //         if (isButtonClicked) {
 //             // Action to perform when the button is clicked (e.g., display a message)
-//             std::cout << "Button clicked!" << std::endl;
+//             std::wcout << "Button clicked!" << std::endl;
 //         }
 
 

@@ -18,13 +18,13 @@ void handleOption(){
     // this should be a client only function so we need to refactor
 }
 
-std::wstring charP_to_wstring(const char* str){
+std::string charP_to_string(const char* str){
     std::string temp = str;
-    return std::wstring(temp.begin(), temp.end());
+    return std::string(temp.begin(), temp.end());
 }
 
-std::wstring string_to_wstring(std::string &str){
-    return std::wstring(str.begin(), str.end());
+std::string string_to_string(std::string &str){
+    return std::string(str.begin(), str.end());
 }
 
 void client_access_lock() { mtx.lock(); }
@@ -139,23 +139,23 @@ int main() {
             continue;
         }
 
-        std::cout << "Accpeted." << std::endl;
+        std::wcout << "Accpeted." << std::endl;
 
         char buffer[1024];
 
         while (true) {
             int bytesReceived = recv(clientSocketFD, buffer, 1024, 0);
-            std::cout << "Bytes received: " << bytesReceived << std::endl;
+            std::wcout << "Bytes received: " << bytesReceived << std::endl;
             if (bytesReceived <= 0) {
                 // Handle disconnection or error
-                std::cout << "Connection closed." << std::endl;
+                std::wcout << "Connection closed." << std::endl;
                 break;
             }
             buffer[bytesReceived] = '\0'; // Null-terminate the received message
-            std::cout << "Message from client: " << buffer << std::endl;
+            std::wcout << "Message from client: " << buffer << std::endl;
             std::string message = "From server";
             send(clientSocketFD, message.c_str(), message.length(), 0);
-            std::cout << "Sent message." << std::endl;
+            std::wcout << "Sent message." << std::endl;
         }
 
 
@@ -164,7 +164,7 @@ int main() {
         int res = add_client(clientSocketFD);
         if(res < 0){
             // technically this should never happen it would fail higher up
-            std::wcout << L"Could not find free thread" << std::endl;
+            std::wcout << "Could not find free thread" << std::endl;
             // idk if we should fail or just continue lol
         }
         // after adding client call dispatcher
@@ -182,8 +182,8 @@ int main() {
     // cJSON_AddStringToObject(root, "name", custom.c_str());
     // cJSON_AddNumberToObject(root, "age", 30);
 
-    // // convery the json object into a string, but we cant do directly to wstring
-    // std::wstring myWstring = charP_to_wstring(cJSON_Print(root));   
+    // // convery the json object into a string, but we cant do directly to string
+    // std::string myWstring = charP_to_string(cJSON_Print(root));   
     // std::string myString = cJSON_Print(root);
 
     // std::wcout << "Json object --> " << myWstring << std::endl;

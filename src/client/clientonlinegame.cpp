@@ -19,8 +19,8 @@ void online_game(){
 
     while(true){
         
-        std::string message;
-        std::cin >> message;
+        std::wstring message;
+        std::wcin >> message;
 
         if(message.length() == 1){
             close(playerSocketFD);
@@ -28,10 +28,10 @@ void online_game(){
         }
         else
             send(playerSocketFD, message.c_str(), message.length(), 0);
-        std::cout << "Message: " << message.c_str() << ", Length: " << message.length() << std::endl;
+        std::wcout << "Message: " << message.c_str() << ", Length: " << message.length() << std::endl;
         recv(playerSocketFD, buffer, sizeof(buffer), 0);
         buffer[sizeof(buffer) - 1] = '\0'; // Ensure buffer is null-terminated
-        std::cout << "Message from server --> " << buffer << std::endl;
+        std::wcout << "Message from server --> " << buffer << std::endl;
         
     }
 }
@@ -56,12 +56,12 @@ void online_game(){
 // static char* strings[2] = {"Move piece: ", "To square: "};
 
 // void time_turn_print() {
-//     // Use a mutex to ensure thread safety when accessing std::cout
+//     // Use a mutex to ensure thread safety when accessing std::wcout
 //     // static std::mutex mtx;
 //     // std::lock_guard<std::mutex> lock(mtx);
 //     print.lock();
 //     //printw("\rTime: %d, Turn: %s", current_time, turn_string.c_str());
-//     // std::cout.flush(); 
+//     // std::wcout.flush(); 
 //     // int row, col;
 //     // getyx(stdscr, row, col); 
 //     // move(row, col);
@@ -103,7 +103,7 @@ void online_game(){
 //         std::this_thread::sleep_for(std::chrono::seconds(1));
 //         count--;
 //     }
-//     std::cout << std::endl; // Print newline after countdown finishes
+//     std::wcout << std::endl; // Print newline after countdown finishes
 // }
 
 // int main() {    

@@ -100,7 +100,7 @@ struct Piece_moveset{
 };
 
 // Everyone to use, idk how to sort these lmao
-std::wstring convertString(std::string &);
+std::string convertString(std::string &);
 
 // Functions for client main
 void local_game();

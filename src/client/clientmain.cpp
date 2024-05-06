@@ -1,5 +1,5 @@
 #include "../chess.h"
-//! Always use wcout, cout and wcout dont mix
+//! Always use wcout, wcout and wcout dont mix
 
 bool running = true;
 extern void local_game();
@@ -14,60 +14,60 @@ void print_wcout(wchar_t ch){
 }
 
 void option_sreen(){
-	std::wcout << L"\n\n\n\n\n";
-	std::wcout << L"\t\t|=====================================|\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|               W-CHESS               |\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|           1. Player One color       |\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|           2. Player Two color       |\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|           3. Undo move (local)      |\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|           4. Back                   |\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|=====================================|\n";
-	std::wcout << L"\n--> ";
+	std::wcout << "\n\n\n\n\n";
+	std::wcout << "\t\t|=====================================|\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|               W-CHESS               |\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|           1. Player One color       |\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|           2. Player Two color       |\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|           3. Undo move (local)      |\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|           4. Back                   |\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|=====================================|\n";
+	std::wcout << "\n--> ";
 }
 
 
 
 void title_screen(){
     // menu when starting;
-    std::wcout << L"\n\n\n\n\n";
-	std::wcout << L"\t\t|=====================================|\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|               W-CHESS               |\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|           1. Local Game             |\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|           2. Online Game            |\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|           3. Options                |\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|           4. Quit                   |\n";
-    std::wcout << L"\t\t|                                     |\n";
-    std::wcout << L"\t\t|=====================================|\n";
-	std::wcout << L"\n--> ";
+    std::wcout << "\n\n\n\n\n";
+	std::wcout << "\t\t|=====================================|\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|               W-CHESS               |\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|           1. Local Game             |\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|           2. Online Game            |\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|           3. Options                |\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|           4. Quit                   |\n";
+    std::wcout << "\t\t|                                     |\n";
+    std::wcout << "\t\t|=====================================|\n";
+	std::wcout << "\n--> ";
 }
 
 //* For future use
-// std::wstring a = L"\n\n\n\n\n" 
-// 				 L"\t\t|=====================================|\n"
-// 				 L"\t\t|                                     |\n" 
-// 				 L"\t\t|               W-CHESS               |\n" 
-// 				 L"\t\t| 		 							 |\n" 
-// 				 L"\t\t|           1. Local Game 			 |\n" 
-// 				 L"\t\t| 									 |\n" 
-// 				 L"\t\t|           2. Online Game            |\n" 
-// 				 L"\t\t| 									 |\n" 
-// 				 L"\t\t|           3. Options  				 |\n" 
-// 				 L"\t\t| 									 |\n" 
-// 				 L"\t\t|           4. Quit 				     |\n" 
-// 				 L"\t\t| 									 |\n" 
-// 				 L"\t\t|=====================================|\n" 
-// 				 L"\n--> "; 
+// std::string a = "\n\n\n\n\n" 
+// 				 "\t\t|=====================================|\n"
+// 				 "\t\t|                                     |\n" 
+// 				 "\t\t|               W-CHESS               |\n" 
+// 				 "\t\t| 		 							 |\n" 
+// 				 "\t\t|           1. Local Game 			 |\n" 
+// 				 "\t\t| 									 |\n" 
+// 				 "\t\t|           2. Online Game            |\n" 
+// 				 "\t\t| 									 |\n" 
+// 				 "\t\t|           3. Options  				 |\n" 
+// 				 "\t\t| 									 |\n" 
+// 				 "\t\t|           4. Quit 				     |\n" 
+// 				 "\t\t| 									 |\n" 
+// 				 "\t\t|=====================================|\n" 
+// 				 "\n--> "; 
 
 int get_menu_option(){
 	while(true){
@@ -88,6 +88,9 @@ int get_menu_option(){
 
 int main()
 {		
+	// Set the global locale to support UTF-8 encoding
+    std::locale::global(std::locale("en_US.UTF-8"));
+	// To make chess pieces able to print
 	while(running){
 		title_screen();
 		int opt = get_menu_option();
@@ -112,26 +115,3 @@ int main()
 }
 
 
-/*
-
-  a   b   c   d   e   f   g   h
-+---+---+---+---+---+---+---+---+
-| ♜ | ♞ | ♝ | ♛ | ♚ | ♝ | ♞ | ♜ | 8
-+---+---+---+---+---+---+---+---+
-| ♟ | ♟ | ♟ | ♟ | ♟ | ♟ | ♟ | ♟ | 7
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   | 6
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   | 5
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   | 4
-+---+---+---+---+---+---+---+---+
-|   |   |   |   |   |   |   |   | 3
-+---+---+---+---+---+---+---+---+
-| ♙ | ♙ | ♙ | ♙ | ♙ | ♙ | ♙ | ♙ | 2
-+---+---+---+---+---+---+---+---+
-| ♖ | ♘ | ♗ | ♕ | ♔ | ♗ | ♘ | ♖ | 1
-+---+---+---+---+---+---+---+---+
-  a   b   c   d   e   f   g   h
-
-*/

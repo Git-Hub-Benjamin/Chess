@@ -24,6 +24,7 @@ client:
 
 # same as game
 all: game
+	./build/chess.out
 #build game
 game: server client
 

@@ -1,6 +1,0 @@
-{
-    "includePath": [
-        "${workspaceFolder}/**",
-        // other include paths...
-    ],
-}

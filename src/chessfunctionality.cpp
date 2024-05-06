@@ -1,8 +1,8 @@
 #include "chess.h"
 
-// Conversion from string to wstring
-std::wstring convertString(std::string &passed){
-    return std::wstring(passed.begin(), passed.end());
+// Conversion from string to string
+std::string convertString(std::string &passed){
+    return std::string(passed.begin(), passed.end());
 }
 
 // Global for the program
@@ -19,11 +19,11 @@ int PIECE_MOVE_COUNTS[] = {PAWN_POSSIBLE_MOVES, KNIGHT_POSSIBLE_MOVES, BISHOP_PO
 
 struct Piece_moveset* PIECE_MOVES[] = {&Pawn2, &Pawn1, &Knight, &Bishop, &Rook, &King, &Queen};
 
-// wchar_t piece_art_p1[7] = {' ', L'♟', L'♞', L'♝', L'♜', L'♚', L'♛'};
-// wchar_t piece_art_p2[7] = {' ', L'♙', L'♘', L'♗', L'♖', L'♔', L'♕'};
+wchar_t piece_art_p1[7] = {' ', L'♟', L'♞', L'♝', L'♜', L'♚', L'♛'};
+wchar_t piece_art_p2[7] = {' ', L'♙', L'♘', L'♗', L'♖', L'♔', L'♕'};
 
-wchar_t piece_art_p1[7] = {' ', L'P', L'K', L'B', L'R', L'K', L'Q'};
-wchar_t piece_art_p2[7] = {' ', L'p', L'k', L'b', L'r', L'k', L'q'};
+// wchar_t piece_art_p1[7] = {' ', L'P', L'K', L'B', L'R', L'K', L'Q'};
+// wchar_t piece_art_p2[7] = {' ', L'p', L'k', L'b', L'r', L'k', L'q'};
 
 // Class functions
 
@@ -94,10 +94,10 @@ void ChessGame::init(){
 
 void print_board(ChessGame &game){
     
-    std::wcout << L"\t\t    a   b   c   d   e   f   g   h\n" 
-    << L"\t\t  +---+---+---+---+---+---+---+---+\n";
+    std::wcout << "\t\t    a   b   c   d   e   f   g   h\n" 
+    << "\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
-        std::wcout << "\t\t" << CHESS_BOARD_HEIGHT - i << L" ";
+        std::wcout << "\t\t" << CHESS_BOARD_HEIGHT - i << " ";
         for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
 
             wchar_t piece;
@@ -110,12 +110,12 @@ void print_board(ChessGame &game){
 
             
             // print section --> "| ♟ " ex.
-            std::wcout << L"| " << piece << L" ";
+            std::wcout << "| " << piece << " ";
         }
-        std::wcout << L"| " << CHESS_BOARD_HEIGHT - i << std::endl;
-        std::wcout << L"\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
+        std::wcout << "| " << CHESS_BOARD_HEIGHT - i << std::endl;
+        std::wcout << "\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
     }
-    std::wcout << L"\t\t    a   b   c   d   e   f   g   h\n";
+    std::wcout << "\t\t    a   b   c   d   e   f   g   h\n";
 }
 
 // 0 FREE
@@ -163,7 +163,7 @@ void validateMovePiece(ChessGame& game, GameSqaure& movePiece, std::wstring& ret
 
     // make sure piece belongs to current turn
     if(movePiece.ownership != game.currentTurn){
-        retMsg =  L"Piece does not belong to you."; //! cannot move a square of the other players piece
+        retMsg = L"Piece does not belong to you."; //! cannot move a square of the other players piece
     }
 }
 
@@ -260,13 +260,13 @@ static bool validateMoveset(ChessGame &game, GameSqaure &from, GameSqaure &to){
 
 static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameSqaure &to){
     
-    // Rules of double advancing for pawns
+    // Rules of double advanwcing for pawns
     // 1. Starting Position
     // 2. Unobstructed Path
     // 3. No Capturing
 
     if(std::abs(pawnFrom.pos.y - to.pos.y) == 2){
-        std::wcout << "Pawn double advancing" << std::endl; 
+        std::wcout << "Pawn double advanwcing" << std::endl; 
         if(!pawnClearPath(game, pawnFrom, to)) // checking 2.
             return false; 
         if(game.currentTurn == PONE){ // checking 1. and 3.
@@ -440,16 +440,16 @@ int getMove(std::wstring& dst, bool firstMove){
         // force to lower
         dst[0] = std::tolower(dst[0]); //! force [0] to lower case
         switch(dst[0]){
-            case 'a':
-            case 'b':
-            case 'c':
-            case 'd':
-            case 'e':
-            case 'f':
-            case 'g':
-            case 'h': //* ALL VALID
+            case L'a':
+            case L'b':
+            case L'c':
+            case L'd':
+            case L'e':
+            case L'f':
+            case L'g':
+            case L'h': //* ALL VALID
                 break;
-            case 'q': //* VALID too but for option
+            case L'q': //* VALID too but for option
                 optionMenu = !optionMenu;
                 break;
             default: //! make sure one of the character above
@@ -472,7 +472,7 @@ int getMove(std::wstring& dst, bool firstMove){
             continue; //! move must be length of 2
 
         // make sure 2 char is a number
-        if(!std::isdigit(dst[1]) || dst[1] == '0' || dst[1] == '9') // using std::isdigit
+        if(!std::isdigit(dst[1]) || dst[1] == L'0' || dst[1] == L'9') // using std::isdigit
             continue; //! make sure [1] must be a digit and not '0' OR '9' 
 
         // Now we know it must be [0] == a-h, [1] == 1 - 8
@@ -539,19 +539,19 @@ void init_moveset(){
 
     /*
     for(short i = 1; i < 8; i++){
-        std::cout << "Bishop.moves" << "[" << i - 1 << "]" << "=" << "{" << i << "," << i << "};" << std::endl;
+        std::wcout << "Bishop.moves" << "[" << i - 1 << "]" << "=" << "{" << i << "," << i << "};" << std::endl;
     }
 
     for(short j = -1; j > -8; j--){
-        std::cout << "Bishop.moves" << "[" << abs(j) - 1 + 7 << "]" << "=" << "{" << j << "," << j << "};" << std::endl;
+        std::wcout << "Bishop.moves" << "[" << abs(j) - 1 + 7 << "]" << "=" << "{" << j << "," << j << "};" << std::endl;
     }
 
     for(short k = -1; k > -8; k--){
-        std::cout << "Bishop.moves" << "[" << abs(k) - 1 + 14 << "]" << "=" << "{" << k << "," << abs(k) << "};" << std::endl;
+        std::wcout << "Bishop.moves" << "[" << abs(k) - 1 + 14 << "]" << "=" << "{" << k << "," << abs(k) << "};" << std::endl;
     }
 
     for(short l = -1; l > -8; l--){
-        std::cout << "Bishop.moves" << "[" << abs(l) - 1 + 21 << "]" << "=" << "{" << abs(l) << "," << l << "};" << std::endl;
+        std::wcout << "Bishop.moves" << "[" << abs(l) - 1 + 21 << "]" << "=" << "{" << abs(l) << "," << l << "};" << std::endl;
     }
     */
 
@@ -587,19 +587,19 @@ void init_moveset(){
     // keep in case of fuck up
     /*
     for(short i = 1; i < 8; i++){
-        std::cout << "Rook.moves" << "[" << i - 1 << "]" << "=" << "{" << i << "," << 0 << "};" << std::endl;
+        std::wcout << "Rook.moves" << "[" << i - 1 << "]" << "=" << "{" << i << "," << 0 << "};" << std::endl;
     }
 
     for(short j = 1; j < 8; j++){
-        std::cout << "Rook.moves" << "[" << j - 1 + 7 << "]" << "=" << "{" << 0 << "," << j << "};" << std::endl;
+        std::wcout << "Rook.moves" << "[" << j - 1 + 7 << "]" << "=" << "{" << 0 << "," << j << "};" << std::endl;
     }
 
     for(short k = -1; k > -8; k--){
-        std::cout << "Rook.moves" << "[" << abs(k) - 1 + 14 << "]" << "=" << "{" << k << "," << 0 << "};" << std::endl;
+        std::wcout << "Rook.moves" << "[" << abs(k) - 1 + 14 << "]" << "=" << "{" << k << "," << 0 << "};" << std::endl;
     }
 
     for(short l = -1; l > -8; l--){
-        std::cout << "Rook.moves" << "[" << abs(l) - 1 + 21 << "]" << "=" << "{" << 0 << "," << l << "};" << std::endl;
+        std::wcout << "Rook.moves" << "[" << abs(l) - 1 + 21 << "]" << "=" << "{" << 0 << "," << l << "};" << std::endl;
     }
     */
 
