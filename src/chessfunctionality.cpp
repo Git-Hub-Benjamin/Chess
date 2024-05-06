@@ -1,4 +1,6 @@
 #include "chess.h"
+#include <vector>
+#include <unordered_map>
 
 // Conversion from string to string
 std::string convertString(std::string &passed){
@@ -295,6 +297,30 @@ static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameS
     return true; // Meaning this is a valid move
 }
 
+// True means the path is clear, it can make this move
+// False means there is something in the way
+static bool unobstructed_path_check(ChessGame &game, GameSqaure& from, GameSqaure &to){
+    // Now verify if there is anything in path
+    // Dont have to check knight bc it can go through pieces, also king can only go one piece
+    switch(from.piece){
+        case(ROOK):
+            return rookClearPath(game, from, to);
+            break;
+        case(QUEEN):
+            if(rookClearPath(game, from, to));
+                return bishopClearPath(game, from, to);
+            break;
+        case(BISHOP):
+            return bishopClearPath(game, from, to);
+            break;
+        case(PAWN): 
+            return pawnHelperDblAdvCapture(game, from, to);
+            break;
+        default:
+            return true; // Doesnt matter for (KNIGHT, KING & OPEN/NONE)
+    }   
+}
+
 //* use this at the beggining of a turn to make sure that the oppenent didnt put you in check, and use this after your piece moves to make sure
 //* moving your piece did not put your king in check (kingSafe)
 
@@ -308,15 +334,11 @@ bool kingSafe(ChessGame& game){ // Just checking the king square
             if(currentSquare.ownership == NONE || currentSquare.piece == OPEN || currentSquare.ownership == game.currentTurn)
                 continue;
             
-            if(validateMoveset(game, currentSquare, kingToCheckSafteyFor)){ 
+            if(verifyMove(game, currentSquare, kingToCheckSafteyFor)){ 
                 // if this returns true then it means that the currentSquare can actually attack the king, 
                 // BUT this doesnt apply for pawns, we need to pawns we need to do extra check for them 
-
-                if(currentSquare.piece == PAWN){ 
-                    if(pawnHelperDblAdvCapture(game, currentSquare, kingToCheckSafteyFor)){ // if this returns true then this is a valid attack from pawn
-                        return false; // KING IS NOT SAFE
-                    }
-                }
+                
+                game.pieceCausingKingCheck = currentSquare; // Needed for checkMate
                 return false; // KING IS NOT SAFE
             }
         }
@@ -334,77 +356,90 @@ bool checkMate(ChessGame &game){ // Checking everything around the king
     GameSqaure& kingToCheckSafteyFor = *game.KingPositions[game.currentTurn - 1];
     short kingPossibleMoves = KING_POSSIBLE_MOVES; // 8
     struct Piece_moveset* KING_MOVESET = PIECE_MOVES[KING];
-    //bool KING_IN_CHECK_MATE = true; // ASSUME IT IS
+    std::vector<GameSqaure&> teamPieces;
+    std::vector<GameSqaure&> enemyPieces;
+
+    // Getting enemy and team pieces
+    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
+        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
+            GameSqaure& currBoardSquare = game.GameBoard[row][col];
+            if(currBoardSquare.ownership == NONE)
+                continue;
+            else if(currBoardSquare.ownership == game.currentTurn)
+                teamPieces.push_back(currBoardSquare);
+            else
+                enemyPieces.push_back(currBoardSquare);
+        }
+    }
     
     // Check each square around the King, if its not on the board SKIP it
     // If its taken by a teammate then SKIP it, bc the king cant take own piece
     // If its taken by an oppnent then we need to check if its a pawn OR knight
     for(int i = 0; i < kingPossibleMoves; i++){
-        struct Point currGamePosCheck = kingToCheckSafteyFor.pos;
-        currGamePosCheck.x += KING_MOVESET->moves->x;
-        currGamePosCheck.y += KING_MOVESET->moves->y;
-        
-        if(!onBoard(currGamePosCheck))
-            continue; // Not on gameboard, king cant move here
 
+        struct Point currGamePosCheck = kingToCheckSafteyFor.pos;
+        currGamePosCheck.x += KING_MOVESET->moves[i].x;
+        currGamePosCheck.y += KING_MOVESET->moves[i].y;
+        
+        if(!onBoard(currGamePosCheck)) // Not on gameboard, king cant move here
+            continue; 
+
+
+        bool ENEMY_CAN_ATTACK_KING_SURROUNDING_SQUARE = false;
         GameSqaure& currSquareAroundKingCheck = game.GameBoard[currGamePosCheck.y][currGamePosCheck.x];
 
-        if(currSquareAroundKingCheck.ownership == game.currentTurn)
-            continue; // Piece at position is taken by team piece, cannot move here
-        
-        // Iterate over gameboard, find enemy pieces and see if any of them can reach the currentGameSquareCheck, if yes continue, if no, KING_CAN_MAKE_MOVE = true
-        // This is where I wish I had an array of player1 and player2 pieces, it would be more efficent to iterate over that than this
-        for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
-            for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
-                GameSqaure& currBorardSquare = game.GameBoard[row][col];
-                if(currBorardSquare.ownership == NONE || currBorardSquare.ownership == game.currentTurn)
-                    continue; // validateMoveset expects a piece at the square  
-                              // we only want to check enemy pieces
-                if(!validateMoveset(game, currBorardSquare, currSquareAroundKingCheck)){ // checking if piece, can reach the currently surrounding king square
-                    return false; // There is an open spot that none of the enemies can reach, we CAN stop checking, or you could see how many open spots there are
-                    //KING_CAN_MAKE_MOVE = true; 
-                }
-            }
+        if(currSquareAroundKingCheck.ownership == game.currentTurn) // Piece at position is taken by team piece, cannot move here
+            continue; 
+
+        for(GameSqaure& enemy: enemyPieces){
+            if(verifyMove(game, enemy, currSquareAroundKingCheck))
+                ENEMY_CAN_ATTACK_KING_SURROUNDING_SQUARE = true;
         }
-    } // True, CheckMate
+
+        if(!ENEMY_CAN_ATTACK_KING_SURROUNDING_SQUARE)
+            return false;
+    }
+
+    // Now we need to see if any of the team pieces can block the enemy piece that is causing the team king to be in check
+    switch(game.pieceCausingKingCheck.piece){
+        case(ROOK):
+            // Up Or Down
+            if(kingToCheckSafteyFor.pos.x == game.pieceCausingKingCheck.pos.x){ // checking along the y axis
+                // +1 because we are including the actual piece
+                int amount_to_check = std::abs(kingToCheckSafteyFor.pos.y - game.pieceCausingKingCheck.pos.y) + 1; 
+                // if Rook is above king then we need to check from rook down to the king, if its below then the opposite
+                int direction = (kingToCheckSafteyFor.pos.y - game.pieceCausingKingCheck.pos.y < 0) ? 1 : -1;
+
+                for(int i = 0; i < amount_to_check; i++){
+                    if(verifyMove)
+                }
+            }else{ // Left or Right
+
+            }
+            break;
+        case(QUEEN):
+            break;
+        case(BISHOP):
+            break;
+        case(PAWN): 
+            break;
+        case(KNIGHT):
+            break;
+        default:
+            break; // Idk what to do if the king is causing the check?
+    }
+
     return true; // This determines if the game is over or not
     //return KING_CAN_MAKE_MOVE; 
 }
 
 
-// 0 --> Valid
-// 1 --> Invalid
-int verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to){
-
-    bool VALID_MOVE = validateMoveset(game, from, to);
-
-    std::wcout << "(AFTER MOVESET CHECK), VALID_MOVE --> " <<  (VALID_MOVE ? "true" : "false") << std::endl;
-
-    // Now verify if there is anything in path
-    // Dont have to check knight bc it can go through pieces, also king can only go one piece
-    switch(from.piece){
-        case(ROOK):
-            VALID_MOVE = rookClearPath(game, from, to);
-            break;
-        case(QUEEN):
-            VALID_MOVE = rookClearPath(game, from, to);
-            VALID_MOVE = bishopClearPath(game, from, to);
-            break;
-        case(BISHOP):
-            VALID_MOVE = bishopClearPath(game, from, to);
-            break;
-        case(PAWN): 
-            VALID_MOVE = pawnHelperDblAdvCapture(game, from, to);
-            break;
-        default:
-            break; // OPEN, KNIGHT, KING
-    }    
-
-    if(!VALID_MOVE){
-        return 1;
-    } 
-
-    return 0;
+// True --> Valid
+// False --> Invalid
+bool verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to){
+    if(validateMoveset(game, from, to))
+        return unobstructed_path_check(game, from, to);
+    return false;
 }
 
 GameSqaure* moveConverter(ChessGame &game, std::wstring& move){

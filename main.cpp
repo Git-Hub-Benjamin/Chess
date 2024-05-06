@@ -40,8 +40,8 @@ void clear_screen() {
         system("cls");
     #else
         // Assume POSIX-compatible system (Linux, macOS)
-        std::wcout << "\033[2J\033[1;1H";
-        std::wcout.flush();
+        std::cout << "\033[2J\033[1;1H";
+        std::cout.flush();
     #endif
 }
 
@@ -55,7 +55,7 @@ void trackingNcurse() {
                 msg = "\nCleared";
                 clear_screen();
             }
-            std::wcout << msg << std::endl;
+            std::cout << msg << std::endl;
         }
         else if(ch == 127){ // checking for delete
             if(!turn_string.empty()){

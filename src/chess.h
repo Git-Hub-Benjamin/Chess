@@ -81,6 +81,7 @@ public:
     bool gameover;
     GameSqaure GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
     GameSqaure* KingPositions[2]; // 2 because there are 2 players, update king position in makeMove function whenever king moves (NOTE CASTLING TOO)
+    GameSqaure& pieceCausingKingCheck;
 
     ChessGame();
     void reset();
@@ -118,6 +119,6 @@ bool checkMate(ChessGame &game);
 int getMove(std::wstring& dst, bool firstMove);
 GameSqaure* moveConverter(ChessGame &game, std::wstring& move);
 int makeMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
-int verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
+bool verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
 void validateMovePiece(ChessGame& game, GameSqaure& movePiece, std::wstring& msg);
 void validateMoveToPiece(ChessGame& game, GameSqaure& moveToSquare, std::wstring& retMsg);
