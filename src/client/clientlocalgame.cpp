@@ -8,19 +8,29 @@ void local_game(){
     ChessGame Game;
 
     // White alwalys go first
-    bool* game_gameover = &Game.gameover;
+    bool& game_gameover = Game.gameover;
 
-    while(!*game_gameover)
+    while(!game_gameover)
     {
         
         print_board(Game);
+
         if(Game.currentTurn == PONE)
             std::wcout << "Player one's turn..." << std::endl;
         else
             std::wcout << "Player twos's turn..." << std::endl;
-        
-        if(!kingSafe(Game))
-            std::wcout << "Player " << (Game.currentTurn == PONE ? L"one" : L"two") << ", you are in check!" << std::endl; 
+
+        if(!kingSafe(Game)){
+            if(!checkMate(Game)){ // Check checkmate for the current players turn
+                std::wcout << "Player " << (Game.currentTurn == PONE ? L"one" : L"two") << ", you are in check!" << std::endl; 
+            }else{
+                std::wcout << "Player " << (Game.currentTurn == PONE ? L"one" : L"two") << ", you got check mated!" << std::endl;
+                std::wcout << "Player " << (Game.currentTurn == PONE ? L"two" : L"one") << ", you win!!" << std::endl;
+                Game.gameover = true;
+                break;
+            }
+        }
+                
 
         while(true)
         {
@@ -97,4 +107,5 @@ void local_game(){
         }
         Game.currentTurn = Game.currentTurn == PONE ? PTWO : PONE;
     }
+    std::wcout << "Game Over..." << std::endl;
 }

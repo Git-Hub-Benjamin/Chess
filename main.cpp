@@ -85,19 +85,25 @@ void timer() {
 }
 
 int main() {    
-    ChessGame game;
+    // ChessGame game;
 
-    print_board(game);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    // print_board(game);
+    // std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    initscr();
-    cbreak();
-    noecho();
+    // initscr();
+    // cbreak();
+    // noecho();
 
-    while(true){
-        getch();
-        std::wcout << "Key pressed" << std::endl;
-    }
+    // while(true){
+    //     getch();
+    //     std::wcout << "Key pressed" << std::endl;
+    // }
+
+    // Set the global locale to support UTF-8 encoding
+    std::locale::global(std::locale("en_US.UTF-8"));
+
+    // Output UTF-8 encoded wide characters
+    std::wcout << L"| ♜ | ♞ | ♝ | ♛ | ♚ | ♝ | ♞ | ♜ |" << std::endl;
 
 
     // std::thread timer_thread(timer);

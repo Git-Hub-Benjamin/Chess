@@ -347,16 +347,20 @@ bool checkMate(ChessGame &game){ // Checking everything around the king
         if(!onBoard(currGamePosCheck))
             continue; // Not on gameboard, king cant move here
 
-        GameSqaure& currGameSquareCheck = game.GameBoard[currGamePosCheck.y][currGamePosCheck.x];
+        GameSqaure& currSquareAroundKingCheck = game.GameBoard[currGamePosCheck.y][currGamePosCheck.x];
 
-        if(currGameSquareCheck.ownership == game.currentTurn)
+        if(currSquareAroundKingCheck.ownership == game.currentTurn)
             continue; // Piece at position is taken by team piece, cannot move here
         
         // Iterate over gameboard, find enemy pieces and see if any of them can reach the currentGameSquareCheck, if yes continue, if no, KING_CAN_MAKE_MOVE = true
         // This is where I wish I had an array of player1 and player2 pieces, it would be more efficent to iterate over that than this
         for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
             for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
-                if(!validateMoveset(game, game.GameBoard[row][col], currGameSquareCheck)){ // checking if piece, can reach the currently surrounding king square
+                GameSqaure& currBorardSquare = game.GameBoard[row][col];
+                if(currBorardSquare.ownership == NONE || currBorardSquare.ownership == game.currentTurn)
+                    continue; // validateMoveset expects a piece at the square  
+                              // we only want to check enemy pieces
+                if(!validateMoveset(game, currBorardSquare, currSquareAroundKingCheck)){ // checking if piece, can reach the currently surrounding king square
                     return false; // There is an open spot that none of the enemies can reach, we CAN stop checking, or you could see how many open spots there are
                     //KING_CAN_MAKE_MOVE = true; 
                 }

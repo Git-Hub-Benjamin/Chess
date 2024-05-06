@@ -13,28 +13,61 @@ void print_wcout(wchar_t ch){
    std::wcout << ch;
 }
 
+void option_sreen(){
+	std::wcout << L"\n\n\n\n\n";
+	std::wcout << L"\t\t|=====================================|\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|               W-CHESS               |\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|           1. Player One color       |\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|           2. Player Two color       |\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|           3. Undo move (local)      |\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|           4. Back                   |\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|=====================================|\n";
+	std::wcout << L"\n--> ";
+}
+
+
+
 void title_screen(){
     // menu when starting;
-    std::wstring a = L"\n\n\n\n\n"
-					 L"\t\t|=====================================|\n"
-                     L"\t\t|                                     |\n"
-                     L"\t\t|               W-CHESS               |\n"
-                     L"\t\t|                                     |\n"
-                     L"\t\t|           1. Local Game             |\n"
-                     L"\t\t|                                     |\n"
-                     L"\t\t|           2. Online Game            |\n"
-                     L"\t\t|                                     |\n"
-                     L"\t\t|           3. Options                |\n"
-                     L"\t\t|                                     |\n"
-                     L"\t\t|           4. Quit                   |\n"
-                     L"\t\t|                                     |\n"
-                     L"\t\t|=====================================|\n"
-					 L"\n--> ";
-
-    for(int i = 0; i < a.length(); i++){
-        print_wcout(a.at(i));
-    }
+    std::wcout << L"\n\n\n\n\n";
+	std::wcout << L"\t\t|=====================================|\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|               W-CHESS               |\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|           1. Local Game             |\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|           2. Online Game            |\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|           3. Options                |\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|           4. Quit                   |\n";
+    std::wcout << L"\t\t|                                     |\n";
+    std::wcout << L"\t\t|=====================================|\n";
+	std::wcout << L"\n--> ";
 }
+
+//* For future use
+// std::wstring a = L"\n\n\n\n\n" 
+// 				 L"\t\t|=====================================|\n"
+// 				 L"\t\t|                                     |\n" 
+// 				 L"\t\t|               W-CHESS               |\n" 
+// 				 L"\t\t| 		 							 |\n" 
+// 				 L"\t\t|           1. Local Game 			 |\n" 
+// 				 L"\t\t| 									 |\n" 
+// 				 L"\t\t|           2. Online Game            |\n" 
+// 				 L"\t\t| 									 |\n" 
+// 				 L"\t\t|           3. Options  				 |\n" 
+// 				 L"\t\t| 									 |\n" 
+// 				 L"\t\t|           4. Quit 				     |\n" 
+// 				 L"\t\t| 									 |\n" 
+// 				 L"\t\t|=====================================|\n" 
+// 				 L"\n--> "; 
 
 int get_menu_option(){
 	while(true){
@@ -63,10 +96,16 @@ int main()
 		}else if(opt == 2){
 			online_game();
 		}else if(opt ==3){
-
+			option_sreen();
+			int opt = get_menu_option();
+			if(opt != 4){
+				std::wcout << "Not implemented, try again later." << std::endl;
+			}
 		}else if(opt == 4){
 			if(Pawn1.moves == nullptr)
 				uninit_moveset(); // free the heap memory in the moveset
+			running = false;
+			std::wcout << "Have a good day..." << std::endl;
 		}
 		// if anything else just run again
 	}
