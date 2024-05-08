@@ -307,7 +307,7 @@ static bool unobstructed_path_check(ChessGame &game, GameSqaure& from, GameSqaur
             return rookClearPath(game, from, to);
             break;
         case(QUEEN):
-            if(rookClearPath(game, from, to));
+            if(rookClearPath(game, from, to))
                 return bishopClearPath(game, from, to);
             break;
         case(BISHOP):
@@ -317,41 +317,60 @@ static bool unobstructed_path_check(ChessGame &game, GameSqaure& from, GameSqaur
             return pawnHelperDblAdvCapture(game, from, to);
             break;
         default:
-            return true; // Doesnt matter for (KNIGHT, KING & OPEN/NONE)
+            break;
     }   
+    return true; // Doesnt matter for (KNIGHT, KING & OPEN/NONE)
 }
 
 // True  -> nothing can stop this attack >:)
 // False -> means that not checkmate since a piece can block OR take the rook 
-static bool rook_causing_check(ChessGame &game, GameSqaure& checkedKing, std::vector<GameSqaure&>& teamPieces){
-    // Up Or Down
-    int amount_to_check = 0;
-    int direction = 0;
-    int static_axis = 0;
-    int moving_axis = 0;
+static bool rook_causing_check(ChessGame &game, GameSqaure& checkedKing, std::vector<GameSqaure*>& teamPieces){
+    GameSqaure temp = game.pieceCausingKingCheck;
+                                                                        // if on same x axis, then moving up or down, 
+    int xdir = (game.pieceCausingKingCheck.pos.x == checkedKing.pos.x) ? (game.pieceCausingKingCheck.pos.x - checkedKing.pos.x < 0 ? -1 : 1) : 0;
+                // if x == 0 then it must be on the same y axis value, so going left or right, 
+    int ydir = xdir == 0 ? game.pieceCausingKingCheck.pos.y - checkedKing.pos.y < 0 ? 1 : -1 : 0;
+    int amount_to_check = xdir == 0 ? std::abs(checkedKing.pos.y - game.pieceCausingKingCheck.pos.y) : std::abs(checkedKing.pos.x - game.pieceCausingKingCheck.pos.x);
 
-    if(game.pieceCausingKingCheck.pos.x == game.pieceCausingKingCheck.pos.x){ // checking along the y axis
-        // square to check
-        amount_to_check = std::abs(checkedKing.pos.y - game.pieceCausingKingCheck.pos.y); 
-        // if Rook is above king then we need to check from rook down to the king, if its below then the opposite
-        direction = (checkedKing.pos.y - game.pieceCausingKingCheck.pos.y < 0) ? 1 : -1;
-        // we are not changing the x axis
-        static_axis = game.pieceCausingKingCheck.pos.x;
-    }else{ // Left or Right
-        // Look above for explanation
-        amount_to_check = std::abs(checkedKing.pos.x - game.pieceCausingKingCheck.pos.x);
-        direction = (checkedKing.pos.x - game.pieceCausingKingCheck.pos.x < 0 ? -1 : 1);
-        static_axis = game.pieceCausingKingCheck.pos.y;
-    }
+    for(int i = 0; i < amount_to_check; i++){
 
-    for(int row = 0; row < amount_to_check; row++){
-        GameSqaure& currGameSquareChecking = game.GameBoard[row][col];
-        for(GameSqaure& teamPiece: teamPieces){
-            if(verifyMove(game, teamPiece, currGameSquareChecking))
-                return false;
+        // Iterate over teamPieces to see if they can reach the currentSquare
+        for(GameSqaure* teamPiece: teamPieces){
+            if(verifyMove(game, *teamPiece, temp))
+                return false; // Some team piece can take or block the enemy piece that is causing the check on the king
         }
+
+        // Now we know this square didnt work, get the next one
+        temp.pos.x += (i * xdir);
+        temp.pos.y += (i * ydir);
     }
+
+    return true;
 }
+
+// True  -> nothing can stop this attack >:)
+// False -> means that not checkmate since a piece can block OR take the bishop
+static bool bishop_causing_check(ChessGame &game, GameSqaure& checkedKing, std::vector<GameSqaure*>& teamPieces){
+    // Up Or Down
+    GameSqaure temp = game.pieceCausingKingCheck;
+
+    int xdir = game.pieceCausingKingCheck.pos.x - checkedKing.pos.x < 0 ? -1 : 1;
+    int ydir = game.pieceCausingKingCheck.pos.y - checkedKing.pos.y < 0 ? -1 : 1;
+    int amount_to_check = std::abs(game.pieceCausingKingCheck.pos.x - checkedKing.pos.x); // i dont think this should matter which one you do
+    
+    for(int i = 0; i < amount_to_check; i++){
+        // Iterate over teamPieces to see if they can reach the currentSquare
+        for(GameSqaure* teamPiece: teamPieces){
+            if(verifyMove(game, *teamPiece, temp))
+                return false; // Some team piece can take or block the enemy piece that is causing the check on the king
+        }
+
+        temp.pos.x += (i * xdir);
+        temp.pos.y += (i * ydir);
+    }
+    return true; 
+}
+
 
 //* use this at the beggining of a turn to make sure that the oppenent didnt put you in check, and use this after your piece moves to make sure
 //* moving your piece did not put your king in check (kingSafe)
@@ -385,11 +404,12 @@ bool onBoard(Point& p){
 // This will be called if kingSafe returns false, meaning the king is in check, we need to see if there is somewhere the king can go to get out of it
 
 bool checkMate(ChessGame &game){ // Checking everything around the king
+
     GameSqaure& kingToCheckSafteyFor = *game.KingPositions[game.currentTurn - 1];
     short kingPossibleMoves = KING_POSSIBLE_MOVES; // 8
     struct Piece_moveset* KING_MOVESET = PIECE_MOVES[KING];
-    std::vector<GameSqaure&> teamPieces;
-    std::vector<GameSqaure&> enemyPieces;
+    std::vector<GameSqaure*> teamPieces;
+    std::vector<GameSqaure*> enemyPieces;
 
     // Getting enemy and team pieces
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
@@ -398,9 +418,9 @@ bool checkMate(ChessGame &game){ // Checking everything around the king
             if(currBoardSquare.ownership == NONE)
                 continue;
             else if(currBoardSquare.ownership == game.currentTurn)
-                teamPieces.push_back(currBoardSquare);
+                teamPieces.push_back(&currBoardSquare);
             else
-                enemyPieces.push_back(currBoardSquare);
+                enemyPieces.push_back(&currBoardSquare);
         }
     }
     
@@ -423,8 +443,8 @@ bool checkMate(ChessGame &game){ // Checking everything around the king
         if(currSquareAroundKingCheck.ownership == game.currentTurn) // Piece at position is taken by team piece, cannot move here
             continue; 
 
-        for(GameSqaure& enemy: enemyPieces){
-            if(verifyMove(game, enemy, currSquareAroundKingCheck))
+        for(GameSqaure* enemy: enemyPieces){
+            if(verifyMove(game, *enemy, currSquareAroundKingCheck))
                 ENEMY_CAN_ATTACK_KING_SURROUNDING_SQUARE = true;
         }
 
@@ -435,18 +455,24 @@ bool checkMate(ChessGame &game){ // Checking everything around the king
     // Now we need to see if any of the team pieces can block the enemy piece that is causing the team king to be in check
     switch(game.pieceCausingKingCheck.piece){
         case(ROOK):
-            return rook_causing_check(game);
+            return rook_causing_check(game, kingToCheckSafteyFor, teamPieces);
             break;
         case(QUEEN):
+            if(rook_causing_check(game, kingToCheckSafteyFor, teamPieces))
+                return bishop_causing_check(game, kingToCheckSafteyFor, teamPieces);
             break;
         case(BISHOP):
-            break;
-        case(PAWN): 
+            return bishop_causing_check(game, kingToCheckSafteyFor, teamPieces);
             break;
         case(KNIGHT):
+            // For bishop, we just have to check if any teamPieces can attack the knight
+            for(GameSqaure* teamPiece: teamPieces){
+                if(verifyMove(game, *teamPiece, game.pieceCausingKingCheck))
+                    return false; // Some team piece can attack the knight, no gameover
+            }
             break;
         default:
-            break; // Idk what to do if the king is causing the check?
+            break; // Idk what to do if the king is causing the check? if its a pawn we dont have to check, because it can only attack if its 1 spot away and diagonally
     }
 
     return true; // This determines if the game is over or not

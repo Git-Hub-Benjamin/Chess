@@ -81,7 +81,9 @@ public:
     bool gameover;
     GameSqaure GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
     GameSqaure* KingPositions[2]; // 2 because there are 2 players, update king position in makeMove function whenever king moves (NOTE CASTLING TOO)
-    GameSqaure& pieceCausingKingCheck;
+    GameSqaure& pieceCausingKingCheck = GameBoard[0][0]; 
+    // i dont like doing this, but idk what else to do to get rid of the warning / error,
+    // either way this will be updated whenever a piece causes a check on a king
 
     ChessGame();
     void reset();
