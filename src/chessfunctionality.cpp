@@ -29,7 +29,8 @@ wchar_t piece_art_p2[7] = {' ', L'♙', L'♘', L'♗', L'♖', L'♔', L'♕'};
 
 // Class functions
 
-ChessGame::ChessGame(){
+ChessGame::ChessGame(bool dev_mode){
+    DEV_MODE_ENABLE = dev_mode;
     gameover = false;
     init();
 }
@@ -40,53 +41,58 @@ void ChessGame::reset(){
 
 // 0 Good, 1 Bad
 void ChessGame::init(){
-    currentTurn = PONE;
     memset(&GameBoard, 0, sizeof(GameBoard));
+    currentTurn = PONE;
 
-    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++)
-    {
-        for(int col = 0; col < CHESS_BOARD_WIDTH; col++)
+    if(this->DEV_MODE_ENABLE){
+        this->DEV_MODE_PRESET();
+    }else{
+
+        for(int row = 0; row < CHESS_BOARD_HEIGHT; row++)
         {
-            enum GamePiece temp = OPEN;
-            GameBoard[row][col].pos = {col, row};
-            if(row < Y2) GameBoard[row][col].ownership = PTWO;
-            if(row > Y5) GameBoard[row][col].ownership = PONE;
-            if(row == Y0 || row == Y7){
+            for(int col = 0; col < CHESS_BOARD_WIDTH; col++)
+            {
+                enum GamePiece temp = OPEN;
+                GameBoard[row][col].pos = {col, row};
+                if(row < Y2) GameBoard[row][col].ownership = PTWO;
+                if(row > Y5) GameBoard[row][col].ownership = PONE;
+                if(row == Y0 || row == Y7){
 
-                switch(col){
-                    case X0:
-                        temp = ROOK;
-                        break;
-                    case X1:
-                        temp = KNIGHT;
-                        break;
-                    case X2:
-                        temp = BISHOP;
-                        break;
-                    case X3:
-                        temp = KING;
-                        break;
-                    case X4:
-                        temp = QUEEN;
-                        break;
-                    case X5:
-                        temp = BISHOP;
-                        break;
-                    case X6:
-                        temp = KNIGHT;
-                        break;
-                    case X7:
-                        temp = ROOK;
-                        break;
+                    switch(col){
+                        case X0:
+                            temp = ROOK;
+                            break;
+                        case X1:
+                            temp = KNIGHT;
+                            break;
+                        case X2:
+                            temp = BISHOP;
+                            break;
+                        case X3:
+                            temp = KING;
+                            break;
+                        case X4:
+                            temp = QUEEN;
+                            break;
+                        case X5:
+                            temp = BISHOP;
+                            break;
+                        case X6:
+                            temp = KNIGHT;
+                            break;
+                        case X7:
+                            temp = ROOK;
+                            break;
+                    }
+
+                    GameBoard[row][col].piece = temp;
                 }
+                if(row == Y1 || row == Y6) 
+                    GameBoard[row][col].piece = PAWN;
 
-                GameBoard[row][col].piece = temp;
-            }
-            if(row == Y1 || row == Y6) 
-                GameBoard[row][col].piece = PAWN;
-
-            if(temp == KING){
-                KingPositions[row == Y0 ? 1 : 0] = &GameBoard[row][col]; // if Y0 then it is player2 King, it not then its player1 king
+                if(temp == KING){
+                    KingPositions[row == Y0 ? 1 : 0] = &GameBoard[row][col]; // if Y0 then it is player2 King, it not then its player1 king
+                }
             }
         }
     }
@@ -185,7 +191,7 @@ static bool rookClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
         int amount_to_check = std::abs(from.pos.y - to.pos.y);
         int direction = (from.pos.y - to.pos.y < 0) ? 1 : -1;
 
-        for(int i = 0; i < amount_to_check; i++){
+        for(int i = 1; i < amount_to_check; i++){
             struct Point temp = from.pos;
             temp.y += (i * direction);
             if(piecePresent(game, {temp.x, temp.y}))
@@ -196,7 +202,7 @@ static bool rookClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
         int amount_to_check = std::abs(from.pos.x - to.pos.x);
         int direction = (from.pos.x - to.pos.x < 0) ? 1 : -1;
 
-        for(int i = 0; i < amount_to_check; i++){
+        for(int i = 1; i < amount_to_check; i++){
             struct Point temp = from.pos;
             temp.x += (i * direction);
             if(piecePresent(game, {temp.x, temp.y}))
@@ -207,11 +213,11 @@ static bool rookClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
 }
 
 static bool bishopClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
-    int xdir = from.pos.x - to.pos.x < 0 ? -1 : 1;
-    int ydir = from.pos.y - to.pos.y < 0 ? -1 : 1;
+    int xdir = from.pos.x - to.pos.x < 0 ? 1 : -1;
+    int ydir = from.pos.y - to.pos.y < 0 ? 1 : -1;
     int amount_of_check = std::abs(from.pos.x - to.pos.x); // i dont think this should matter which one you do
     
-    for(int i = 0; i < amount_of_check; i++){
+    for(int i = 1; i < amount_of_check; i++){
         struct Point temp = from.pos;
         temp.x += (i * xdir);
         temp.y += (i * ydir);
@@ -241,7 +247,7 @@ static bool validateMoveset(ChessGame &game, GameSqaure &from, GameSqaure &to){
     
     // if its a pawn, and its the player two turn then set this bc ptwo has
     // a different moveset for the pon
-    if(game.currentTurn == PTWO) 
+    if(game.currentTurn == PTWO && piece == PAWN) 
         PIECE_MOVESET = PIECE_MOVES[0];
 
     struct Point pointToGetTo = to.pos; // make a copy of to
@@ -491,6 +497,13 @@ GameSqaure* moveConverter(ChessGame &game, std::wstring& move){
     // convert letter to number (a = 0, b = 1 etc)
     // convert char number to number ('0' = 0 etc)
     // minus 8 is important since (0,0) is flipped since 8 starts at top
+
+    //!TESTING
+    wchar_t a = move[0];
+    wchar_t b = move[1];
+
+    GameSqaure* temp = &game.GameBoard[8 - (b - 48)][a - 97];
+
     return &game.GameBoard[8 - (move[1] - 48)][move[0] - 97];
 }
 

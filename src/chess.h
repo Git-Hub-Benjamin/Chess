@@ -85,7 +85,9 @@ public:
     // i dont like doing this, but idk what else to do to get rid of the warning / error,
     // either way this will be updated whenever a piece causes a check on a king
 
-    ChessGame();
+    bool DEV_MODE_ENABLE;
+    void DEV_MODE_PRESET();
+    ChessGame(bool);
     void reset();
 
 

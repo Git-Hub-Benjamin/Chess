@@ -1,11 +1,11 @@
 #include "../chess.h"
 
-void local_game(){
+void local_game(bool dev_mode){
     //! Required
     if(Pawn1.moves == nullptr)
         init_moveset();
     
-    ChessGame Game;
+    ChessGame Game(dev_mode);
 
     // White alwalys go first
     bool& game_gameover = Game.gameover;
@@ -63,6 +63,7 @@ void local_game(){
             }
             
             // moveTo --> gamesquare pointer to point on board
+            const wchar_t* wTest = moveTo.c_str();
             moveToSquare = moveConverter(Game, moveTo);
 
             // Makes sure that the piece you are moving to is not owned by your self, (ONLY EXCPETION IS CASTLING (IMPLEMENT LATER))
@@ -75,7 +76,7 @@ void local_game(){
 
             // Now we need to make sure that the piece can actually make this move
             res = verifyMove(Game, *movePiece, *moveToSquare);
-            if(res != 0){
+            if(res != 1){
                 //! Invalid move
                 std::wcout << "Invalid move." << std::endl;
                 continue;

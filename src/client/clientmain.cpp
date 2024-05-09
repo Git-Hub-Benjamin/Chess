@@ -2,7 +2,7 @@
 //! Always use wcout, wcout and wcout dont mix
 
 bool running = true;
-extern void local_game();
+extern void local_game(bool);
 extern void online_game();
 
 void handleOption(){
@@ -81,6 +81,8 @@ int get_menu_option(){
 			return 3;
 		if(str[0] == L'4')
 			return 4;
+		if(str[0] == L'5' || str[0] == L'D' || str[0] == L'd')
+			return 5;
 		break;
 	}
 	return -1;
@@ -94,8 +96,8 @@ int main()
 	while(running){
 		title_screen();
 		int opt = get_menu_option();
-		if(opt == 1){
-			local_game();
+		if(opt == 1 || opt == 5){
+			local_game(opt == 5 ? true : false);
 		}else if(opt == 2){
 			online_game();
 		}else if(opt ==3){

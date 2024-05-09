@@ -102,7 +102,9 @@ int main() {
     
 
     // Output UTF-8 encoded wide characters
+    std::wstring abc = L"Hello my name is yoda";
     std::wcout << "| ♜ | ♞ | ♝ | ♛ | ♚ | ♝ | ♞ | ♜ |" << std::endl;
+    std::wcout << abc << std::endl;
 
 
     // std::thread timer_thread(timer);
