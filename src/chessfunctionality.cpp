@@ -100,12 +100,22 @@ void ChessGame::init(){
 
 // Logic functions
 
+void print_messages(std::deque<std::wstring> deque){
+    for(auto it = deque.begin(); it != deque.end(); it++){
+        std::wcout << *it << std::endl; // printt the curr msg
+    }
+    while (!deque.empty()) {
+        deque.pop_front();
+    }
+}
+
 void print_board(ChessGame &game){
+
+    //std::wcout << "+---+---+\n" << "|       |\n" << "|   " << piece_art_p1[5] << "   |\n" << "|       |\n" << "+---+---+" << std::endl;
     
-    std::wcout << "\t\t    a   b   c   d   e   f   g   h\n" 
-    << "\t\t  +---+---+---+---+---+---+---+---+\n";
+    std::wcout << "\t\t\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
-        std::wcout << "\t\t" << CHESS_BOARD_HEIGHT - i << " ";
+        std::wcout << "\t\t\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
         for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
 
             wchar_t piece;
@@ -121,10 +131,11 @@ void print_board(ChessGame &game){
             std::wcout << "| " << piece << " ";
         }
         std::wcout << "| " << CHESS_BOARD_HEIGHT - i << std::endl;
-        std::wcout << "\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
+        std::wcout << "\t\t\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
     }
-    std::wcout << "\t\t    a   b   c   d   e   f   g   h\n";
+    std::wcout << "\t\t\t\t\t    a   b   c   d   e   f   g   h\n";
 }
+
 
 // 0 FREE
 // 1 PONE TAKEN
@@ -396,6 +407,8 @@ bool kingSafe(ChessGame& game){ // Just checking the king square
                 // BUT this doesnt apply for pawns, we need to pawns we need to do extra check for them 
                 
                 game.pieceCausingKingCheck = currentSquare; // Needed for checkMate
+                std::wcout << "Piece causing check: " << game.pieceCausingKingCheck.piece << ", Pos: {" << game.pieceCausingKingCheck.pos.x << ", " <<
+                game.pieceCausingKingCheck.pos.y << "}" << std::endl; 
                 return false; // KING IS NOT SAFE
             }
         }
@@ -513,67 +526,63 @@ static char toLowercase(char ch){
     return ch;
 }
 
+
+
 // 0 --> Good
 // 1 --> Game changing option (requires restart) // not implemented yet
-int getMove(std::wstring& dst, bool firstMove){
+// 2 --> Invalid input
+int getMove(std::wstring& dst){
+
+    bool optionMenu = false;
+    // get input
+    std::wcin >> dst;
     
-    while(true){
-        if(firstMove)
-            std::wcout << "Piece to move: ";
-        else
-            std::wcout << "To move to: ";
+    if(!std::isalpha(dst[0])) 
+        return 2; //! make sure [0] is alphabetical character
+    
+    // force to lower
+    dst[0] = std::tolower(dst[0]); //! force [0] to lower case
+    switch(dst[0]){
+        case L'a':
+        case L'b':
+        case L'c':
+        case L'd':
+        case L'e':
+        case L'f':
+        case L'g':
+        case L'h': //* ALL VALID
+            break;
+        case L'q': //* VALID too but for option
+            optionMenu = !optionMenu;
+            break;
+        default: //! make sure one of the character above
+            return 2;
 
-        bool optionMenu = false;
-        // get input
-        std::wcin >> dst;
-        
-        if(!std::isalpha(dst[0])) 
-            continue; //! make sure [0] is alphabetical character
-        
-        // force to lower
-        dst[0] = std::tolower(dst[0]); //! force [0] to lower case
-        switch(dst[0]){
-            case L'a':
-            case L'b':
-            case L'c':
-            case L'd':
-            case L'e':
-            case L'f':
-            case L'g':
-            case L'h': //* ALL VALID
-                break;
-            case L'q': //* VALID too but for option
-                optionMenu = !optionMenu;
-                break;
-            default: //! make sure one of the character above
-                continue;
-
-        }
-
-        if(optionMenu){
-            handleOption();
-            // depending on the return if will tell main if it requires the,
-            // game to be stop or restarted
-            
-            // for ex, if change color, we need to do that then just continue
-            // but like restart game we need to return 1 to tell main to handle
-            continue; //! REDO TURN
-        }
-
-        // make sure length is 2
-        if(dst.length() != 2)
-            continue; //! move must be length of 2
-
-        // make sure 2 char is a number
-        if(!std::isdigit(dst[1]) || dst[1] == L'0' || dst[1] == L'9') // using std::isdigit
-            continue; //! make sure [1] must be a digit and not '0' OR '9' 
-
-        // Now we know it must be [0] == a-h, [1] == 1 - 8
-
-        dst.append(L"\0"); //! add null terminator in case we want to print
-        break;
     }
+
+    if(optionMenu){
+        handleOption();
+        // depending on the return if will tell main if it requires the,
+        // game to be stop or restarted
+        
+        // for ex, if change color, we need to do that then just continue
+        // but like restart game we need to return 1 to tell main to handle
+        return 1; //! REDO TURN
+    }
+
+    // make sure length is 2
+    if(dst.length() != 2)
+        return 2; //! move must be length of 2
+
+    // make sure 2 char is a number
+    if(!std::isdigit(dst[1]) || dst[1] == L'0' || dst[1] == L'9') // using std::isdigit
+        return 2; //! make sure [1] must be a digit and not '0' OR '9' 
+
+    // Now we know it must be [0] == a-h, [1] == 1 - 8
+
+    dst.append(L"\0"); //! add null terminator in case we want to print
     return 0;
+    
 }
 
 void uninit_moveset(){

@@ -15,19 +15,20 @@ void print_wcout(wchar_t ch){
 
 void option_sreen(){
 	std::wcout << "\n\n\n\n\n";
-	std::wcout << "\t\t|=====================================|\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|               W-CHESS               |\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|           1. Player One color       |\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|           2. Player Two color       |\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|           3. Undo move (local)      |\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|           4. Back                   |\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|=====================================|\n";
+	std::wcout << "\t\t\t\t\t|=====================================|\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|               W-CHESS               |\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|           1. Player One color       |\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|           2. Player Two color       |\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|           3. Undo move (local)      |\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|           4. Back                   |\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|=====================================|\n";
+	std::wcout << "\n\n\n" << std::endl;
 	std::wcout << "\n--> ";
 }
 
@@ -36,37 +37,38 @@ void option_sreen(){
 void title_screen(){
     // menu when starting;
     std::wcout << "\n\n\n\n\n";
-	std::wcout << "\t\t|=====================================|\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|               W-CHESS               |\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|           1. Local Game             |\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|           2. Online Game            |\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|           3. Options                |\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|           4. Quit                   |\n";
-    std::wcout << "\t\t|                                     |\n";
-    std::wcout << "\t\t|=====================================|\n";
+	std::wcout << "\t\t\t\t\t|=====================================|\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|               W-CHESS               |\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|           1. Local Game             |\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|           2. Online Game            |\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|           3. Options                |\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|           4. Quit                   |\n";
+    std::wcout << "\t\t\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t\t\t|=====================================|\n";
+	std::wcout << "\n\n\n" << std::endl;
 	std::wcout << "\n--> ";
 }
 
 //* For future use
 // std::string a = "\n\n\n\n\n" 
-// 				 "\t\t|=====================================|\n"
-// 				 "\t\t|                                     |\n" 
-// 				 "\t\t|               W-CHESS               |\n" 
-// 				 "\t\t| 		 							 |\n" 
-// 				 "\t\t|           1. Local Game 			 |\n" 
-// 				 "\t\t| 									 |\n" 
-// 				 "\t\t|           2. Online Game            |\n" 
-// 				 "\t\t| 									 |\n" 
-// 				 "\t\t|           3. Options  				 |\n" 
-// 				 "\t\t| 									 |\n" 
-// 				 "\t\t|           4. Quit 				     |\n" 
-// 				 "\t\t| 									 |\n" 
-// 				 "\t\t|=====================================|\n" 
+// 				 "\t\t\t\t|=====================================|\n"
+// 				 "\t\t\t\t|                                     |\n" 
+// 				 "\t\t\t\t|               W-CHESS               |\n" 
+// 				 "\t\t\t\t| 		 							 |\n" 
+// 				 "\t\t\t\t|           1. Local Game 			 |\n" 
+// 				 "\t\t\t\t| 									 |\n" 
+// 				 "\t\t\t\t|           2. Online Game            |\n" 
+// 				 "\t\t\t\t| 									 |\n" 
+// 				 "\t\t\t\t|           3. Options  				 |\n" 
+// 				 "\t\t\t\t| 									 |\n" 
+// 				 "\t\t\t\t|           4. Quit 				     |\n" 
+// 				 "\t\t\t\t| 									 |\n" 
+// 				 "\t\t\t\t|=====================================|\n" 
 // 				 "\n--> "; 
 
 int get_menu_option(){
@@ -92,6 +94,9 @@ int main()
 {		
 	// Set the global locale to support UTF-8 encoding
     std::locale::global(std::locale("en_US.UTF-8"));
+	set_terminal_color(BOLD);
+	std::wcout << "\n\n\n\n\n" << std::endl;
+
 	// To make chess pieces able to print
 	while(running){
 		title_screen();

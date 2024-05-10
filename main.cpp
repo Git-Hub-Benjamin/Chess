@@ -102,6 +102,7 @@ int main() {
     
 
     // Output UTF-8 encoded wide characters
+    std::locale::global(std::locale("en_US.UTF-8"));
     std::wstring abc = L"Hello my name is yoda";
     std::wcout << "| ♜ | ♞ | ♝ | ♛ | ♚ | ♝ | ♞ | ♜ |" << std::endl;
     std::wcout << abc << std::endl;

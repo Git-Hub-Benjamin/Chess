@@ -2,6 +2,8 @@
 #include <cstring>
 #include <string>
 #include <iostream>
+#include <deque>
+#include "./terminal-io/terminal.hpp"
 
 #define CHESS_BOARD_HEIGHT 8
 #define CHESS_BOARD_WIDTH 8
@@ -65,6 +67,10 @@ public:
     struct Point pos;
     enum GamePiece piece;
     enum Owner ownership;
+
+    void print(){
+        std::wcout << "Pos: {" << pos.x << ", " << pos.y << "}, Piece: " << piece << ", Owner: " << (ownership == NONE ? "None" : ownership == PONE ? "Player one" : "Player two") << std::endl;
+    }
 };
 
 
@@ -117,10 +123,11 @@ void handleOption();
 extern struct Piece_moveset Pawn1;
 void init_moveset();
 void uninit_moveset();
+void print_messages(std::deque<std::wstring>);
 void print_board(ChessGame &game);
 bool kingSafe(ChessGame& game);
 bool checkMate(ChessGame &game);
-int getMove(std::wstring& dst, bool firstMove);
+int getMove(std::wstring& dst);
 GameSqaure* moveConverter(ChessGame &game, std::wstring& move);
 int makeMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
 bool verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to);

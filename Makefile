@@ -1,8 +1,9 @@
 JSONLIB = ./jsonlib/cJSON.c
 SOCKET = ./src/server/socket/sockethelper.cpp
-SERVER_FILES = ./src/server/servermain.cpp ./src/chessfunctionality.cpp #$(JSONLIB)
-CLIENT_FILES = ./src/client/clientmain.cpp ./src/client/clientlocalgame.cpp ./src/chessfunctionality.cpp ./src/client/clientonlinegame.cpp
+SERVER_FILES = ./src/server/servermain.cpp  $(CHESS_FUNC)
+CLIENT_FILES = ./src/client/clientmain.cpp ./src/client/clientlocalgame.cpp ./src/client/clientonlinegame.cpp $(CHESS_FUNC)
 DEV_FILES = ./src/dev_mode.cpp
+CHESS_FUNC = ./src/chessfunctionality.cpp ./src/terminal-io/terminal.cpp
 ZERO_OPTIMIZATION = -O0
 
 #test
