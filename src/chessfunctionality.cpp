@@ -100,6 +100,132 @@ void ChessGame::init(){
 
 // Logic functions
 
+// 0 FREE
+// 1 PONE TAKEN
+// 2 PTWO TAKEN
+enum Owner piecePresent(ChessGame &game, struct Point p){
+    enum Owner owner = game.GameBoard[p.y][p.x].ownership;
+    if(owner == NONE && game.GameBoard[p.y][p.x].piece == OPEN)
+        return NONE;
+    return owner;
+    
+}
+
+static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameSqaure &to){
+    
+    // Rules of double advanwcing for pawns
+    // 1. Starting Position
+    // 2. Unobstructed Path
+    // 3. No Capturing
+
+    if(std::abs(pawnFrom.pos.y - to.pos.y) == 2){
+        std::wcout << "Pawn double advanwcing" << std::endl; 
+        if(!pawnClearPath(game, pawnFrom, to)) // checking 2.
+            return false; 
+        if(game.currentTurn == PONE){ // checking 1. and 3.
+            if(pawnFrom.pos.y != 6 || piecePresent(game, {to.pos.x, to.pos.y}))
+                return false;
+        }else{
+            if(pawnFrom.pos.y != 1 || piecePresent(game, {to.pos.x, to.pos.y}))
+                return false;
+        }
+    }else{
+        std::wcout << "Pawn moving 1 square" << std::endl;
+        // Now this section if for checking that pawn can only take an oppenents piece if moving diagonally
+        if(pawnFrom.pos.x == to.pos.x){ 
+            std::wcout << "Moving straight" << std::endl;
+            // moving forward 1, meaning it cant take pieces
+            if(piecePresent(game, {to.pos.x, to.pos.y}))
+                return false;
+        }else{
+            std::wcout << "Moving diagonally" << std::endl;
+            // moving diagonally, meaning it has to take a piece to do this
+            if(!piecePresent(game, {to.pos.x, to.pos.y}))
+                return false;
+        }
+    }
+
+    return true; // Meaning this is a valid move
+}
+
+// True means the path is clear, it can make this move
+// False means there is something in the way
+static bool unobstructed_path_check(ChessGame &game, GameSqaure& from, GameSqaure &to){
+    // Now verify if there is anything in path
+    // Dont have to check knight bc it can go through pieces, also king can only go one piece
+    switch(from.piece){
+        case(ROOK):
+            return rookClearPath(game, from, to);
+            break;
+        case(QUEEN):
+            if(rookClearPath(game, from, to))
+                return bishopClearPath(game, from, to);
+            break;
+        case(BISHOP):
+            return bishopClearPath(game, from, to);
+            break;
+        case(PAWN): 
+            return pawnHelperDblAdvCapture(game, from, to);
+            break;
+        default:
+            break;
+    }   
+    return true; // Doesnt matter for (KNIGHT, KING & OPEN/NONE)
+}
+
+// True  -> nothing can stop this attack >:)
+// False -> means that not checkmate since a piece can block OR take the rook 
+static bool rook_causing_check(ChessGame &game, GameSqaure& checkedKing, std::vector<GameSqaure*>& teamPieces){
+    GameSqaure temp = game.pieceCausingKingCheck;
+                                                                        // if on same x axis, then moving up or down, 
+    int xdir = (game.pieceCausingKingCheck.pos.x == checkedKing.pos.x) ? (game.pieceCausingKingCheck.pos.x - checkedKing.pos.x < 0 ? -1 : 1) : 0;
+                // if x == 0 then it must be on the same y axis value, so going left or right, 
+    int ydir = xdir == 0 ? game.pieceCausingKingCheck.pos.y - checkedKing.pos.y < 0 ? 1 : -1 : 0;
+    int amount_to_check = xdir == 0 ? std::abs(checkedKing.pos.y - game.pieceCausingKingCheck.pos.y) : std::abs(checkedKing.pos.x - game.pieceCausingKingCheck.pos.x);
+
+    for(int i = 0; i < amount_to_check; i++){
+
+        // Iterate over teamPieces to see if they can reach the currentSquare
+        for(GameSqaure* teamPiece: teamPieces){
+            if(verifyMove(game, *teamPiece, temp))
+                return false; // Some team piece can take or block the enemy piece that is causing the check on the king
+        }
+
+        // Now we know this square didnt work, get the next one
+        temp.pos.x += (i * xdir);
+        temp.pos.y += (i * ydir);
+    }
+
+    return true;
+}
+
+// True  -> nothing can stop this attack >:)
+// False -> means that not checkmate since a piece can block OR take the bishop
+static bool bishop_causing_check(ChessGame &game, GameSqaure& checkedKing, std::vector<GameSqaure*>& teamPieces){
+    // Up Or Down
+    GameSqaure temp = game.pieceCausingKingCheck;
+
+    int xdir = game.pieceCausingKingCheck.pos.x - checkedKing.pos.x < 0 ? -1 : 1;
+    int ydir = game.pieceCausingKingCheck.pos.y - checkedKing.pos.y < 0 ? -1 : 1;
+    int amount_to_check = std::abs(game.pieceCausingKingCheck.pos.x - checkedKing.pos.x); // i dont think this should matter which one you do
+    
+    for(int i = 0; i < amount_to_check; i++){
+        // Iterate over teamPieces to see if they can reach the currentSquare
+        for(GameSqaure* teamPiece: teamPieces){
+            if(verifyMove(game, *teamPiece, temp))
+                return false; // Some team piece can take or block the enemy piece that is causing the check on the king
+        }
+
+        temp.pos.x += (i * xdir);
+        temp.pos.y += (i * ydir);
+    }
+    return true; 
+}
+
+bool onBoard(Point& p){
+    return (p.x <= 7 && p.x >= 0 && p.y <= 7 && p.y >= 0);
+}
+
 void print_messages(std::deque<std::wstring> deque){
     for(auto it = deque.begin(); it != deque.end(); it++){
         std::wcout << *it << std::endl; // printt the curr msg
@@ -109,10 +235,88 @@ void print_messages(std::deque<std::wstring> deque){
     }
 }
 
-void print_board(ChessGame &game){
-
-    //std::wcout << "+---+---+\n" << "|       |\n" << "|   " << piece_art_p1[5] << "   |\n" << "|       |\n" << "+---+---+" << std::endl;
+static std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from){
+    std::vector<GameSqaure*>* squares = new std::vector<GameSqaure*>;
     
+    //* SETUP --> very similar to verifyMove function
+                                                // -1  since we dont use OPEN (0)
+    short possibleMoveCounter = PIECE_MOVE_COUNTS[from.piece - 1];
+    enum GamePiece piece = from.piece;
+    struct Piece_moveset* PIECE_MOVESET = PIECE_MOVES[from.piece];
+    
+    // if its a pawn, and its the player two turn then set this bc ptwo has
+    // a different moveset for the pon
+    if(game.currentTurn == PTWO && piece == PAWN) 
+        PIECE_MOVESET = PIECE_MOVES[0];
+    
+    for(int i = 0; i < possibleMoveCounter; i++){
+        // since we are testing this every time we need to make a copy everytime
+        struct Point pointToMoveFrom = from.pos; // make a copy of from
+
+        pointToMoveFrom.x += PIECE_MOVESET->moves[i].x;
+        pointToMoveFrom.y += PIECE_MOVESET->moves[i].y;
+
+        // If on board, nothing in the way, and not attacking own teammate, then add it to the vector
+        if(onBoard(pointToMoveFrom) && 
+            unobstructed_path_check(game, from, game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x]) && 
+            game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x].ownership != game.currentTurn){
+            squares->push_back(&game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x]);
+        }
+    }
+    return squares; // If this returns with a size of 0, then that means this piece CANNOT make any moves 
+
+}
+
+static bool in_vec_squares(std::vector<GameSqaure*>* vec, GameSqaure& check) {
+    if (vec == nullptr) {
+        // Handle nullptr
+        return false;
+    }
+    
+    for (GameSqaure* square : *vec) { 
+        if (square->pos.x == check.pos.x && square->pos.y == check.pos.y) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void print_board_with_moves(ChessGame &game, GameSqaure& from){
+    // first get the gameSquares that the piece can move to into a vector
+    std::vector<GameSqaure*>* squaresPieceCanMoveTo = get_move_to_squares(game, from);
+
+    std::wcout << "\t\t\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
+        std::wcout << "\t\t\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
+        for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
+
+            wchar_t piece;
+            if(game.GameBoard[i][j].ownership == NONE)
+                piece = ' ';
+            else if(game.GameBoard[i][j].ownership == PONE)
+                piece = piece_art_p1[game.GameBoard[i][j].piece];
+            else
+                piece = piece_art_p2[game.GameBoard[i][j].piece];
+
+            // checking if we need to change the color
+            if(in_vec_squares(squaresPieceCanMoveTo, game.GameBoard[i][j])){
+                std::wcout << "| ";
+                if(piece == ' ')
+                    piece = 'X';
+                set_terminal_color(RED);
+                std::wcout << piece;    
+                set_terminal_color(BOLD);
+                std::wcout << " ";
+            }else
+                std::wcout << "| " << piece << " ";
+        }
+        std::wcout << "| " << CHESS_BOARD_HEIGHT - i << std::endl;
+        std::wcout << "\t\t\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
+    }
+    std::wcout << "\t\t\t\t\t    a   b   c   d   e   f   g   h\n";
+}
+
+void print_board(ChessGame &game){    
     std::wcout << "\t\t\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
         std::wcout << "\t\t\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
@@ -136,17 +340,6 @@ void print_board(ChessGame &game){
     std::wcout << "\t\t\t\t\t    a   b   c   d   e   f   g   h\n";
 }
 
-
-// 0 FREE
-// 1 PONE TAKEN
-// 2 PTWO TAKEN
-enum Owner piecePresent(ChessGame &game, struct Point p){
-    enum Owner owner = game.GameBoard[p.y][p.x].ownership;
-    if(owner == NONE && game.GameBoard[p.y][p.x].piece == OPEN)
-        return NONE;
-    return owner;
-    
-}
 
 //0; // Successful move
 //1; // Successful move piece taken
@@ -277,117 +470,6 @@ static bool validateMoveset(ChessGame &game, GameSqaure &from, GameSqaure &to){
     return false; // No, the piece cannot reach this gameSquare
 }
 
-static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameSqaure &to){
-    
-    // Rules of double advanwcing for pawns
-    // 1. Starting Position
-    // 2. Unobstructed Path
-    // 3. No Capturing
-
-    if(std::abs(pawnFrom.pos.y - to.pos.y) == 2){
-        std::wcout << "Pawn double advanwcing" << std::endl; 
-        if(!pawnClearPath(game, pawnFrom, to)) // checking 2.
-            return false; 
-        if(game.currentTurn == PONE){ // checking 1. and 3.
-            if(pawnFrom.pos.y != 6 || piecePresent(game, {to.pos.x, to.pos.y}))
-                return false;
-        }else{
-            if(pawnFrom.pos.y != 1 || piecePresent(game, {to.pos.x, to.pos.y}))
-                return false;
-        }
-    }else{
-        std::wcout << "Pawn moving 1 square" << std::endl;
-        // Now this section if for checking that pawn can only take an oppenents piece if moving diagonally
-        if(pawnFrom.pos.x == to.pos.x){ 
-            std::wcout << "Moving straight" << std::endl;
-            // moving forward 1, meaning it cant take pieces
-            if(piecePresent(game, {to.pos.x, to.pos.y}))
-                return false;
-        }else{
-            std::wcout << "Moving diagonally" << std::endl;
-            // moving diagonally, meaning it has to take a piece to do this
-            if(!piecePresent(game, {to.pos.x, to.pos.y}))
-                return false;
-        }
-    }
-
-    return true; // Meaning this is a valid move
-}
-
-// True means the path is clear, it can make this move
-// False means there is something in the way
-static bool unobstructed_path_check(ChessGame &game, GameSqaure& from, GameSqaure &to){
-    // Now verify if there is anything in path
-    // Dont have to check knight bc it can go through pieces, also king can only go one piece
-    switch(from.piece){
-        case(ROOK):
-            return rookClearPath(game, from, to);
-            break;
-        case(QUEEN):
-            if(rookClearPath(game, from, to))
-                return bishopClearPath(game, from, to);
-            break;
-        case(BISHOP):
-            return bishopClearPath(game, from, to);
-            break;
-        case(PAWN): 
-            return pawnHelperDblAdvCapture(game, from, to);
-            break;
-        default:
-            break;
-    }   
-    return true; // Doesnt matter for (KNIGHT, KING & OPEN/NONE)
-}
-
-// True  -> nothing can stop this attack >:)
-// False -> means that not checkmate since a piece can block OR take the rook 
-static bool rook_causing_check(ChessGame &game, GameSqaure& checkedKing, std::vector<GameSqaure*>& teamPieces){
-    GameSqaure temp = game.pieceCausingKingCheck;
-                                                                        // if on same x axis, then moving up or down, 
-    int xdir = (game.pieceCausingKingCheck.pos.x == checkedKing.pos.x) ? (game.pieceCausingKingCheck.pos.x - checkedKing.pos.x < 0 ? -1 : 1) : 0;
-                // if x == 0 then it must be on the same y axis value, so going left or right, 
-    int ydir = xdir == 0 ? game.pieceCausingKingCheck.pos.y - checkedKing.pos.y < 0 ? 1 : -1 : 0;
-    int amount_to_check = xdir == 0 ? std::abs(checkedKing.pos.y - game.pieceCausingKingCheck.pos.y) : std::abs(checkedKing.pos.x - game.pieceCausingKingCheck.pos.x);
-
-    for(int i = 0; i < amount_to_check; i++){
-
-        // Iterate over teamPieces to see if they can reach the currentSquare
-        for(GameSqaure* teamPiece: teamPieces){
-            if(verifyMove(game, *teamPiece, temp))
-                return false; // Some team piece can take or block the enemy piece that is causing the check on the king
-        }
-
-        // Now we know this square didnt work, get the next one
-        temp.pos.x += (i * xdir);
-        temp.pos.y += (i * ydir);
-    }
-
-    return true;
-}
-
-// True  -> nothing can stop this attack >:)
-// False -> means that not checkmate since a piece can block OR take the bishop
-static bool bishop_causing_check(ChessGame &game, GameSqaure& checkedKing, std::vector<GameSqaure*>& teamPieces){
-    // Up Or Down
-    GameSqaure temp = game.pieceCausingKingCheck;
-
-    int xdir = game.pieceCausingKingCheck.pos.x - checkedKing.pos.x < 0 ? -1 : 1;
-    int ydir = game.pieceCausingKingCheck.pos.y - checkedKing.pos.y < 0 ? -1 : 1;
-    int amount_to_check = std::abs(game.pieceCausingKingCheck.pos.x - checkedKing.pos.x); // i dont think this should matter which one you do
-    
-    for(int i = 0; i < amount_to_check; i++){
-        // Iterate over teamPieces to see if they can reach the currentSquare
-        for(GameSqaure* teamPiece: teamPieces){
-            if(verifyMove(game, *teamPiece, temp))
-                return false; // Some team piece can take or block the enemy piece that is causing the check on the king
-        }
-
-        temp.pos.x += (i * xdir);
-        temp.pos.y += (i * ydir);
-    }
-    return true; 
-}
-
 
 //* use this at the beggining of a turn to make sure that the oppenent didnt put you in check, and use this after your piece moves to make sure
 //* moving your piece did not put your king in check (kingSafe)
@@ -414,10 +496,6 @@ bool kingSafe(ChessGame& game){ // Just checking the king square
         }
     }
     return true; // KING IS SAFE
-}
-
-bool onBoard(Point& p){
-    return (p.x <= 7 && p.x >= 0 && p.y <= 7 && p.y >= 0);
 }
 
 // This will be called if kingSafe returns false, meaning the king is in check, we need to see if there is somewhere the king can go to get out of it

@@ -68,6 +68,8 @@ void local_game(bool dev_mode){
                 // If the king is in check then we already know that the moveFromSquare / Piece is the king
                 movePiece = Game.KingPositions[Game.currentTurn - 1];
             }
+
+            print_board_with_moves(Game, *movePiece);
             
             // We know the move from square is valid now lets get the moveTo
             std::wcout << "To: ";

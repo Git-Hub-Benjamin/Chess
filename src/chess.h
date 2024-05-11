@@ -128,6 +128,7 @@ void print_board(ChessGame &game);
 bool kingSafe(ChessGame& game);
 bool checkMate(ChessGame &game);
 int getMove(std::wstring& dst);
+void print_board_with_moves(ChessGame &game, GameSqaure& from);
 GameSqaure* moveConverter(ChessGame &game, std::wstring& move);
 int makeMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
 bool verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
