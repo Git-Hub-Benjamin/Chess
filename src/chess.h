@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <deque>
+#include <vector>
 #include "./terminal-io/terminal.hpp"
 
 #define CHESS_BOARD_HEIGHT 8
@@ -13,7 +14,7 @@
 #define KING_POSSIBLE_MOVES 8
 #define BISHOP_POSSIBLE_MOVES 28
 #define ROOK_POSSIBLE_MOVES 28
-#define QUEEN_POSSIBLE_MOVES 64
+#define QUEEN_POSSIBLE_MOVES 56 // ROOK + BISHOP
 
 struct Point{
     int x;
@@ -128,9 +129,10 @@ void print_board(ChessGame &game);
 bool kingSafe(ChessGame& game);
 bool checkMate(ChessGame &game);
 int getMove(std::wstring& dst);
-void print_board_with_moves(ChessGame &game, GameSqaure& from);
 GameSqaure* moveConverter(ChessGame &game, std::wstring& move);
 int makeMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
 bool verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
+std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from);
 void validateMovePiece(ChessGame& game, GameSqaure& movePiece, std::wstring& msg);
 void validateMoveToPiece(ChessGame& game, GameSqaure& moveToSquare, std::wstring& retMsg);
+void print_board_with_moves(ChessGame &game, GameSqaure& from, std::vector<GameSqaure*>& vecOfSquare);

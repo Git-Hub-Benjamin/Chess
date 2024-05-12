@@ -1,6 +1,6 @@
 #include "../chess.h"
 
-std::deque<std::wstring> toPrint; 
+//std::deque<std::wstring> toPrint; 
 
 void local_game(bool dev_mode){
     //! Required
@@ -14,8 +14,7 @@ void local_game(bool dev_mode){
 
     while(!game_gameover)
     {
-        print_board(Game);
-        print_messages(toPrint);
+        //print_messages(toPrint);
         bool CURRENT_TURN_IN_CHECK = false;
         if(Game.currentTurn == PONE)
             std::wcout << "Player one's turn..." << std::endl;
@@ -44,13 +43,17 @@ void local_game(bool dev_mode){
             std::wstring moveTo;
             GameSqaure* moveToSquare;
 
+            print_board(Game);
+
             if(!CURRENT_TURN_IN_CHECK){
-                std::wcout << "Move: ";
+                std::wcout << (Game.currentTurn == PONE ? "P1 - " : "P2 - ") << 
+                "Move: ";
                 res = getMove(move);
                 if(res != 0){ 
                     // handle
                     if(res == 1){ // 1 --> Option change, 
-
+                        Game.gameover = true; 
+                        break;
                     }else{
                         continue; // 2 --> Invalid input
                     }
@@ -69,10 +72,17 @@ void local_game(bool dev_mode){
                 movePiece = Game.KingPositions[Game.currentTurn - 1];
             }
 
-            print_board_with_moves(Game, *movePiece);
-            
+            std::vector<GameSqaure*>* squaresPieceCanMoveTo = get_move_to_squares(Game, *movePiece);
+            if(squaresPieceCanMoveTo->size() > 0) 
+                print_board_with_moves(Game, *movePiece, *squaresPieceCanMoveTo);
+            else{
+                std::wcout << "No valid moves with this piece." << std::endl;
+                continue;
+            }
+
             // We know the move from square is valid now lets get the moveTo
-            std::wcout << "To: ";
+            std::wcout << (Game.currentTurn == PONE ? "P1 - " : "P2 - ") <<
+            "To: ";
             res = getMove(moveTo);
             if(res != 0){ 
                 // handle
@@ -116,10 +126,10 @@ void local_game(bool dev_mode){
                 continue; //! I dont know when makemove would return 2, but for later if i need it
             else{
                 if(kingSafe(Game)){
-                    if(res == 0)
-                        toPrint.push_front(std::wstring(L"Piece moved.")); 
-                    else
-                        toPrint.push_front(std::wstring(L"Piece taken."));                 
+                    // if(res == 0)
+                    //     toPrint.push_front(std::wstring(L"Piece moved.")); 
+                    // else
+                    //     toPrint.push_front(std::wstring(L"Piece taken."));                 
                 }else{
                     makeMove(Game, copyOfSquareBeingMoved, copyOfSquareBeingMovedTo); // Revert move
                     continue;                                                         // Redo move

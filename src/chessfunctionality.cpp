@@ -111,6 +111,60 @@ enum Owner piecePresent(ChessGame &game, struct Point p){
     
 }
 
+static bool rookClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
+    // Determine if moving along x or y axis
+    if(from.pos.x == to.pos.x){
+        // moving along Y axis
+        int amount_to_check = std::abs(from.pos.y - to.pos.y);
+        int direction = (from.pos.y - to.pos.y < 0) ? 1 : -1;
+
+        for(int i = 1; i < amount_to_check; i++){
+            struct Point temp = from.pos;
+            temp.y += (i * direction);
+            if(piecePresent(game, {temp.x, temp.y}))
+                return false; 
+        }
+    }else{
+        // moving along X axis
+        int amount_to_check = std::abs(from.pos.x - to.pos.x);
+        int direction = (from.pos.x - to.pos.x < 0) ? 1 : -1;
+
+        for(int i = 1; i < amount_to_check; i++){
+            struct Point temp = from.pos;
+            temp.x += (i * direction);
+            if(piecePresent(game, {temp.x, temp.y}))
+                return false; 
+        }
+    }
+    return true;
+}
+
+static bool bishopClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
+    int xdir = from.pos.x - to.pos.x < 0 ? 1 : -1;
+    int ydir = from.pos.y - to.pos.y < 0 ? 1 : -1;
+    int amount_of_check = std::abs(from.pos.x - to.pos.x); // i dont think this should matter which one you do
+    
+    for(int i = 1; i < amount_of_check; i++){
+        struct Point temp = from.pos;
+        temp.x += (i * xdir);
+        temp.y += (i * ydir);
+        if(piecePresent(game, {temp.x, temp.y}))
+            return false;
+    }
+    return true; 
+}
+
+static bool pawnClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
+    if(std::abs(from.pos.y - to.pos.y) == 2){
+        // check the 1 spot between
+        int direction = game.currentTurn == PONE ? -1 : 1;
+        if(piecePresent(game, {from.pos.x, from.pos.y + (2 * direction)}))
+            return false; // if there is a piece present then return false
+    }
+    return true;
+}
+
+
 static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameSqaure &to){
     
     // Rules of double advanwcing for pawns
@@ -156,21 +210,15 @@ static bool unobstructed_path_check(ChessGame &game, GameSqaure& from, GameSqaur
     switch(from.piece){
         case(ROOK):
             return rookClearPath(game, from, to);
-            break;
         case(QUEEN):
-            if(rookClearPath(game, from, to))
-                return bishopClearPath(game, from, to);
-            break;
+            return (rookClearPath(game, from, to) && bishopClearPath(game, from, to));
         case(BISHOP):
             return bishopClearPath(game, from, to);
-            break;
         case(PAWN): 
             return pawnHelperDblAdvCapture(game, from, to);
-            break;
         default:
-            break;
+            return true; // Doesnt matter for (KNIGHT, KING & OPEN/NONE)
     }   
-    return true; // Doesnt matter for (KNIGHT, KING & OPEN/NONE)
 }
 
 // True  -> nothing can stop this attack >:)
@@ -235,7 +283,7 @@ void print_messages(std::deque<std::wstring> deque){
     }
 }
 
-static std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from){
+std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from){
     std::vector<GameSqaure*>* squares = new std::vector<GameSqaure*>;
     
     //* SETUP --> very similar to verifyMove function
@@ -281,13 +329,12 @@ static bool in_vec_squares(std::vector<GameSqaure*>* vec, GameSqaure& check) {
     return false;
 }
 
-void print_board_with_moves(ChessGame &game, GameSqaure& from){
+void print_board_with_moves(ChessGame &game, GameSqaure& from, std::vector<GameSqaure*>& vecOfSquare){
     // first get the gameSquares that the piece can move to into a vector
-    std::vector<GameSqaure*>* squaresPieceCanMoveTo = get_move_to_squares(game, from);
 
-    std::wcout << "\t\t\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
-        std::wcout << "\t\t\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
+        std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
         for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
 
             wchar_t piece;
@@ -299,7 +346,7 @@ void print_board_with_moves(ChessGame &game, GameSqaure& from){
                 piece = piece_art_p2[game.GameBoard[i][j].piece];
 
             // checking if we need to change the color
-            if(in_vec_squares(squaresPieceCanMoveTo, game.GameBoard[i][j])){
+            if(in_vec_squares(&vecOfSquare, game.GameBoard[i][j])){
                 std::wcout << "| ";
                 if(piece == ' ')
                     piece = 'X';
@@ -311,15 +358,15 @@ void print_board_with_moves(ChessGame &game, GameSqaure& from){
                 std::wcout << "| " << piece << " ";
         }
         std::wcout << "| " << CHESS_BOARD_HEIGHT - i << std::endl;
-        std::wcout << "\t\t\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
+        std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
     }
-    std::wcout << "\t\t\t\t\t    a   b   c   d   e   f   g   h\n";
+    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n";
 }
 
 void print_board(ChessGame &game){    
-    std::wcout << "\t\t\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
-        std::wcout << "\t\t\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
+        std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
         for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
 
             wchar_t piece;
@@ -335,9 +382,9 @@ void print_board(ChessGame &game){
             std::wcout << "| " << piece << " ";
         }
         std::wcout << "| " << CHESS_BOARD_HEIGHT - i << std::endl;
-        std::wcout << "\t\t\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
+        std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
     }
-    std::wcout << "\t\t\t\t\t    a   b   c   d   e   f   g   h\n";
+    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n";
 }
 
 
@@ -374,7 +421,7 @@ void validateMovePiece(ChessGame& game, GameSqaure& movePiece, std::wstring& ret
     }
 
     // make sure piece belongs to current turn
-    if(movePiece.ownership != game.currentTurn){
+    else if(movePiece.ownership != game.currentTurn){
         retMsg = L"Piece does not belong to you."; //! cannot move a square of the other players piece
     }
 }
@@ -386,59 +433,6 @@ void validateMoveToPiece(ChessGame& game, GameSqaure& moveToSquare, std::wstring
         retMsg = L"Cannot take own piece."; //! cannot take own piece
         // hanlde castling later, its complex...
     }
-}
-
-static bool rookClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
-    // Determine if moving along x or y axis
-    if(from.pos.x == to.pos.x){
-        // moving along Y axis
-        int amount_to_check = std::abs(from.pos.y - to.pos.y);
-        int direction = (from.pos.y - to.pos.y < 0) ? 1 : -1;
-
-        for(int i = 1; i < amount_to_check; i++){
-            struct Point temp = from.pos;
-            temp.y += (i * direction);
-            if(piecePresent(game, {temp.x, temp.y}))
-                return false; 
-        }
-    }else{
-        // moving along X axis
-        int amount_to_check = std::abs(from.pos.x - to.pos.x);
-        int direction = (from.pos.x - to.pos.x < 0) ? 1 : -1;
-
-        for(int i = 1; i < amount_to_check; i++){
-            struct Point temp = from.pos;
-            temp.x += (i * direction);
-            if(piecePresent(game, {temp.x, temp.y}))
-                return false; 
-        }
-    }
-    return true;
-}
-
-static bool bishopClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
-    int xdir = from.pos.x - to.pos.x < 0 ? 1 : -1;
-    int ydir = from.pos.y - to.pos.y < 0 ? 1 : -1;
-    int amount_of_check = std::abs(from.pos.x - to.pos.x); // i dont think this should matter which one you do
-    
-    for(int i = 1; i < amount_of_check; i++){
-        struct Point temp = from.pos;
-        temp.x += (i * xdir);
-        temp.y += (i * ydir);
-        if(piecePresent(game, {temp.x, temp.y}))
-            return false;
-    }
-    return true; 
-}
-
-static bool pawnClearPath(ChessGame &game, GameSqaure &from, GameSqaure &to){
-    if(std::abs(from.pos.y - to.pos.y) == 2){
-        // check the 1 spot between
-        int direction = game.currentTurn == PONE ? -1 : 1;
-        if(piecePresent(game, {from.pos.x, from.pos.y + (2 * direction)}))
-            return false; // if there is a piece present then return false
-    }
-    return true;
 }
 
 static bool validateMoveset(ChessGame &game, GameSqaure &from, GameSqaure &to){
@@ -880,12 +874,4 @@ void init_moveset(){
     Queen.moves[53] = {0,-5};
     Queen.moves[54] = {0,-6};
     Queen.moves[55] = {0,-7};
-    Queen.moves[56] = {0,1};
-    Queen.moves[57] = {1,1};
-    Queen.moves[58] = {1,0};
-    Queen.moves[59] = {1,-1};
-    Queen.moves[60] = {0,-1};
-    Queen.moves[61] = {-1,-1};
-    Queen.moves[62] = {-1,0};
-    Queen.moves[63] = {-1,1};
 }
