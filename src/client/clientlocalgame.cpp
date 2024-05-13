@@ -20,10 +20,13 @@ void local_game(bool dev_mode){
     if(Pawn1.moves == nullptr)
         init_moveset();
     
+
     ChessGame Game(dev_mode);
     Game.p1_color = playerOneColor;
     Game.p2_color = playerTwoColor;
     
+    //! TEMPORARY
+    Game.moveHighlighting = true;
 
     // White alwalys go first
     bool& game_gameover = Game.gameover;
@@ -34,6 +37,7 @@ void local_game(bool dev_mode){
         //     nextTurnPrint.clear();
 
         bool CURRENT_TURN_IN_CHECK = false;
+        bool QUIT = false;
 
         if(!kingSafe(Game)){
             if(!checkMate(Game)){ // Check checkmate for the current players turn
@@ -93,45 +97,55 @@ void local_game(bool dev_mode){
                 movePiece = Game.KingPositions[Game.currentTurn - 1];
             }
 
-            std::vector<GameSqaure*>* squaresPieceCanMoveTo;
-            squaresPieceCanMoveTo = get_move_to_squares(Game, *movePiece);
-            if(squaresPieceCanMoveTo->size() > 0) 
-                print_board_with_moves(Game, *movePiece, *squaresPieceCanMoveTo);
-            else{
-                nextTurnPrint = std::wstring(L"No valid moves with this piece.");
-                continue;
-            }
+            if(Game.moveHighlighting){
+                std::vector<GameSqaure*>* squaresPieceCanMoveTo;
+                squaresPieceCanMoveTo = get_move_to_squares(Game, *movePiece);
+                if(squaresPieceCanMoveTo->size() > 0) 
+                    print_board_with_moves(Game, *movePiece, *squaresPieceCanMoveTo);
+                else{
+                    nextTurnPrint = std::wstring(L"No valid moves with this piece.");
+                    continue;
+                }
 
-            if(Game.currentTurn == PONE)
-                std::wcout << "Player one's turn..." << std::endl;
-            else
-                std::wcout << L"Player twos's turn..." << std::endl;
-            
-            if(!CURRENT_TURN_IN_CHECK)
-                std::wcout << L"Move: " << move << std::endl;
-
-            if(CURRENT_TURN_IN_CHECK){
-                set_terminal_color(RED);
                 if(Game.currentTurn == PONE)
-                    std::wcout << L"Player one, You are in check!" << std::endl;
+                    std::wcout << "Player one's turn..." << std::endl;
                 else
-                    std::wcout << L"Player two, You are in check!" << std::endl;
-                set_terminal_color(DEFAULT);
+                    std::wcout << L"Player twos's turn..." << std::endl;
+                
+                if(!CURRENT_TURN_IN_CHECK)
+                    std::wcout << L"Move: " << move << std::endl;
+
+                if(CURRENT_TURN_IN_CHECK){
+                    set_terminal_color(RED);
+                    if(Game.currentTurn == PONE)
+                        std::wcout << L"Player one, You are in check!" << std::endl;
+                    else
+                        std::wcout << L"Player two, You are in check!" << std::endl;
+                    set_terminal_color(DEFAULT);
+                }
             }
 
             // We know the move from square is valid now lets get the moveTo
             // Before printing "To: " if highlighting is on then we need to reprint messages
             
-            std::wcout << (Game.currentTurn == PONE ? "P1 - " : "P2 - ") <<
-            "To: ";
-            res = getMove(moveTo);
-            if(res != 0){ 
-                // handle
-                if(res == 1){ // 1 --> Option change, 
-
-                }else{
-                    continue; // 2 --> Invalid input
+            while(true){
+                std::wcout << (Game.currentTurn == PONE ? "P1 - " : "P2 - ") <<
+                "To: ";
+                res = getMove(moveTo);
+                if(res != 0){ 
+                    // handle
+                    if(res == 1){ // 1 --> Option change, 
+                        QUIT = true;
+                    }else{
+                        continue; // 2 --> Invalid input
+                    }
                 }
+                break;
+            }
+
+            if(QUIT){
+                Game.gameover = true;
+                break;
             }
             
             // moveTo --> gamesquare pointer to point on board
@@ -149,7 +163,7 @@ void local_game(bool dev_mode){
             res = verifyMove(Game, *movePiece, *moveToSquare);
             if(res != 1){
                 //! Invalid move
-                nextTurnPrint = std::wstring(msg);
+                nextTurnPrint = std::wstring(L"Piece cannot reach there.");
                 continue;
             }
 

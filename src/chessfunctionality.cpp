@@ -658,7 +658,9 @@ int getMove(std::wstring& dst){
         case L'h': //* ALL VALID
             break;
         case L'q': //* VALID too but for option
-            optionMenu = !optionMenu;
+        case L'x':
+        case L'o':
+            optionMenu = true;
             break;
         default: //! make sure one of the character above
             return 2;
@@ -666,7 +668,21 @@ int getMove(std::wstring& dst){
     }
 
     if(optionMenu){
-        handleOption();
+        std::wcout << "\n1. Change Colors\n" << "2. Continue\n" << "3. Quit\n\n--> "; 
+        std::wcin >> dst;
+        switch(dst[0]){
+            case L'1':
+                std::wcout << "Not implemented." << std::endl;
+                break;
+            case L'2':
+                return 2; //! REDO
+            case L'3':
+            case L'q':
+                return 1;
+            default:
+                break;
+        }
+        return 2; //! REDO
         // depending on the return if will tell main if it requires the,
         // game to be stop or restarted
         
