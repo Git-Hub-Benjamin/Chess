@@ -1,17 +1,8 @@
 #pragma once
-#include "../chess.h"
-
-enum WRITE_COLOR{
-    DEFAULT = 0, // Default color
-    RED,         // Attack
-    GREEN,       // Safe king spots?
-    AQUA,
-    BOLD         // BOLDED WHITE
-};
+#include "./colors.hpp"
 
 void erase_display(int n);
-void set_terminal_color(enum WRITE_COLOR);
-
+void set_terminal_color(enum WRITE_COLOR color);
 
 //! BEFORE CHANGING BOARD
 

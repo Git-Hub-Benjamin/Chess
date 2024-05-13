@@ -1,9 +1,13 @@
-#include "../chess.h"
+#include "../chess.hpp"
 //! Always use wcout, wcout and wcout dont mix
 
 bool running = true;
 extern void local_game(bool);
 extern void online_game();
+
+// GLOBAL
+enum WRITE_COLOR playerOneColor;
+enum WRITE_COLOR playerTwoColor;
 
 void handleOption(){
   //implement later
@@ -30,6 +34,37 @@ void option_sreen(){
     std::wcout << "\t\t\t|=====================================|\n";
 	std::wcout << "\n\n\n" << std::endl;
 	std::wcout << "\n--> ";
+}
+
+void color_select_screen(){
+	std::wcout << "\n\n\n\n\n";
+	std::wcout << "\t\t\t|=====================================|\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|               W-CHESS               |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|               1. AQUA       	       |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|               2. GREEN       	   |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|               3. BLUE			   |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|               4. Back               |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|=====================================|\n";
+	std::wcout << "\n\n\n" << std::endl;
+	std::wcout << "\n--> ";
+}
+
+enum WRITE_COLOR num_to_enum_write_color(int num){
+	switch(num){
+		case 1:
+			return AQUA;
+		case 2:
+			return GREEN;
+		case 3:
+			return BLUE;
+	}
+	return DEFAULT; // ??
 }
 
 
@@ -94,7 +129,7 @@ int main()
 {		
 	// Set the global locale to support UTF-8 encoding
     std::locale::global(std::locale("en_US.UTF-8"));
-	set_terminal_color(BOLD);
+	set_terminal_color(DEFAULT);
 	std::wcout << "\n\n\n\n\n" << std::endl;
 
 	// To make chess pieces able to print
@@ -107,10 +142,21 @@ int main()
 			online_game();
 		}else if(opt ==3){
 			option_sreen();
-			int opt = get_menu_option();
-			if(opt != 4){
+			int option_opt = get_menu_option();
+			if(option_opt == 1 || option_opt == 2){
+				color_select_screen();
+				int color_opt = get_menu_option();
+				if(option_opt == 1){
+					playerOneColor = num_to_enum_write_color(color_opt);
+				}else{
+					playerTwoColor = num_to_enum_write_color(color_opt);
+				}
+
+			}else if(opt == 3)
 				std::wcout << "Not implemented, try again later." << std::endl;
-			}
+			else
+				std::wcout << "Back." << std::endl;
+				
 		}else if(opt == 4){
 			if(Pawn1.moves == nullptr)
 				uninit_moveset(); // free the heap memory in the moveset

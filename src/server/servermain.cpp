@@ -1,4 +1,4 @@
-#include "../chess.h"
+#include "../chess.hpp"
 #include "./socket/socketutil.h"
 #include <stdio.h>
 #include <string>

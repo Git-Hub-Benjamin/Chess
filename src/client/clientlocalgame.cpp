@@ -1,6 +1,19 @@
-#include "../chess.h"
+#include "../chess.hpp"
+#include <sstream>
 
-//std::deque<std::wstring> toPrint; 
+// GLOBAL
+extern enum WRITE_COLOR playerOneColor;
+extern enum WRITE_COLOR playerTwoColor;
+// QUEUE
+std::wstring nextTurnPrint; 
+
+void print_last_turn_msg(){
+    set_terminal_color(RED);
+    std::wcout << nextTurnPrint << std::endl;
+    set_terminal_color(DEFAULT);
+    nextTurnPrint = L"";
+}
+
 
 void local_game(bool dev_mode){
     //! Required
@@ -8,22 +21,22 @@ void local_game(bool dev_mode){
         init_moveset();
     
     ChessGame Game(dev_mode);
+    Game.p1_color = playerOneColor;
+    Game.p2_color = playerTwoColor;
+    
 
     // White alwalys go first
     bool& game_gameover = Game.gameover;
 
     while(!game_gameover)
     {
-        //print_messages(toPrint);
+        // if(clearQueue)
+        //     nextTurnPrint.clear();
+
         bool CURRENT_TURN_IN_CHECK = false;
-        if(Game.currentTurn == PONE)
-            std::wcout << "Player one's turn..." << std::endl;
-        else
-            std::wcout << "Player twos's turn..." << std::endl;
 
         if(!kingSafe(Game)){
             if(!checkMate(Game)){ // Check checkmate for the current players turn
-                std::wcout << "Player " << (Game.currentTurn == PONE ? "one" : "two") << ", you are in check!" << std::endl; 
                 CURRENT_TURN_IN_CHECK = true;
             }else{
                 std::wcout << "Player " << (Game.currentTurn == PONE ? "one" : "two") << ", you got check mated!" << std::endl;
@@ -43,9 +56,17 @@ void local_game(bool dev_mode){
             std::wstring moveTo;
             GameSqaure* moveToSquare;
 
-            print_board(Game);
-
             if(!CURRENT_TURN_IN_CHECK){
+                print_board(Game);
+                
+                if(Game.currentTurn == PONE)
+                    std::wcout << "Player one's turn..." << std::endl;
+                else
+                    std::wcout << L"Player twos's turn..." << std::endl;
+
+                if(nextTurnPrint.length() != 0)
+                    print_last_turn_msg();
+
                 std::wcout << (Game.currentTurn == PONE ? "P1 - " : "P2 - ") << 
                 "Move: ";
                 res = getMove(move);
@@ -64,7 +85,7 @@ void local_game(bool dev_mode){
                 // Makes sure that the piece you selected to move is valid. (Not Open and Not oppenents piece)
                 validateMovePiece(Game, *movePiece, msg);
                 if(msg.length() != 0){
-                    std::wcout << msg << std::endl;
+                    nextTurnPrint = std::wstring(msg);
                     continue;
                 }
             }else{
@@ -72,15 +93,35 @@ void local_game(bool dev_mode){
                 movePiece = Game.KingPositions[Game.currentTurn - 1];
             }
 
-            std::vector<GameSqaure*>* squaresPieceCanMoveTo = get_move_to_squares(Game, *movePiece);
+            std::vector<GameSqaure*>* squaresPieceCanMoveTo;
+            squaresPieceCanMoveTo = get_move_to_squares(Game, *movePiece);
             if(squaresPieceCanMoveTo->size() > 0) 
                 print_board_with_moves(Game, *movePiece, *squaresPieceCanMoveTo);
             else{
-                std::wcout << "No valid moves with this piece." << std::endl;
+                nextTurnPrint = std::wstring(L"No valid moves with this piece.");
                 continue;
             }
 
+            if(Game.currentTurn == PONE)
+                std::wcout << "Player one's turn..." << std::endl;
+            else
+                std::wcout << L"Player twos's turn..." << std::endl;
+            
+            if(!CURRENT_TURN_IN_CHECK)
+                std::wcout << L"Move: " << move << std::endl;
+
+            if(CURRENT_TURN_IN_CHECK){
+                set_terminal_color(RED);
+                if(Game.currentTurn == PONE)
+                    std::wcout << L"Player one, You are in check!" << std::endl;
+                else
+                    std::wcout << L"Player two, You are in check!" << std::endl;
+                set_terminal_color(DEFAULT);
+            }
+
             // We know the move from square is valid now lets get the moveTo
+            // Before printing "To: " if highlighting is on then we need to reprint messages
+            
             std::wcout << (Game.currentTurn == PONE ? "P1 - " : "P2 - ") <<
             "To: ";
             res = getMove(moveTo);
@@ -100,7 +141,7 @@ void local_game(bool dev_mode){
             //? IMPLEMENT CASTLING
             validateMoveToPiece(Game, *moveToSquare, msg);
             if(msg.length() != 0){
-                std::wcout << msg << std::endl;
+                nextTurnPrint = std::wstring(msg);
                 continue;
             }
 
@@ -108,7 +149,7 @@ void local_game(bool dev_mode){
             res = verifyMove(Game, *movePiece, *moveToSquare);
             if(res != 1){
                 //! Invalid move
-                std::wcout << "Invalid move." << std::endl;
+                nextTurnPrint = std::wstring(msg);
                 continue;
             }
 
@@ -117,9 +158,6 @@ void local_game(bool dev_mode){
 
             GameSqaure copyOfSquareBeingMoved = *movePiece;
             GameSqaure copyOfSquareBeingMovedTo = *moveToSquare;
-
-            movePiece->print();
-            moveToSquare->print();
 
             res = makeMove(Game, *movePiece, *moveToSquare); //! CAUSING SEGMENTATION FAULT, Maybe something to do with copy? it was working fine before...
             if(res == 2)

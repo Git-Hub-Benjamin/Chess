@@ -27,8 +27,8 @@ client:
 # same as game
 all: game
 	
-#build game
-game: server client
+#build game (took out server for now)
+game: client
 
 clean:
 	rm -rf ./build/chess.out

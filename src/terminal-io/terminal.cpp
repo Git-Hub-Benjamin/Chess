@@ -1,7 +1,9 @@
 #include "./terminal.hpp"
+#include <string>
+#include <iostream>
 
 void set_terminal_color(enum WRITE_COLOR color) {
-    std::wstring col = std::wstring(L"37");// Default color: WHITE
+    std::wstring col = std::wstring(L"1");// Default color: BOLD WHITE
     switch (color) {
         case RED:
             col = std::wstring(L"31"); // RED
@@ -9,11 +11,14 @@ void set_terminal_color(enum WRITE_COLOR color) {
         case GREEN:
             col = std::wstring(L"32"); // GREEN
             break;
+        case BLUE:
+            col = std::wstring(L"34"); // BLUE
+            break;
         case AQUA:
             col = std::wstring(L"36"); // AQUA
             break;
-        case BOLD:
-            col = std::wstring(L"1"); // AQUA
+        case THIN:
+            col = std::wstring(L"37"); // THIN WHITE
             break;
         default:
             break;

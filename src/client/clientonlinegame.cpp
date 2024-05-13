@@ -1,4 +1,4 @@
-#include "../chess.h"
+#include "../chess.hpp"
 #include "../server/socket/socketutil.h"
 #include <unistd.h>
 

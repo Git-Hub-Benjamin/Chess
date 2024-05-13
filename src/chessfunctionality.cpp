@@ -1,10 +1,42 @@
-#include "chess.h"
+#include "chess.hpp"
 #include <vector>
 #include <unordered_map>
 
 // Conversion from string to string
 std::string convertString(std::string &passed){
     return std::string(passed.begin(), passed.end());
+}
+
+// Enum piece to string
+std::wstring enumPiece_toString(enum GamePiece p){
+    std::wstring out;
+    switch(p){
+        case OPEN:
+            out = L"None";
+            break;
+        case PAWN:
+            out = L"Pawn";
+            break;
+        case BISHOP:
+            out = L"Bishop";
+            break;
+        case KNIGHT:
+            out = L"Knight";
+            break;
+        case ROOK:
+            out = L"Rook";
+            break;
+        case KING:
+            out = L"King";
+            break;
+        case QUEEN:
+            out = L"Queen";
+            break;
+        default:
+            out = L"Error unknown piece?";
+            break;
+    }  
+    return out;
 }
 
 // Global for the program
@@ -173,7 +205,6 @@ static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameS
     // 3. No Capturing
 
     if(std::abs(pawnFrom.pos.y - to.pos.y) == 2){
-        std::wcout << "Pawn double advanwcing" << std::endl; 
         if(!pawnClearPath(game, pawnFrom, to)) // checking 2.
             return false; 
         if(game.currentTurn == PONE){ // checking 1. and 3.
@@ -184,15 +215,12 @@ static bool pawnHelperDblAdvCapture(ChessGame &game, GameSqaure &pawnFrom, GameS
                 return false;
         }
     }else{
-        std::wcout << "Pawn moving 1 square" << std::endl;
         // Now this section if for checking that pawn can only take an oppenents piece if moving diagonally
         if(pawnFrom.pos.x == to.pos.x){ 
-            std::wcout << "Moving straight" << std::endl;
             // moving forward 1, meaning it cant take pieces
             if(piecePresent(game, {to.pos.x, to.pos.y}))
                 return false;
         }else{
-            std::wcout << "Moving diagonally" << std::endl;
             // moving diagonally, meaning it has to take a piece to do this
             if(!piecePresent(game, {to.pos.x, to.pos.y}))
                 return false;
@@ -211,7 +239,10 @@ static bool unobstructed_path_check(ChessGame &game, GameSqaure& from, GameSqaur
         case(ROOK):
             return rookClearPath(game, from, to);
         case(QUEEN):
-            return (rookClearPath(game, from, to) && bishopClearPath(game, from, to));
+            if(from.pos.x == to.pos.x || from.pos.y == to.pos.y)
+                return rookClearPath(game, from, to);
+            else
+                return bishopClearPath(game, from, to);
         case(BISHOP):
             return bishopClearPath(game, from, to);
         case(PAWN): 
@@ -274,30 +305,27 @@ bool onBoard(Point& p){
     return (p.x <= 7 && p.x >= 0 && p.y <= 7 && p.y >= 0);
 }
 
-void print_messages(std::deque<std::wstring> deque){
-    for(auto it = deque.begin(); it != deque.end(); it++){
-        std::wcout << *it << std::endl; // printt the curr msg
-    }
-    while (!deque.empty()) {
-        deque.pop_front();
+void print_messages(std::vector<std::wstring>& msgs){
+    for(auto& msg: msgs){
+        std::wcout << msg << std::endl; // printt the curr msg
     }
 }
 
-std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from){
+std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from) {
     std::vector<GameSqaure*>* squares = new std::vector<GameSqaure*>;
-    
-    //* SETUP --> very similar to verifyMove function
-                                                // -1  since we dont use OPEN (0)
+
+    // SETUP --> very similar to verifyMove function
+    // -1 since we don't use OPEN (0)
     short possibleMoveCounter = PIECE_MOVE_COUNTS[from.piece - 1];
     enum GamePiece piece = from.piece;
     struct Piece_moveset* PIECE_MOVESET = PIECE_MOVES[from.piece];
-    
-    // if its a pawn, and its the player two turn then set this bc ptwo has
-    // a different moveset for the pon
-    if(game.currentTurn == PTWO && piece == PAWN) 
+
+    // if it's a pawn, and it's the player two turn then set this bc ptwo has
+    // a different moveset for the pawn
+    if (game.currentTurn == PTWO && piece == PAWN) 
         PIECE_MOVESET = PIECE_MOVES[0];
-    
-    for(int i = 0; i < possibleMoveCounter; i++){
+
+    for (int i = 0; i < possibleMoveCounter; i++) {
         // since we are testing this every time we need to make a copy everytime
         struct Point pointToMoveFrom = from.pos; // make a copy of from
 
@@ -305,15 +333,15 @@ std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from)
         pointToMoveFrom.y += PIECE_MOVESET->moves[i].y;
 
         // If on board, nothing in the way, and not attacking own teammate, then add it to the vector
-        if(onBoard(pointToMoveFrom) && 
-            unobstructed_path_check(game, from, game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x]) && 
-            game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x].ownership != game.currentTurn){
-            squares->push_back(&game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x]);
-        }
+        if (onBoard(pointToMoveFrom))
+            if (unobstructed_path_check(game, from, game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x]))
+                if (game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x].ownership != game.currentTurn)
+                    squares->push_back(&game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x]);
+
     }
     return squares; // If this returns with a size of 0, then that means this piece CANNOT make any moves 
-
 }
+
 
 static bool in_vec_squares(std::vector<GameSqaure*>* vec, GameSqaure& check) {
     if (vec == nullptr) {
@@ -332,30 +360,37 @@ static bool in_vec_squares(std::vector<GameSqaure*>* vec, GameSqaure& check) {
 void print_board_with_moves(ChessGame &game, GameSqaure& from, std::vector<GameSqaure*>& vecOfSquare){
     // first get the gameSquares that the piece can move to into a vector
 
-    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
         std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
         for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
 
+            std::wcout << "| ";
             wchar_t piece;
             if(game.GameBoard[i][j].ownership == NONE)
                 piece = ' ';
-            else if(game.GameBoard[i][j].ownership == PONE)
+            else if(game.GameBoard[i][j].ownership == PONE){
                 piece = piece_art_p1[game.GameBoard[i][j].piece];
-            else
+                set_terminal_color(game.p1_color);
+            }else{
                 piece = piece_art_p2[game.GameBoard[i][j].piece];
+                set_terminal_color(game.p2_color);
+            }
 
-            // checking if we need to change the color
+            // checking if the current square can be acctacked by piece
             if(in_vec_squares(&vecOfSquare, game.GameBoard[i][j])){
-                std::wcout << "| ";
                 if(piece == ' ')
                     piece = 'X';
                 set_terminal_color(RED);
                 std::wcout << piece;    
-                set_terminal_color(BOLD);
+                set_terminal_color(DEFAULT);
                 std::wcout << " ";
-            }else
-                std::wcout << "| " << piece << " ";
+            }else{
+                
+                std::wcout << piece; 
+                set_terminal_color(DEFAULT);
+                std::wcout << " ";
+            }    
         }
         std::wcout << "| " << CHESS_BOARD_HEIGHT - i << std::endl;
         std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
@@ -364,22 +399,28 @@ void print_board_with_moves(ChessGame &game, GameSqaure& from, std::vector<GameS
 }
 
 void print_board(ChessGame &game){    
-    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
         std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
         for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
 
+            std::wcout << "| ";
             wchar_t piece;
             if(game.GameBoard[i][j].ownership == NONE)
                 piece = ' ';
-            else if(game.GameBoard[i][j].ownership == PONE)
+            else if(game.GameBoard[i][j].ownership == PONE){
                 piece = piece_art_p1[game.GameBoard[i][j].piece];
-            else
+                set_terminal_color(game.p1_color);
+            }else{
                 piece = piece_art_p2[game.GameBoard[i][j].piece];
-
+                set_terminal_color(game.p2_color);
+            }
             
             // print section --> "| ♟ " ex.
-            std::wcout << "| " << piece << " ";
+            std::wcout << piece;
+            set_terminal_color(DEFAULT);
+            std::wcout << " ";
+            
         }
         std::wcout << "| " << CHESS_BOARD_HEIGHT - i << std::endl;
         std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
@@ -483,8 +524,6 @@ bool kingSafe(ChessGame& game){ // Just checking the king square
                 // BUT this doesnt apply for pawns, we need to pawns we need to do extra check for them 
                 
                 game.pieceCausingKingCheck = currentSquare; // Needed for checkMate
-                std::wcout << "Piece causing check: " << game.pieceCausingKingCheck.piece << ", Pos: {" << game.pieceCausingKingCheck.pos.x << ", " <<
-                game.pieceCausingKingCheck.pos.y << "}" << std::endl; 
                 return false; // KING IS NOT SAFE
             }
         }
@@ -582,12 +621,6 @@ GameSqaure* moveConverter(ChessGame &game, std::wstring& move){
     // convert letter to number (a = 0, b = 1 etc)
     // convert char number to number ('0' = 0 etc)
     // minus 8 is important since (0,0) is flipped since 8 starts at top
-
-    //!TESTING
-    wchar_t a = move[0];
-    wchar_t b = move[1];
-
-    GameSqaure* temp = &game.GameBoard[8 - (b - 48)][a - 97];
 
     return &game.GameBoard[8 - (move[1] - 48)][move[0] - 97];
 }

@@ -1,10 +1,12 @@
-#pragma once 
+#pragma once
+
 #include <cstring>
 #include <string>
 #include <iostream>
 #include <deque>
 #include <vector>
 #include "./terminal-io/terminal.hpp"
+#include "./terminal-io/colors.hpp"
 
 #define CHESS_BOARD_HEIGHT 8
 #define CHESS_BOARD_WIDTH 8
@@ -15,6 +17,7 @@
 #define BISHOP_POSSIBLE_MOVES 28
 #define ROOK_POSSIBLE_MOVES 28
 #define QUEEN_POSSIBLE_MOVES 56 // ROOK + BISHOP
+
 
 struct Point{
     int x;
@@ -43,8 +46,6 @@ enum YHEIGHT{
     Y7
 };
 
-
-
 enum GamePiece{
     OPEN = 0,
     PAWN,
@@ -61,6 +62,8 @@ enum Owner{
     PTWO,
 };
 
+std::wstring enumPiece_toString(enum GamePiece p);
+
 class GameSqaure{
 public:
     GameSqaure(){}
@@ -70,10 +73,9 @@ public:
     enum Owner ownership;
 
     void print(){
-        std::wcout << "Pos: {" << pos.x << ", " << pos.y << "}, Piece: " << piece << ", Owner: " << (ownership == NONE ? "None" : ownership == PONE ? "Player one" : "Player two") << std::endl;
+        std::wcout << "Pos: {" << pos.x << ", " << pos.y << "}, Piece: " << enumPiece_toString(piece) << ", Owner: " << (ownership == NONE ? "None" : ownership == PONE ? "Player one" : "Player two") << std::endl;
     }
 };
-
 
 class ChessGame{
 
@@ -97,6 +99,10 @@ public:
     ChessGame(bool);
     void reset();
 
+    // Options regarding game
+    bool moveHighlighting = false;
+    enum WRITE_COLOR p1_color;// BOLD
+    enum WRITE_COLOR p2_color;// BOLD
 
 };
 
@@ -124,7 +130,7 @@ void handleOption();
 extern struct Piece_moveset Pawn1;
 void init_moveset();
 void uninit_moveset();
-void print_messages(std::deque<std::wstring>);
+void print_messages(std::vector<std::wstring>&);
 void print_board(ChessGame &game);
 bool kingSafe(ChessGame& game);
 bool checkMate(ChessGame &game);
@@ -136,3 +142,4 @@ std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from)
 void validateMovePiece(ChessGame& game, GameSqaure& movePiece, std::wstring& msg);
 void validateMoveToPiece(ChessGame& game, GameSqaure& moveToSquare, std::wstring& retMsg);
 void print_board_with_moves(ChessGame &game, GameSqaure& from, std::vector<GameSqaure*>& vecOfSquare);
+
