@@ -3,12 +3,12 @@ SOCKET = ./src/server/socket/sockethelper.cpp
 SERVER_FILES = ./src/server/servermain.cpp  $(CHESS_FUNC)
 CLIENT_FILES = ./src/client/clientmain.cpp ./src/client/clientlocalgame.cpp ./src/client/clientonlinegame.cpp $(CHESS_FUNC)
 DEV_FILES = ./src/dev_mode.cpp
-CHESS_FUNC = ./src/chessfunctionality.cpp ./src/terminal-io/terminal.cpp
+CHESS_FUNC = ./src/chessfunctionality.cpp ./src/terminal-io/terminal.cpp ./src/client-rand-strign/generate.cpp
 ZERO_OPTIMIZATION = -O0
 
 #test
 test:
-	clang++ main.cpp $(DEV_FILES) -g -o ./a.out -lncurses ./src/chessfunctionality.cpp
+	clang++ main.cpp -g -o ./a.out 
 	#clang++ main.cpp -g -o test.out -lSDL2 -lSDL2_ttf
 
 	./a.out
@@ -28,7 +28,7 @@ client:
 all: game
 	
 #build game (took out server for now)
-game: client
+game: client server
 
 clean:
 	rm -rf ./build/chess.out

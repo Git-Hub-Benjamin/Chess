@@ -1,9 +1,10 @@
 #include "../chess.hpp"
+#include "./option.hpp"
 #include <sstream>
 
 // GLOBAL
-extern enum WRITE_COLOR playerOneColor;
-extern enum WRITE_COLOR playerTwoColor;
+extern Options global_player_option;
+
 // QUEUE
 std::wstring nextTurnPrint; 
 
@@ -22,11 +23,7 @@ void local_game(bool dev_mode){
     
 
     ChessGame Game(dev_mode);
-    Game.p1_color = playerOneColor;
-    Game.p2_color = playerTwoColor;
-    
-    //! TEMPORARY
-    Game.moveHighlighting = true;
+    Game.GameOptions = global_player_option;
 
     // White alwalys go first
     bool& game_gameover = Game.gameover;
@@ -97,7 +94,7 @@ void local_game(bool dev_mode){
                 movePiece = Game.KingPositions[Game.currentTurn - 1];
             }
 
-            if(Game.moveHighlighting){
+            if(Game.GameOptions.moveHighlighting){
                 std::vector<GameSqaure*>* squaresPieceCanMoveTo;
                 squaresPieceCanMoveTo = get_move_to_squares(Game, *movePiece);
                 if(squaresPieceCanMoveTo->size() > 0) 

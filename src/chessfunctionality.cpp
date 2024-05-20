@@ -2,8 +2,13 @@
 #include <vector>
 #include <unordered_map>
 
-// Conversion from string to string
-std::string convertString(std::string &passed){
+// Conversion from string to wstring
+std::wstring convertString(const std::string& passed) {
+    return std::wstring(passed.begin(), passed.end());
+}
+
+// conversion from wstring to string
+std::string convertWString(std::wstring& passed){
     return std::string(passed.begin(), passed.end());
 }
 
@@ -371,10 +376,10 @@ void print_board_with_moves(ChessGame &game, GameSqaure& from, std::vector<GameS
                 piece = ' ';
             else if(game.GameBoard[i][j].ownership == PONE){
                 piece = piece_art_p1[game.GameBoard[i][j].piece];
-                set_terminal_color(game.p1_color);
+                set_terminal_color(game.GameOptions.p1_color);
             }else{
                 piece = piece_art_p2[game.GameBoard[i][j].piece];
-                set_terminal_color(game.p2_color);
+                set_terminal_color(game.GameOptions.p2_color);
             }
 
             // checking if the current square can be acctacked by piece
@@ -410,10 +415,10 @@ void print_board(ChessGame &game){
                 piece = ' ';
             else if(game.GameBoard[i][j].ownership == PONE){
                 piece = piece_art_p1[game.GameBoard[i][j].piece];
-                set_terminal_color(game.p1_color);
+                set_terminal_color(game.GameOptions.p1_color);
             }else{
                 piece = piece_art_p2[game.GameBoard[i][j].piece];
-                set_terminal_color(game.p2_color);
+                set_terminal_color(game.GameOptions.p2_color);
             }
             
             // print section --> "| ♟ " ex.
@@ -431,7 +436,6 @@ void print_board(ChessGame &game){
 
 //0; // Successful move
 //1; // Successful move piece taken
-//2; // Unsuccessful move
 int makeMove(ChessGame &game, GameSqaure &from, GameSqaure &to){
 
     int res = 0;
@@ -623,6 +627,10 @@ GameSqaure* moveConverter(ChessGame &game, std::wstring& move){
     // minus 8 is important since (0,0) is flipped since 8 starts at top
 
     return &game.GameBoard[8 - (move[1] - 48)][move[0] - 97];
+}
+
+int char_single_digit_to_int(const char c){
+    return c - 48;
 }
 
 static char toLowercase(char ch){

@@ -1,120 +1,45 @@
-
-
 #include <iostream>
 #include <thread>
-#include <chrono>
-#include <atomic>
-#include <ncurses.h>
-#include <mutex>
-#include <stdio.h>
-#include <string>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdlib.h>
-#include "./src/chess.h"
+#include <csignal>
 
-void handleOption(){
 
-}
+// Signal handler to interrupt std::cin
+void signal_handler(int signum) {}
 
-std::atomic<bool> stop_timer(false); // Atomic flag to signal the timer thread to stop
-static int current_time = 0;
-static std::string turn_string = "";
-static std::mutex print;
-static char* strings[2] = {"Move piece: ", "To square: "};
-
-void time_turn_print() {
-    // Use a mutex to ensure thread safety when accessing std::wcout
-    // static std::mutex mtx;
-    // std::lock_guard<std::mutex> lock(mtx);
-    print.lock();
-    std::wcout << "\r                                                              ";
-    std::wcout << "\rTime: " << current_time << " Turn: " << turn_string.c_str() << std::flush;
-    refresh();
-    print.unlock();
-}
-
-void clear_screen() {
-    #ifdef _WIN32
-        system("cls");
-    #else
-        // Assume POSIX-compatible system (Linux, macOS)
-        std::cout << "\033[2J\033[1;1H";
-        std::cout.flush();
-    #endif
-}
-
-void trackingNcurse() {
+// Function that runs in the thread
+void thread_func() {
+    std::string input;
+    // Register the signal handler for SIGUSR1
+    signal(SIGUSR1, signal_handler);
 
     while (true) {
-        int ch = getch(); // blocking until key press
-        if(ch == 10){ // checking for enter
-            std::string msg = "\nSubmited";
-            if(turn_string.find("clear") != std::string::npos){
-                msg = "\nCleared";
-                clear_screen();
-            }
-            std::cout << msg << std::endl;
-        }
-        else if(ch == 127){ // checking for delete
-            if(!turn_string.empty()){
-                turn_string.pop_back();
-            }
-        }
-        else{
-            turn_string += (char)ch;
-        }
-        
-        time_turn_print();
+        std::cout << "Enter input: ";
+        // Try to read input
+        std::cin >> input;
+        std::cout << "You entered: " << input << std::endl;
     }
 
-    endwin();
+    std::cout << "Thread exiting gracefully." << std::endl;
 }
 
-// Function to print the timer
-void timer() {
-    int count = 60; // Initial countdown value
-    while (count > 0 && !stop_timer) {
-        current_time = count;
-        time_turn_print();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        count--;
-    }
-    std::wcout << std::endl; // Print newline after countdown finishes
-}
+int main() {
+    std::thread t(thread_func);
 
-int main() {    
-    // ChessGame game;
-
-    // print_board(game);
-    // std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    // initscr();
-    // cbreak();
-    // noecho();
-
-    // while(true){
-    //     getch();
-    //     std::wcout << "Key pressed" << std::endl;
-    // }
-
+    // Give the thread time to start and block on std::cin
     
+    sleep(3);
 
-    // Output UTF-8 encoded wide characters
-    std::locale::global(std::locale("en_US.UTF-8"));
-    std::wstring abc = L"Hello my name is yoda";
-    std::wcout << "| ♜ | ♞ | ♝ | ♛ | ♚ | ♝ | ♞ | ♜ |" << std::endl;
-    std::wcout << abc << std::endl;
+    std::cout << "\nMatch found..." << std::endl;
 
+    // Send the SIGUSR1 signal to the thread to interrupt std::cin
+    pthread_kill(t.native_handle(), SIGUSR1);
 
-    // std::thread timer_thread(timer);
-    // std::thread ncurses(trackingNcurse);
-
-    // timer_thread.join();
+    std::wstring in;
+    std::wcin >> in;
 
     return 0;
 }
+
 
 
 

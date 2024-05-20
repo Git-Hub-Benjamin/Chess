@@ -7,6 +7,11 @@
 #include <vector>
 #include "./terminal-io/terminal.hpp"
 #include "./terminal-io/colors.hpp"
+#include "./client/option.hpp"
+#include "./client-rand-strign/random-string.hpp"
+#include "client-server-communication.hpp"
+
+#define CONFIG_FILE_NAME "/wchesscfg"
 
 #define CHESS_BOARD_HEIGHT 8
 #define CHESS_BOARD_WIDTH 8
@@ -17,6 +22,8 @@
 #define BISHOP_POSSIBLE_MOVES 28
 #define ROOK_POSSIBLE_MOVES 28
 #define QUEEN_POSSIBLE_MOVES 56 // ROOK + BISHOP
+
+#define ONLINE_BUFFER_SIZE 128
 
 
 struct Point{
@@ -88,21 +95,20 @@ public:
     // owner enum is used to track player turn, None will not be used, just 1 & 2
     enum Owner currentTurn;
     bool gameover;
+    ChessGame(){}
     GameSqaure GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
     GameSqaure* KingPositions[2]; // 2 because there are 2 players, update king position in makeMove function whenever king moves (NOTE CASTLING TOO)
     GameSqaure& pieceCausingKingCheck = GameBoard[0][0]; 
     // i dont like doing this, but idk what else to do to get rid of the warning / error,
     // either way this will be updated whenever a piece causes a check on a king
 
-    bool DEV_MODE_ENABLE;
+    bool DEV_MODE_ENABLE = false;;
     void DEV_MODE_PRESET();
     ChessGame(bool);
     void reset();
 
     // Options regarding game
-    bool moveHighlighting = false;
-    enum WRITE_COLOR p1_color;// BOLD
-    enum WRITE_COLOR p2_color;// BOLD
+    Options GameOptions;
 
 };
 
@@ -118,7 +124,9 @@ struct Piece_moveset{
 };
 
 // Everyone to use, idk how to sort these lmao
-std::string convertString(std::string &);
+int char_single_digit_to_int(const char c);
+std::wstring convertString(const std::string& passed);
+std::string convertWString(std::wstring& passed);
 
 // Functions for client main
 void local_game();
