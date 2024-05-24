@@ -1,43 +1,99 @@
 #include <iostream>
 #include <thread>
 #include <csignal>
+#include <string>
+#include <fcntl.h>
+#include <sys/stat.h>
 
+void enter_private_lobby_code_menu(){
+    std::wcout << L"\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = =" << std::endl;
+    std::wcout << L"(!back) to go back" << std::endl;
+    std::wcout << L"Searching for another players..." << std::endl;
+    std::wcout << L"--> " << std::endl;
+    std::wcout << L"= = = = = = = = = = = = = = = = = = = = = = = = = = = =" << std::endl;
+    std::wcout << L"\033[2A";  // Move cursor up 5 line
+    std::wcout << L"\033[4C";  // Move cursor right 4 columns
+    std::wcout.flush();
+}
 
-// Signal handler to interrupt std::cin
-void signal_handler(int signum) {}
+// Conversion from string to wstring
+std::wstring convertString(const std::string& passed) {
+    return std::wstring(passed.begin(), passed.end());
+}
 
-// Function that runs in the thread
-void thread_func() {
-    std::string input;
-    // Register the signal handler for SIGUSR1
-    signal(SIGUSR1, signal_handler);
+int server_terminal_communication_fd;
 
-    while (true) {
-        std::cout << "Enter input: ";
-        // Try to read input
-        std::cin >> input;
-        std::cout << "You entered: " << input << std::endl;
+void handle_command(std::string cmd){
+    std::wcout << convertString(cmd) << std::endl;
+}
+
+void read_fifo(){
+    char buffer[128];
+    ssize_t bytesRead;
+
+    bytesRead = read(server_terminal_communication_fd, buffer, sizeof(buffer) - 1);
+    if (bytesRead > 0) {
+        buffer[bytesRead] = '\0'; // Null-terminate the buffer
+        handle_command(std::string(buffer));
+    } else if (bytesRead == -1 && errno == EAGAIN) {
+        // No data available, perform other tasks in the thread
+        // (e.g., process other events, perform calculations)
+        
+        return;
     }
-
-    std::cout << "Thread exiting gracefully." << std::endl;
 }
 
 int main() {
-    std::thread t(thread_func);
 
-    // Give the thread time to start and block on std::cin
-    
-    sleep(3);
+    const char* fifo_path = "/tmp/serverchessfifo";
+    std::wcout << L"Waiting until writer is available..." << std::endl;
+    server_terminal_communication_fd = open(fifo_path, O_RDONLY);
 
-    std::cout << "\nMatch found..." << std::endl;
+    if (server_terminal_communication_fd == -1) {
+        perror("open");
+        
+        char user_input;
+        std::wcout << L"FIFO does not exist. Do you want to create it? (y/n): ";
+        std::cin >> user_input;
 
-    // Send the SIGUSR1 signal to the thread to interrupt std::cin
-    pthread_kill(t.native_handle(), SIGUSR1);
+        if (user_input == 'y' || user_input == 'Y') {
+            if (mkfifo(fifo_path, 0777) == -1) {
+                perror("mkfifo");
+                return 1;
+            } else {
+                std::wcout << L"FIFO created successfully. Waiting until writer is available..." << std::endl;
+                server_terminal_communication_fd = open(fifo_path, O_RDONLY);
+                if (server_terminal_communication_fd == -1) {
+                    perror("open");
+                    return 1;
+                }
+            }
+        } else {
+            return 1;
+        }
+    }
 
-    std::wstring in;
-    std::wcin >> in;
+    // Set the file descriptor for non-blocking mode
+    int flags = fcntl(server_terminal_communication_fd, F_GETFL, 0);
+    if (flags == -1) {
+        perror("fcntl(F_GETFL)");
+        return 1;
+    }
+    if (fcntl(server_terminal_communication_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        perror("fcntl(F_SETFL)");
+        return 1;
+    }
 
-    return 0;
+    while(true){
+        // read fifo
+
+        read_fifo();
+
+        // do other work
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+
 }
 
 

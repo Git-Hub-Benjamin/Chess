@@ -3,7 +3,7 @@ SOCKET = ./src/server/socket/sockethelper.cpp
 SERVER_FILES = ./src/server/servermain.cpp  $(CHESS_FUNC)
 CLIENT_FILES = ./src/client/clientmain.cpp ./src/client/clientlocalgame.cpp ./src/client/clientonlinegame.cpp $(CHESS_FUNC)
 DEV_FILES = ./src/dev_mode.cpp
-CHESS_FUNC = ./src/chessfunctionality.cpp ./src/terminal-io/terminal.cpp ./src/client-rand-strign/generate.cpp
+CHESS_FUNC = ./src/chessfunctionality.cpp ./src/terminal-io/terminal.cpp ./src/client-rand-string/generate.cpp
 ZERO_OPTIMIZATION = -O0
 
 #test
@@ -18,8 +18,17 @@ buru: game
 	./build/chess.out
 
 #build server
-server:
+tserver:
+	clang++ $(DEV_FILES) $(SERVER_FILES) $(SOCKET) -o ./build/serverchess.out -g $(ZERO_OPTIMIZATION) -D SERVER_TERMINAL
+	clang++ ./src/server/server-terminal-communication/fifowriter.cpp -o ./build/server-terminal.out
+
+#build server without terminal
+ntserver:
 	clang++ $(DEV_FILES) $(SERVER_FILES) $(SOCKET) -o ./build/serverchess.out -g $(ZERO_OPTIMIZATION)
+	
+terminal:
+	clang++ ./src/server/server-terminal-communication/fifowriter.cpp ./src/terminal-io/terminal.cpp -o ./build/server-terminal.out
+
 
 client:
 	clang++ $(DEV_FILES) $(CLIENT_FILES) $(SOCKET) -o ./build/chess.out -g $(ZERO_OPTIMIZATION)
@@ -28,7 +37,7 @@ client:
 all: game
 	
 #build game (took out server for now)
-game: client server
+game: client tserver
 
 clean:
 	rm -rf ./build/chess.out

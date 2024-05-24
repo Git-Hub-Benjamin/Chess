@@ -8,7 +8,7 @@
 #include "./terminal-io/terminal.hpp"
 #include "./terminal-io/colors.hpp"
 #include "./client/option.hpp"
-#include "./client-rand-strign/random-string.hpp"
+#include "./client-rand-string/random-string.hpp"
 #include "client-server-communication.hpp"
 
 #define CONFIG_FILE_NAME "/wchesscfg"
@@ -95,7 +95,6 @@ public:
     // owner enum is used to track player turn, None will not be used, just 1 & 2
     enum Owner currentTurn;
     bool gameover;
-    ChessGame(){}
     GameSqaure GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
     GameSqaure* KingPositions[2]; // 2 because there are 2 players, update king position in makeMove function whenever king moves (NOTE CASTLING TOO)
     GameSqaure& pieceCausingKingCheck = GameBoard[0][0]; 
@@ -105,6 +104,7 @@ public:
     bool DEV_MODE_ENABLE = false;;
     void DEV_MODE_PRESET();
     ChessGame(bool);
+    ChessGame();
     void reset();
 
     // Options regarding game

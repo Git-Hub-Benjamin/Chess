@@ -37,8 +37,59 @@
 
 //* MATCH FOUND
 #define MATCH_FOUND "match-found"
+#define CLIENT_RDY_FOR_MATCH ":match-ready" // before : will be the client bind string that is sending the match ready
+#define SERVER_CLIENT_ACK_MATCH_RDY "match-start" // server telling client we are going to start match, this will be sent after both clients have sent their match ready
+#define SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT "match-bad-you"
+#define SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT "match-bad-other"
+
+//* MATCH COMMUNICATION
+
+// Before each turn, the game status will be sent to each player
+#define GAMESTATUS_GAMEOVER_DC "opponent-dc" // other player disconnected
+#define GAMESTATUS_SURRENDER "gamestatus-surrender"    // other player surrender
+
+// if you got this and it WAS and its your turn then you lose bc you got checkmated
+// if you got this and its NOT your turn then you win bc you just did the move
+// that got them checkmated
+#define GAMESTATUS_CHECKMATE "gamestatus-checkmate"   
+// like checkmate if you get this and its your turn you are in check
+// if you get this and its not your turn you just put the other player in check 
+#define GAMESTATUS_CHECK "gamestatus-check"
+#define GAMESTATUS_ALL_GOOD "gamestatus-good"
+
+// To the player whos not their turn, after the other player has done their turn
+// gamestat:(-1,0,1, 2)\n // -1 Disconnected, 0 Surrender, 1 Checkmate, 2 (alive but check), 3 alive
+// move:( )\n
+// to:( )\n
+
+#define SERVER_CLIENT_INDEX_MOVE_PT_1 6
+#define SERVER_CLIENT_INDEX_MOVE_PT_2 7
+
+#define SERVER_CLIENT_INDEX_TO_PT_1 12
+#define SERVER_CLIENT_INDEX_TO_PT_2 13
+
+// To the player whos turn it is
+
+// From client to server:
+// "move:()\nto:()"
+#define CLIENT_MOVE_INDEX_AFTER_COLOR 6 // to 7
+#define CLIENT_TO_INDEX_AFTER_COLOR 11 // to 12
+
+// After the server verifys the move it will send back this to the client
+// "move:(0,1)\ncheck:(0,1)"
+
+#define SERVER_CLIENT_INDEX_MOVE_VALID 5
+#define SERVER_CLIENT_INDEX_CHECK_OR_NOT 13
+
+#define SERVER_CLIENT_VERIFY_MOVE_VALID "client-move-valid"
+#define SERVER_CLIENT_VERIFY_MOVE_INVALID "client-move-invalid"
+#define SERVER_CLIENT_VERIFY_MOVE_INVALID_CHECK "client-move-check"
 
 #define WAITING_MSG_W "waiting: \n"
 #define WAITING_MSG_P "playing: \n"
 #define WAITING_MSG_FIRST_INDEX 8
 #define WAITING_MSG_SECOND_INDEX 8
+
+//* Errors
+// This should actually never happen, but there is the smallest chance that it could
+#define SERVER_CLIENT_MAX_CAPACITY "server-max-capacity"

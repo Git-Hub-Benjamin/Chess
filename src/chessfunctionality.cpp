@@ -66,6 +66,11 @@ wchar_t piece_art_p2[7] = {' ', L'♙', L'♘', L'♗', L'♖', L'♔', L'♕'};
 
 // Class functions
 
+ChessGame::ChessGame(){
+    gameover = false;
+    init();
+}
+
 ChessGame::ChessGame(bool dev_mode){
     DEV_MODE_ENABLE = dev_mode;
     gameover = false;
@@ -73,6 +78,7 @@ ChessGame::ChessGame(bool dev_mode){
 }
 
 void ChessGame::reset(){
+    gameover = false;
     init();
 }
 
@@ -633,13 +639,14 @@ int char_single_digit_to_int(const char c){
     return c - 48;
 }
 
-static char toLowercase(char ch){
-    if(std::isupper(ch))
-        ch = std::tolower(ch);
-    return ch;
+
+std::string toLowercase(const std::string& str) {
+    std::string result;
+    for (char c : str) {
+        result += std::tolower(c);
+    }
+    return result;
 }
-
-
 
 // 0 --> Good
 // 1 --> Game changing option (requires restart) // not implemented yet

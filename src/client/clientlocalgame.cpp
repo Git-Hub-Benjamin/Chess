@@ -158,7 +158,7 @@ void local_game(bool dev_mode){
 
             // Now we need to make sure that the piece can actually make this move
             res = verifyMove(Game, *movePiece, *moveToSquare);
-            if(res != 1){
+            if(!res){
                 //! Invalid move
                 nextTurnPrint = std::wstring(L"Piece cannot reach there.");
                 continue;

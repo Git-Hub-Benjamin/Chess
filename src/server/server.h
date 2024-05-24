@@ -1,3 +1,5 @@
+#include "../chess.hpp"
+
 #ifndef CHESSSERVER_H
 #define CHESSSERVER_H
 
@@ -5,6 +7,12 @@ enum CLIENT_STATUS{
     UNBOUND, // If the heart_beat sock still needs to be bound to the client
     WAITING,
     PLAYING
+};
+
+enum LOBBY_STATUS{
+    ACTIVE,
+    QUEUE_KILL, // Self thread sets this,
+    AKN_KILL // Main thread will set this and make the thread join the main thread
 };
 
 enum GAME_MODE{
@@ -39,6 +47,20 @@ struct Client{
     } 
 };
 
+struct Online_ChessGame{
+
+    Online_ChessGame(std::thread* thread, int lobby_index, Client& cli1, Client& cli2):
+    game_thread(thread), client_lobbies_index(lobby_index), client1(cli1), client2(cli2){
+        lobby_status = ACTIVE;
+    }
+    std::thread* game_thread;
+    int client_lobbies_index;
+    Client& client1;
+    Client& client2;
+    enum LOBBY_STATUS lobby_status;
+
+    ChessGame game; // invokes the default constructor and called init
+};
 
 
 

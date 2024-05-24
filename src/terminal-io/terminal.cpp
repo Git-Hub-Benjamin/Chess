@@ -18,13 +18,13 @@ void set_terminal_color(enum WRITE_COLOR color) {
             col = std::wstring(L"36"); // AQUA
             break;
         case THIN:
-            col = std::wstring(L"37"); // THIN WHITE
+            col = std::wstring(L"0"); // THIN WHITE
             break;
         default:
             break;
     }
 
-    std::wstring output = L"\x001b[0;" + col + L"m";
+    std::wstring output = L"\x001b[" + col + L"m";
     std::wcout << output;
 }
 
