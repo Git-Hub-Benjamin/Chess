@@ -278,7 +278,20 @@ bool both_clients_joined_successfully(Client& client1, Client& client2){
     return true;
 }
 
-bool verify_client_connection(Client& client1, Client& client2){
+enum Owner fifty_fifty_player_turn(){
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> distribution(0, 1);
+    if(distribution(gen) + 1 == 1){ // Client 1 will be PONE, meaning will go first
+        return PONE;
+    }
+    return PTWO;
+}
+
+// None --> Bad, close lobby, 
+// P1 --> Client1 will have the first move and be player 1
+// P2 --> Client 2 will have the first move and be player 1
+enum Owner verify_client_connection_init_turn(Client& client1, Client& client2){
     // Give each 3 seconds to send back match-rdy msg
 
     bool client1_rdy = false;
@@ -297,23 +310,44 @@ bool verify_client_connection(Client& client1, Client& client2){
             // We dont have to check, if there is more than 0 bytes being sent it means they are ready
             client2_rdy = true;
         }
+
+        if(client1_rdy && client2_rdy)
+            break; // No point to keep checking
+
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
+    std::wcout << "client 1 rdy? --> " << (client1_rdy ? "True" : "False") << std::endl;
+    std::wcout << "client 2 rdy? --> " << (client2_rdy ? "True" : "False") << std::endl;
+
     if(client1_rdy && client2_rdy){
-        send(client1.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY, sizeof(SERVER_CLIENT_ACK_MATCH_RDY), 0);
-        send(client1.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY, sizeof(SERVER_CLIENT_ACK_MATCH_RDY), 0);
-        return true;
+        // Setup Player num / turn for each client
+        std::string send_client = SERVER_CLIENT_ACK_MATCH_RDY;
+        if(fifty_fifty_player_turn() == PONE){
+            send_client += "P1";
+            send(client1.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
+            send_client[send_client.length() - 1] = '2';
+            send(client2.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
+            return PONE;
+        }else{
+            send_client += "P2";
+            send(client1.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
+            send_client[send_client.length() - 1] = '1';
+            send(client2.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
+            return PTWO;
+        }
     }else if(client1_rdy){
         // Client 2 fault
+        std::wcout << "Client2 Fault --> " << convertString(client2.CLIENT_STRING_ID) << std::endl;
         send(client1.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT, sizeof(SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT), 0);
         send(client2.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT, sizeof(SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT), 0);
     }else{
         // Client 1 fault
+        std::wcout << "Client1 Fault --> " << convertString(client1.CLIENT_STRING_ID) << std::endl;
         send(client2.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT, sizeof(SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT), 0);
         send(client1.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT, sizeof(SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT), 0);
     }
-    return false;
+    return NONE;
 }
 
 void delete_lobby(int index){
@@ -331,34 +365,30 @@ void queue_lobby_close(enum LOBBY_STATUS& stat){
 
 }
 
-enum Owner init_client_turns(Online_ChessGame& lobby){
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> distribution(0, 1);
-    if(distribution(gen) + 1 == 1){ // Client 1 will be PONE, meaning will go first
-        send(lobby.client1.Game.fd, (void*)"P1", sizeof("P1"), 0);
-        send(lobby.client2.Game.fd, (void*)"P2", sizeof("P2"), 0);
-        return PONE;
-    }else{
-        send(lobby.client1.Game.fd, (void*)"P2", sizeof("P2"), 0);
-        send(lobby.client2.Game.fd, (void*)"P1", sizeof("P1"), 0);
-        return PTWO;
-    }
-}
-
 void GAME_FOR_TWO_CLIENTS(int lobbies_index){
 
     Online_ChessGame& Lobby = *Client_Lobbies[lobbies_index];
 
-    if(!verify_client_connection(Lobby.client1, Lobby.client2)){
+    std::wcout << "Game thread starting on the server, going to send the verify client message to the two clients" << std::endl;
+
+    enum Owner res = verify_client_connection_init_turn(Lobby.client1, Lobby.client2);
+
+    if(res == NONE){
+        std::wcout << "client connection was not successful" << std::endl;
         queue_lobby_close(Lobby.lobby_status);
         return; // So self can join with main thread
     }
+
+    std::wcout << "Both clients joined successfully..." << std::endl;
     
     ChessGame& Lobby_Game = Lobby.game;
 
-    Client& currTurnClient = Lobby_Game.currentTurn == init_client_turns(Lobby) ? Lobby.client1 : Lobby.client2;
+    Client& currTurnClient = (Lobby_Game.currentTurn == res ? Lobby.client1 : Lobby.client2);
     Client& notTurnClient  = &currTurnClient == &Lobby.client1 ? Lobby.client2 : Lobby.client1;
+
+    std::wcout << "Clients got turns, Curr turn client is --> " << convertString(currTurnClient.CLIENT_STRING_ID) << std::endl;
+    std::wcout << "Clients got turns, Curr Not turn client is --> " << convertString(notTurnClient.CLIENT_STRING_ID) << std::endl;
+
 
     while(!Lobby_Game.gameover){
 
@@ -668,7 +698,7 @@ void read_fifo(){
 // Anything else is the index into client_lobbies to use
 int check_for_open_lobby(){
     for(int client_lobbies_index = 0; client_lobbies_index < MAX_CLIENT / 2; client_lobbies_index++){
-        if(Client_Lobbies[client_lobbies_index] != nullptr)
+        if(Client_Lobbies[client_lobbies_index] == nullptr) // looking for a nullptr
             return client_lobbies_index;
     }
     return -1;
@@ -725,6 +755,8 @@ void dispatch_and_send_waiting_updates(){
         std::thread* game_thread;
         game_thread->detach(); // Dont want main thread waiting for this ever
         initalize_client_lobby(game_thread, lobby_index, pair.first, pair.second);
+
+        std::wcout << "Starting game thread" << std::endl;
 
         // start game thread
         game_thread = new std::thread(GAME_FOR_TWO_CLIENTS, lobby_index);

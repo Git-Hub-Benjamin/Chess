@@ -24,7 +24,7 @@ void set_terminal_color(enum WRITE_COLOR color) {
             break;
     }
 
-    std::wstring output = L"\x001b[" + col + L"m";
+    std::wstring output = L"\x001b[0;" + col + L"m";
     std::wcout << output;
 }
 

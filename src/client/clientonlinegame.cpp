@@ -130,29 +130,39 @@ bool notTurn_getMove(int fd, std::wstring& move, std::wstring& moveTo){
     return true;
 }
 
-// true --> GOOD
-// false --> SOMETHING WENT WRONG
-bool verify_player_server_connection(int fd){
+// None --> Bad, close lobby 
+// P1 or P2 --> Good
+enum Owner verify_player_server_connection(int fd){
     char buffer[ONLINE_BUFFER_SIZE] = {0};
     std::string match_rdy = bind_str + CLIENT_RDY_FOR_MATCH;
+
+    std::wcout << "Sending self ready for match message..." << std::endl;
+
     send(fd, match_rdy.c_str(), match_rdy.length(), 0);
     int byte_read = recv(fd, buffer, sizeof(buffer), 0);
+
+    std::wcout << "Bytes recieved --> " << byte_read << std::endl;
     
     if(byte_read <= 0)
         exit(EXIT_FAILURE); // FATAL ERROR, IDK WHEN THAT WOULD HAPPEN, SERVER SHOULD NEVER BE DOWN
 
     buffer[byte_read] = '\0';
     std::string res(buffer);
-    if(res.compare(SERVER_CLIENT_ACK_MATCH_RDY) != 0){
+
+    std::wcout << "Msg: " << convertString(res) << std::endl;
+    std::wcout << "Trying to find: " << convertString(std::string(SERVER_CLIENT_ACK_MATCH_RDY).substr(0, CLIENT_INDEX_AFTER_COLON_MATCH_START - 2)) << std::endl;
+
+    if(res.find(std::string(SERVER_CLIENT_ACK_MATCH_RDY).substr(0, CLIENT_INDEX_AFTER_COLON_MATCH_START - 2)) == std::string::npos){
+        
         if(res.compare(SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT))
             std::wcout << "Something went wrong with your connection to the server..." << std::endl;
         else
             std::wcout << "Something went wrong with the other players connection to the server..." << std::endl;
-        return false;
+        return NONE;
     }
 
-    std::wcout << "Both players successfully connected to lobby, Starting game..." << std::endl;
-    return true;
+    std::wcout << "Both players successfully connected to lobby, Starting game... Extracting player number --> " << res[CLIENT_INDEX_AFTER_COLON_MATCH_START + 1] << std::endl;
+    return static_cast<enum Owner>(res[CLIENT_INDEX_AFTER_COLON_MATCH_START + 1] - 48);
 }
 
 // Gameover -  0
@@ -184,10 +194,17 @@ int your_turn_server_lobby_pre_check(int fd){
 
 void game_loop(int game_fd){
     
-    if(!verify_player_server_connection(game_fd))
-        return;
 
-    enum Owner myPlayerNum = init_player_num_from_server(game_fd);
+
+    enum Owner myPlayerNum;
+
+    myPlayerNum = verify_player_server_connection(game_fd);
+        
+    if(myPlayerNum == NONE)
+        return;
+    
+    std::wcout << "Successfully joined lobby --> my Player number: " << myPlayerNum << std::endl;
+    std::wcout << "Successfully got playerNum --> " << (myPlayerNum == NONE ? "None" : (myPlayerNum == PONE ? "Player One" : "Player Two")) << std::endl;
     
     ChessGame Game;
     Game.GameOptions = global_player_option;
@@ -544,13 +561,8 @@ int create_private_lobby(int fd){
 
             std::wcout << L"\033[2B\033[G" << std::flush; // Move down 2 and to the beggining
             
-            //! TEMP
-            set_terminal_color(RED);
-            std::wcout << "MATCH FOUND = WAITING" << std::endl;
-            set_terminal_color(DEFAULT);
-            while(true){}
-            //game_loop(fd);
-            //return 0;
+            game_loop(fd);
+            return 0;
         }
 
         if(stop_input_thread){
