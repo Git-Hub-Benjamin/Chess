@@ -1,5 +1,6 @@
 #include "../chess.hpp"
 #include "./option.hpp"
+#include "client-terminal-frontend/displaymanager.hpp"
 #include <sstream>
 
 // GLOBAL

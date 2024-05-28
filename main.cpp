@@ -1,100 +1,153 @@
 #include <iostream>
 #include <thread>
-#include <csignal>
 #include <string>
+#include <unistd.h>
+#include <poll.h>
+#include <termios.h>
+#include <cstring>
+#include <memory>
+#include <atomic>
+#include <mutex>
 #include <fcntl.h>
-#include <sys/stat.h>
 
-void enter_private_lobby_code_menu(){
-    std::wcout << L"\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = =" << std::endl;
-    std::wcout << L"(!back) to go back" << std::endl;
-    std::wcout << L"Searching for another players..." << std::endl;
-    std::wcout << L"--> " << std::endl;
-    std::wcout << L"= = = = = = = = = = = = = = = = = = = = = = = = = = = =" << std::endl;
-    std::wcout << L"\033[2A";  // Move cursor up 5 line
-    std::wcout << L"\033[4C";  // Move cursor right 4 columns
-    std::wcout.flush();
-}
+std::atomic_bool global_stop;
+std::mutex mtx;
 
-// Conversion from string to wstring
-std::wstring convertString(const std::string& passed) {
-    return std::wstring(passed.begin(), passed.end());
-}
 
-int server_terminal_communication_fd;
 
-void handle_command(std::string cmd){
-    std::wcout << convertString(cmd) << std::endl;
-}
+class DisplayManager {
+public:
+    DisplayManager(const std::wstring& str, int pipe_fd) : lobbyCode(str), pipe_fd(pipe_fd) {}
+    DisplayManager(int pipe_fd) : pipe_fd(pipe_fd) {}
 
-void read_fifo(){
-    char buffer[128];
-    ssize_t bytesRead;
-
-    bytesRead = read(server_terminal_communication_fd, buffer, sizeof(buffer) - 1);
-    if (bytesRead > 0) {
-        buffer[bytesRead] = '\0'; // Null-terminate the buffer
-        handle_command(std::string(buffer));
-    } else if (bytesRead == -1 && errno == EAGAIN) {
-        // No data available, perform other tasks in the thread
-        // (e.g., process other events, perform calculations)
-        
-        return;
+    void start() {
+        std::thread timer_t(&DisplayManager::timer, this);
+        displayCodeAndWait();
+        if (timer_t.joinable())
+            timer_t.join(); // block until the timer meets
     }
-}
 
-int main() {
-
-    const char* fifo_path = "/tmp/serverchessfifo";
-    std::wcout << L"Waiting until writer is available..." << std::endl;
-    server_terminal_communication_fd = open(fifo_path, O_RDONLY);
-
-    if (server_terminal_communication_fd == -1) {
-        perror("open");
-        
-        char user_input;
-        std::wcout << L"FIFO does not exist. Do you want to create it? (y/n): ";
-        std::cin >> user_input;
-
-        if (user_input == 'y' || user_input == 'Y') {
-            if (mkfifo(fifo_path, 0777) == -1) {
-                perror("mkfifo");
-                return 1;
-            } else {
-                std::wcout << L"FIFO created successfully. Waiting until writer is available..." << std::endl;
-                server_terminal_communication_fd = open(fifo_path, O_RDONLY);
-                if (server_terminal_communication_fd == -1) {
-                    perror("open");
-                    return 1;
-                }
-            }
-        } else {
-            return 1;
+private:
+    void timer() {
+        int count = 60;
+        while (count != 0 && !stop_display) {
+            // Beggining of the line + Time + current string
+            mtx.lock();
+            std::wcout << "\033[G" << "Time: " << std::to_wstring(count) << " - " << inputBuffer << std::flush;
+            mtx.unlock();
+            count--;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
 
-    // Set the file descriptor for non-blocking mode
-    int flags = fcntl(server_terminal_communication_fd, F_GETFL, 0);
-    if (flags == -1) {
-        perror("fcntl(F_GETFL)");
+    void displayCodeAndWait() {
+
+        struct pollfd fds[2];
+        fds[0].fd = fileno(stdin); // File descriptor for std::cin
+        fds[0].events = POLLIN;
+        fds[1].fd = pipe_fd;       // File descriptor for the read end of the pipe
+        fds[1].events = POLLIN;
+
+        while (!stop_display) {
+            int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
+            if (ret > 0) {
+                if (fds[1].revents & POLLIN) {
+                    // Pipe has data to read
+                    char buffer[32];
+                    int byte_read = read(fds[1].fd, (void *)buffer, sizeof(buffer));
+                    if (buffer[0] == '1')
+                        break;
+
+                    // Checking if main thread wants this one to stop
+                }
+                if (fds[0].revents & POLLIN) {
+                    char ch;
+                    ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
+                    if (bytes_read > 0) {
+                        mtx.lock();
+                        if (ch == '\n') {
+                            if(inputBuffer == L"!back")
+                                break; // Handle out
+                        } else if (ch == 127) { // Backspace
+                            if (!inputBuffer.empty()) {
+                                inputBuffer.pop_back();
+                                std::wcout << "\033[D \033[D" << std::flush;
+                            }
+                        } else {
+                            std::wcout << ch << std::flush;
+                            inputBuffer += ch;
+                        }
+                        mtx.unlock();
+                    }
+                }
+            }
+        }
+
+        stop_display.store(true);
+        
+        std::wcout << "\033[GStopping display_code_and_wait...\n" << std::flush;
+    }
+
+    // Members
+    std::atomic_bool stop_display; // Only internal, Main thread can cause stop by writing to the end of the pipe
+    std::wstring lobbyCode; // Only if needed
+    std::wstring inputBuffer; // Current input
+    int pipe_fd; // For communication from main thread
+    struct pollfd fds[2] = {};
+};
+
+
+int main() {
+    std::wstring lobby_code = L"LobbyCode";
+
+    // Create a pipe for signaling
+    int pipe_fd[2];
+    if (pipe(pipe_fd) == -1) {
+        std::cerr << "Failed to create pipe" << std::endl;
         return 1;
     }
-    if (fcntl(server_terminal_communication_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        perror("fcntl(F_SETFL)");
-        return 1;
+
+    
+    {
+        DisplayManager display_timer(pipe_fd[0]);
+        TerminalController terminalController; // Manage terminal settings
+        std::thread display_t(&DisplayManager::start, &display_timer);
+        
+        // Simulate some work
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+
+        // Signal the thread to stop
+        write(pipe_fd[1], "1", 2); // Send termination signal to the pipe
+
+        // Wait for the thread to complete execution
+        if (display_t.joinable()) {
+            display_t.join();
+        }
     }
 
-    while(true){
-        // read fifo
 
-        read_fifo();
-
-        // do other work
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    }
-
+    return 0;
 }
+
+
+// int main(int argc, char **argv)
+// {
+//     struct termios attr;
+//     tcgetattr(STDIN_FILENO, &attr);
+//     attr.c_lflag &= ~(ICANON | ECHO);
+//     tcsetattr(STDIN_FILENO, TCSANOW, &attr);
+//     uint8_t buf[20];
+//     ssize_t bytes;
+//     while ((bytes = read(STDIN_FILENO, buf, 20)) > 0) {
+//         for (size_t i = 0; i < bytes; i++) {
+//             printf("%zd: %hhu\n", i, buf[i]);
+//         }
+//     }
+//     return 0;
+// }
+
+
+
 
 
 

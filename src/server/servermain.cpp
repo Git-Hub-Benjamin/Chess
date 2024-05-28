@@ -323,6 +323,14 @@ enum Owner verify_client_connection_init_turn(Client& client1, Client& client2){
     if(client1_rdy && client2_rdy){
         // Setup Player num / turn for each client
         std::string send_client = SERVER_CLIENT_ACK_MATCH_RDY;
+
+        //! FOR NOW MAKING CLIENT 1 AS PLAYER 1 SO THEY WILL GO FIRST, CLIENT 1 WILL BE THE MAKER OF THE PRIVATE LOBBY
+        send_client += "P1";
+        send(client1.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
+        send_client[send_client.length() - 1] = '2';
+        send(client2.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
+        return PONE;
+
         if(fifty_fifty_player_turn() == PONE){
             send_client += "P1";
             send(client1.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
@@ -391,6 +399,11 @@ void GAME_FOR_TWO_CLIENTS(int lobbies_index){
 
 
     while(!Lobby_Game.gameover){
+
+        while(true){
+            std::wcout << "Waiting... Curr -> " << convertString(currTurnClient.CLIENT_STRING_ID) << "\t Not turn --> " << convertString(notTurnClient.CLIENT_STRING_ID) << std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(3));
+        }
 
         // Make sure to switch currentTurn at the end of turn as always
         std::string pre_turn_check_in;
@@ -599,6 +612,16 @@ void client_waiting_to_playing(Client& curr){
     curr.RES_TO_CLIENT_WAITING = MATCH_FOUND;
 }
 
+void cleanup_inactive_lobbies(){
+    for(int client_lobbies_index = 0; client_lobbies_index < MAX_CLIENT / 2; client_lobbies_index++){
+        if(Client_Lobbies[client_lobbies_index] != nullptr && Client_Lobbies[client_lobbies_index]->lobby_status == QUEUE_KILL){
+            // Looking for valid lobbies and ones that are queued to be killed by the main thread
+
+        }
+    }
+    
+}
+
 #ifdef SERVER_TERMINAL
 static int server_terminal_communication_fd;
 
@@ -674,6 +697,8 @@ void handle_command(std::string command){
         display_game_lobbies(); // Display all client game lobbies
     else if(command.compare(CLIENT_PRIVATE_LOBBIES_CMD) == 0 || command.compare(CLIENT_PRIVATE_LOBBY_CMD) == 0)
         display_private_lobbies_and_owner(); // Display all private lobbies and their creator / maker
+    else if(command.compare(SERVER_KILL_LOBBIES_AND_THREAD) == 0 || command.compare(KILL_LOBBY_THREAD_CMD) == 0)
+        cleanup_inactive_lobbies(); // this will not work as expected
     else
         std::wcout << "Unknown command --> " << convertString(command) << std::endl;
 }
@@ -816,16 +841,6 @@ void accept_poll_sockets(int fd){
     
     // Send success message
     send(clientSocketFD, (void*)SERVER_CLIENT_INIT_GOOD, sizeof(SERVER_CLIENT_INIT_GOOD), 0);
-}
-
-void cleanup_inactive_lobbies(){
-    for(int client_lobbies_index = 0; client_lobbies_index < MAX_CLIENT / 2; client_lobbies_index++){
-        if(Client_Lobbies[client_lobbies_index] != nullptr && Client_Lobbies[client_lobbies_index]->lobby_status == QUEUE_KILL){
-            // Looking for valid lobbies and ones that are queued to be killed by the main thread
-
-        }
-    }
-    
 }
 
 void signalHandler(int signal) {

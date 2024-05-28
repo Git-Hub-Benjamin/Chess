@@ -5,6 +5,7 @@
 #include <sstream>
 #include <csignal>
 #include <atomic>
+#include <poll.h> 
  
 
 extern Options global_player_option;
@@ -12,6 +13,8 @@ extern int get_menu_option();
 static std::wstring ONLINE_PLAYER_ID;
 static std::string bind_str;
 
+int *global_pipe_id;
+std::atomic_bool stop_side_input_thread;
 
 void online_menu(){
     std::wcout << "\n\n\n\n\n";
@@ -37,7 +40,7 @@ void poll_to_server(int poll_fd){
     int count = 1;
     while(!ONLINE_QUIT){
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::yield();
 
         char buffer[sizeof(SERVER_POLL_MSG)] = {0};
         
@@ -112,6 +115,8 @@ bool notTurn_getMove(int fd, std::wstring& move, std::wstring& moveTo){
     char buffer[ONLINE_BUFFER_SIZE] = {0};
 
     // This will block until the other player completes their turn
+
+    std::wcout << "Blocking on the recv for the waiting non turn player" << std::endl;
 
     int byte_read = recv(fd, (void*)buffer, sizeof(buffer), 0);
 
@@ -193,8 +198,6 @@ int your_turn_server_lobby_pre_check(int fd){
 }
 
 void game_loop(int game_fd){
-    
-
 
     enum Owner myPlayerNum;
 
@@ -225,6 +228,59 @@ void game_loop(int game_fd){
         // see if server said valid move, if yes then complete move locally
         // if no then redo, end turn after
         print_board(Game);
+
+        if(myPlayerNum == Game.currentTurn){
+
+            while(true){
+
+                int res;
+
+                std::wstring move;
+                std::wstring moveTo;
+                std::wstring ret_msg;
+
+                std::wcout << "Your move: ";
+                res = getMove(move);
+                if(res != 0){ 
+                    // handle
+                    if(res == 1){ // 1 --> Option change, 
+                        // QUIT
+                    }else{
+                        continue; // 2 --> Invalid input
+                    }
+                }
+
+                validateMovePiece(Game, *moveConverter(Game, move), ret_msg);
+
+                if(ret_msg.length() != 0){
+                    std::wcout << ret_msg << std::endl;
+                    continue;
+                }
+
+                std::wcout << "Move to: ";
+                res = getMove(moveTo);
+                if(res != 0){
+                    // hanlde
+                    // handle
+                    if(res == 1){ // 1 --> Option change, 
+                        // QUIT
+                    }else{
+                        continue; // 2 --> Invalid input
+                    }
+                }
+
+                validateMoveToPiece(Game, *moveConverter(Game, moveTo), ret_msg);
+            }
+        }else{
+
+            while(true){
+                std::wcout << "Waiting... (myPlayerNum: " << (myPlayerNum == NONE ? "None" : (myPlayerNum == PONE ? "Player One" : "Player Two")) << "), Game.currentTurn: " << (Game.currentTurn == NONE ? "None" : (Game.currentTurn == PONE ? "Player One" : "Player Two")) << std::endl;
+                std::this_thread::sleep_for(std::chrono::seconds(3));
+            }
+
+        }
+
+
 
         if(myPlayerNum == Game.currentTurn){
 
@@ -393,29 +449,41 @@ void join_private_lobby(int fd){
     }
 }
 
-void signal_handler(int sig){}
+void display_code_and_wait(std::wstring str, int pipe_fd){
 
-void display_code_and_wait(std::wstring& str, std::atomic_bool& stop){
-    
-    signal(SIGUSR1, signal_handler);
+    struct pollfd fds[2];
+    fds[0].fd = fileno(stdin); // File descriptor for std::cin
+    fds[0].events = POLLIN;
+    fds[1].fd = pipe_fd; // File descriptor for the read end of the pipe
+    fds[1].events = POLLIN;
 
-    while (stop == false)
+    while (true)
     {
         display_private_lobby_code_menu(str);
-        std::wstring input;
-        std::wcin >> input;
+        int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
+        if (ret > 0) {
+            if (fds[1].revents & POLLIN) {
+                // Pipe has data to read, which means we should exit
+                break;
+            }
+            if (fds[0].revents & POLLIN) {
+                // std::cin has data to read
+                std::wstring input;
+                std::wcin >> input;
 
-        if(input.compare(L"!back") != 0)
-            continue;
-
-        stop = true;
+                if(input.compare(L"!back") == 0)
+                    break;
+                else
+                    std::wcout << "\033[1A\033[G--> " << std::flush;
+            }
+        }
     }  
+
+    stop_side_input_thread.store(true);
 }
 
 
 void queue_rand_and_wait(bool& back_to_menu){
-    
-    signal(SIGUSR1, signal_handler);
 
     while (true)
     {
@@ -528,49 +596,64 @@ int create_private_lobby(int fd){
         return 1;
     }
 
+    // Create a pipe for signaling
+    int pipe_fd[2];
+    if (pipe(pipe_fd) == -1) {
+        std::cerr << "Failed to create pipe" << std::endl;
+        return 1;
+    }
+
+    stop_side_input_thread.store(false);
+    global_pipe_id = pipe_fd;
+
     // Lobby was created, now we need to display the code on the screen
     std::wstring lobby_code = convertString(res_from_server.substr(CLIENT_INDEX_AFTER_COLON_IN_CREATE_LOBBY_CODE, bytes_recieved - 1));
     
-    std::atomic_bool stop_input_thread(false);
-    std::thread display_code_and_wait_t(display_code_and_wait, std::ref(lobby_code), std::ref(stop_input_thread));
+    std::thread display_code_and_wait_t(display_code_and_wait, lobby_code, pipe_fd[0]);
+    {
+        
+        while(true){
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            int bytes_read = recv(fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
+            buffer[bytes_read] = '\0';
+            std::string res_from_server(buffer);
+            if(bytes_read < 0){
+                if(errno != EAGAIN || errno != EWOULDBLOCK){
+                    // Means a genuine error occurred
+                    std::wcout << "Error occurred in socket" << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+            }else{
 
-    while(true){
-        std::this_thread::sleep_for(std::chrono::milliseconds(250));
-        int bytes_read = recv(fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
-        buffer[bytes_read] = '\0';
-        std::string res_from_server(buffer);
-        if(bytes_read < 0){
-            if(errno != EAGAIN || errno != EWOULDBLOCK){
-                // Means a genuine error occurred
-                std::wcout << "Error occurred in socket" << std::endl;
-                exit(EXIT_FAILURE);
-            }
-        }else{
+                // Got data from the server
+                if(res_from_server.compare(MATCH_FOUND) != 0){
+                    std::wcout << L"\033[2B\033[G" << std::flush; // Move down 2 and to the beggining
+                    std::wcout << "Error creating/joining lobby for some reason..." << std::endl;
+                    send(fd, (void*)CLIENT_CLOSE_LOBBY, sizeof(CLIENT_CLOSE_LOBBY), 0);
+                    return 1;
+                }
 
-            // Got data from the server
-            if(res_from_server.compare(MATCH_FOUND) != 0){
+                //! MATCH FOUND, Tell input thread to stop
+                write(pipe_fd[1], "1", 1);
+                if(display_code_and_wait_t.joinable())
+                    display_code_and_wait_t.join();
+
                 std::wcout << L"\033[2B\033[G" << std::flush; // Move down 2 and to the beggining
-                std::wcout << "Error creating/joining lobby for some reason..." << std::endl;
+                
+                game_loop(fd);
+                return 0;
+            }
+
+            if(stop_side_input_thread){
+
+                if(display_code_and_wait_t.joinable())
+                    display_code_and_wait_t.join();
+
                 send(fd, (void*)CLIENT_CLOSE_LOBBY, sizeof(CLIENT_CLOSE_LOBBY), 0);
                 return 1;
             }
 
-            //! MATCH FOUND, we need to kill bc it is blocking in wcin
-            pthread_kill(display_code_and_wait_t.native_handle(), SIGUSR1);
-            display_code_and_wait_t.detach();
-
-            std::wcout << L"\033[2B\033[G" << std::flush; // Move down 2 and to the beggining
-            
-            game_loop(fd);
-            return 0;
         }
-
-        if(stop_input_thread){
-            display_code_and_wait_t.join();
-            send(fd, (void*)CLIENT_CLOSE_LOBBY, sizeof(CLIENT_CLOSE_LOBBY), 0);
-            return 1;
-        }
-
     }
 }
 
