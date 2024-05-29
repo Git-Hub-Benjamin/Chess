@@ -288,14 +288,15 @@ enum Owner fifty_fifty_player_turn(){
     return PTWO;
 }
 
-// None --> Bad, close lobby, 
-// P1 --> Client1 will have the first move and be player 1
-// P2 --> Client 2 will have the first move and be player 1
-bool verify_client_connection_init_turn(Client& client1, Client& client2){
+// False --> End game, client connection went wrong
+// True  --> Both clients connected continue
+bool verify_client_connection_init_turn(int index){
     // Give each 3 seconds to send back match-rdy msg
 
     bool client1_rdy = false;
     bool client2_rdy = false;
+    Client& client1 = Client_Lobbies[index]->client1;
+    Client& client2 = Client_Lobbies[index]->client2;
     char buffer[ONLINE_BUFFER_SIZE] = {0};
 
     for(int i = 0; i < 3; i++){
@@ -321,26 +322,10 @@ bool verify_client_connection_init_turn(Client& client1, Client& client2){
     std::wcout << "client 2 rdy? --> " << (client2_rdy ? "True" : "False") << std::endl;
 
     if(client1_rdy && client2_rdy){
-        // Setup Player num / turn for each client
-        std::string send_client = SERVER_CLIENT_ACK_MATCH_RDY;
-
-        if(fifty_fifty_player_turn() == PONE){
-            send_client += "P1";
-            send(client1.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
-            client1.Player = PONE;
-            send_client[send_client.length() - 1] = '2';
-            send(client2.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
-            client2.Player = PTWO;
-        }else{
-            send_client += "P2";
-            send(client1.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
-            client1.Player = PTWO;
-            send_client[send_client.length() - 1] = '1';
-            send(client2.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
-            client2.Player = PONE;
-        }
-
+        
+        // If both are ready, the next step is to send the pre turn check in
         return true;
+
     }else if(client1_rdy){
         // Client 2 fault
         std::wcout << "Client2 Fault --> " << convertString(client2.CLIENT_STRING_ID) << std::endl;
@@ -431,33 +416,101 @@ bool end_turn_client_check_in(int lobby_index){
     return (client1_rdy && client2_rdy);
 }
 
+bool send_preturn_check_in(int index, std::string& msg){
+    if(send(Client_Lobbies[index]->client1.Game.fd, (void*)msg.c_str(), msg.length(), 0) < 0 || send(Client_Lobbies[index]->client2.Game.fd, (void*)msg.c_str(), msg.length(), 0) < 0)
+        return false;
+    return true;
+}
+
+// -1 - Server fault
+// 0 -- Good
+// 1 -- Client fault
+int recieve_non_turn_client_check_in(Client& nonTurnClient){
+    char buf[ONLINE_BUFFER_SIZE] = {0};
+    int byte_read = recv(nonTurnClient.Game.fd, (void*)buf, sizeof(buf), 0);
+
+    if(byte_read < 0)
+        return -1;
+
+    if(byte_read <= 0)
+        return 1;
+    
+    return 0;
+}
+
+// -1 - Server fault
+// 0 -- Good
+// 1 -- Client fault
+int recieve_turn_client_move(Client& turnClient, std::string& out){
+    char buf[ONLINE_BUFFER_SIZE] = {0};
+    int byte_read = recv(turnClient.Game.fd, (void*)buf, sizeof(buf), 0); 
+
+    if(byte_read < 0)
+        return -1;
+
+    if(byte_read <= 0)
+        return 1;
+
+    buf[byte_read] = '\0';
+    out = buf;
+    return 0;
+}
+
+void format_turn_move(std::string& in, std::wstring& move, std::wstring& to){
+    move += in[CLIENT_MOVE_INDEX_AFTER_COLON];
+    move += in[CLIENT_MOVE_INDEX_AFTER_COLON + 1];
+    to +=   in[CLIENT_TO_INDEX_AFTER_COLON];
+    to +=   in[CLIENT_TO_INDEX_AFTER_COLON + 1];
+}
+
+void convert_move_square(ChessGame& LobbyGame, Client& currTurnClient, GameSqaure* movesquare, GameSqaure* moveToSquare, std::wstring& move, std::wstring& to){
+    if(move.compare(L"KI") == 0){
+        // The client was automatcially put to move the king
+        movesquare = LobbyGame.KingPositions[currTurnClient.Player - 1];
+    }else{
+        movesquare = moveConverter(LobbyGame, move);
+    }
+
+    moveToSquare = moveConverter(LobbyGame, to);
+}
+
+void check_valid_move(ChessGame& LobbyGame, GameSqaure* movePiece, GameSqaure* moveToSquare, std::string& out){
+    out = SERVER_CLIENT_VERIFY_MOVE_VALID;
+
+    if(!verifyMove(LobbyGame, *movePiece, *moveToSquare)){
+        out = SERVER_CLIENT_VERIFY_MOVE_INVALID;
+    }else{
+
+        // Check if making this move puts them in check
+        GameSqaure copyOfSquareBeingMoved = *movePiece;
+        GameSqaure copyOfSquareBeingMovedTo = *moveToSquare;
+
+        int res = makeMove(LobbyGame, *movePiece, *moveToSquare); //! CAUSING SEGMENTATION FAULT, Maybe something to do with copy? it was working fine before...
+        if(res == 2){
+            //! I dont know when makemove would return 2, but for later if i need it
+        }else{
+            if(!kingSafe(LobbyGame)){
+                out = SERVER_CLIENT_VERIFY_MOVE_INVALID_CHECK;
+                makeMove(LobbyGame, copyOfSquareBeingMoved, copyOfSquareBeingMovedTo); // Revert move
+            }
+        }
+    }
+}
+
 void GAME_FOR_TWO_CLIENTS(int lobbies_index){
 
+    // Init these variables
     Online_ChessGame& Lobby = *Client_Lobbies[lobbies_index];    
     ChessGame& Lobby_Game = Lobby.game;
 
-    if(!verify_client_connection_init_turn(Lobby.client1, Lobby.client2)){
-        std::wcout << "client connection was not successful" << std::endl;
-        queue_lobby_close(Lobby.lobby_status);
-        return; // So self can join with main thread
-    }
-
-    // Init these variables
     Client& currTurnClient = (Lobby_Game.currentTurn == Lobby.client1.Player ? Lobby.client1 : Lobby.client2);
     Client& notTurnClient  = (&currTurnClient == &Lobby.client1 ? Lobby.client2 : Lobby.client1);
-    
-    std::wcout << "Clients got turns, Curr turn client is --> " << convertString(currTurnClient.CLIENT_STRING_ID) << std::endl;
-    std::wcout << "Clients got turns, Curr Not turn client is --> " << convertString(notTurnClient.CLIENT_STRING_ID) << std::endl;
 
-    //! We need to verify connection one more time because above we are sending 
-    //! match-start then below we are also sending the pre turn match status,
-    //! there is a chance and it has happened that both messages get recv by the
-    //! the client at the same time
-
-    if(!begin_game_client_check(lobbies_index)){
+    // Make sure both clients send ("match-start")
+    if(!verify_client_connection_init_turn(lobbies_index)){
         std::wcout << "client connection was not successful" << std::endl;
         queue_lobby_close(Lobby.lobby_status);
-        return; // So self can join with main thread
+        return; 
     }
 
     while(!Lobby_Game.gameover){
@@ -477,68 +530,40 @@ void GAME_FOR_TWO_CLIENTS(int lobbies_index){
             pre_turn_check_in = GAMESTATUS_ALL_GOOD;
         }
 
-
         //! This is where we would do some checks for GAMESTATUS_DC
 
-        send(currTurnClient.Game.fd, (void*)pre_turn_check_in.c_str(), pre_turn_check_in.length(), 0);
-        send(notTurnClient.Game.fd,  (void*)pre_turn_check_in.c_str(), pre_turn_check_in.length(), 0);
+        if(!send_preturn_check_in(lobbies_index, pre_turn_check_in)){
+            // Tell clients there was a socket error, Server fault
+        }
 
-        std::wcout << "Just sent the pre turn check in: " << convertString(pre_turn_check_in) << std::endl;
-        
+        int res = recieve_non_turn_client_check_in(notTurnClient);
+        if(res < 0){
+            // Tell clients there was a socket error, Server fault
+        }else if(res > 0){
+            // Client fault, DC
+        }
+
         while(true){
 
-            // Read the formatted valid turn from the current turn client, now we have to validate it
-            char buffer[ONLINE_BUFFER_SIZE] = {0};
-            int byte_read = recv(currTurnClient.Game.fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
-            if(byte_read < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)){
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
-            }else if(byte_read == 0){
-                send(notTurnClient.Game.fd, (void*)GAMESTATUS_GAMEOVER_DC, sizeof(GAMESTATUS_GAMEOVER_DC), 0);
-                queue_lobby_close(Lobby.lobby_status);
-                return; 
-            }else if(byte_read < 0){
-                // Socket error, close connection with clients, server fault
+            std::string response;
+            res = recieve_turn_client_move(currTurnClient, response);
+            if(res < 0){
+                // Tell clients there was a socket error, Server fault
+            }else if(res > 0){
+                // Client fault, DC
             }
 
-            // Make sure non turn player has sent non turn check in 
-            byte_read = recv(notTurnClient.Game.fd, buffer, sizeof(buffer), 0);
-            if(byte_read <= 0)
-                // Close conneciton
-
-
-            // Else bytes recieved...
-
-            // Formatted like:
-            // "move:()to:"
-            buffer[byte_read] = '\0';
-
-            std::string res(buffer);
-
-            std::string move_unformat;
-            move_unformat += res[CLIENT_MOVE_INDEX_AFTER_COLON];
-            move_unformat += res[CLIENT_MOVE_INDEX_AFTER_COLON + 1];
-
-            std::string to_unformat;
-            to_unformat += res[CLIENT_TO_INDEX_AFTER_COLON];
-            to_unformat += res[CLIENT_TO_INDEX_AFTER_COLON + 1];
-
-            std::wstring move(convertString(move_unformat));
-            std::wstring to(convertString(to_unformat));
+            std::wstring move;
+            std::wstring to;
+            format_turn_move(response, move, to);
 
             std::wcout << "\n\nClient move: " << move << std::endl;
             std::wcout << "\n\nClient to  : " <<  to  << std::endl;
 
             GameSqaure* movePiece;
+            GameSqaure* moveToSquare;
 
-            if(move.compare(L"KI") == 0){
-                // The client was automatcially put to move the king
-                movePiece = Lobby_Game.KingPositions[currTurnClient.Player - 1];
-            }else{
-                movePiece = moveConverter(Lobby_Game, move);
-            }
-
-            GameSqaure* moveToSquare = moveConverter(Lobby_Game, to);
+            convert_move_square(Lobby_Game, currTurnClient, movePiece, moveToSquare, move, to);
 
             std::wcout << "Client movesquare --> ";
             movePiece->print();
@@ -547,38 +572,22 @@ void GAME_FOR_TWO_CLIENTS(int lobbies_index){
             std::wcout << std::endl;
 
             // Got move and to, now check valid
-            std::string validaty_of_move_str = SERVER_CLIENT_VERIFY_MOVE_VALID;
+            std::string validaty_of_move_str;
+            
+            check_valid_move(Lobby_Game, movePiece, moveToSquare, validaty_of_move_str);
 
-            if(!verifyMove(Lobby_Game, *movePiece, *moveToSquare)){
-                validaty_of_move_str = SERVER_CLIENT_VERIFY_MOVE_INVALID;
-            }else{
-
-                // Check if making this move puts them in check
-                GameSqaure copyOfSquareBeingMoved = *movePiece;
-                GameSqaure copyOfSquareBeingMovedTo = *moveToSquare;
-
-                int res = makeMove(Lobby_Game, *movePiece, *moveToSquare); //! CAUSING SEGMENTATION FAULT, Maybe something to do with copy? it was working fine before...
-                if(res == 2)
-                    continue; //! I dont know when makemove would return 2, but for later if i need it
-                else{
-                    if(!kingSafe(Lobby_Game)){
-                        validaty_of_move_str = SERVER_CLIENT_VERIFY_MOVE_INVALID_CHECK;
-                        makeMove(Lobby_Game, copyOfSquareBeingMoved, copyOfSquareBeingMovedTo); // Revert move
-                    }
-                }
+            if(send(currTurnClient.Game.fd, (void*)validaty_of_move_str.c_str(), validaty_of_move_str.length(), 0) < 0){
+                // Tell clients there was a socket error, Server fault
             }
 
-            send(currTurnClient.Game.fd, (void*)validaty_of_move_str.c_str(), validaty_of_move_str.length(), 0);
-
             // If its invalid, we have to do it all again
-            
             if(validaty_of_move_str.compare(SERVER_CLIENT_VERIFY_MOVE_VALID) != 0)
                 continue;
 
             // Valid move, the other player is still expecting the move the other player made,
             // Since we already did the checks on it we can just send it
 
-            send(notTurnClient.Game.fd, (void*)buffer, byte_read, 0);
+            send(notTurnClient.Game.fd, (void*)response.c_str(), response.length(), 0);
             break;
         }
 
@@ -872,20 +881,43 @@ void dispatch_and_send_waiting_updates(){
 
     // Schedule matches found
     for(auto pair: CLIENTS_TO_DISPATCH){
-        std::wcout << "FOUND MATCH FOR TWO CLIENTS, NOW CHECK IF SPACE FOR LOBBY" << std::endl;
+
+        std::wcout << "= = = = =\n\nFOUND MATCH FOR TWO CLIENTS\nClient 1: " << convertString(pair.first.CLIENT_STRING_ID) << "\nClient 2: " << convertString(pair.second.CLIENT_STRING_ID) << "\n\n= = = = =" << std::endl;
         int lobby_index = check_for_open_lobby();
+
         if(lobby_index < 0){
             // Means no open lobby was found
             pair.first.RES_TO_CLIENT_WAITING = SERVER_CLIENT_MAX_CAPACITY;
             pair.second.RES_TO_CLIENT_WAITING = SERVER_CLIENT_MAX_CAPACITY;
+
+            set_terminal_color(RED);
+            std::wcout << "Nevermind... No lobbies available..." << std::endl;
+            set_terminal_color(DEFAULT);
+
             continue;
         }
 
-        // It is safe to start a thread now because the first thing that server 
-        // does when the game loop starts is listen to make sure both clients are 
-        // connected, so we dont have to worry about sending two messages at the same time        
-        client_waiting_to_playing(pair.first); // This will set matchfound for the client
-        client_waiting_to_playing(pair.second); // This too, then it will send it below regulary
+        enum Owner playerSelect = fifty_fifty_player_turn();
+
+        pair.first.Player = playerSelect;
+        pair.second.Player = (playerSelect == PONE ? PTWO : PONE);;
+
+        std::string client1_res = MATCH_FOUND;
+        client1_res += ",opponent:";
+        std::string client2_res = client1_res;
+        client1_res += pair.second.CLIENT_STRING_ID;
+        client2_res += pair.first.CLIENT_STRING_ID;
+        client1_res += ",playerNum:";
+        client1_res += pair.first.Player == PONE ? '1' : '2';
+        client2_res += ",playerNum:";
+        client2_res += pair.second.Player == PONE ? '1' : '2';
+
+        std::wcout << "Client 1 res: " << convertString(client1_res) << std::endl;
+        std::wcout << "Client 2 res: " << convertString(client2_res) << std::endl;
+
+        pair.first.status = PLAYING;
+        pair.second.status = PLAYING;
+
         std::thread* game_thread;
         game_thread->detach(); // Dont want main thread waiting for this ever
         initalize_client_lobby(game_thread, lobby_index, pair.first, pair.second);

@@ -1,5 +1,6 @@
 #pragma once
-#include "../chess.hpp"
+
+#include "../terminal-io/colors.hpp"
 
 class Options{
 public:

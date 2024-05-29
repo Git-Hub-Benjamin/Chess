@@ -36,7 +36,10 @@
 #define SERVER_CLIENT_LEAVE_RAND_QUEUE_GOOD "leave-rand-queue-good"
 
 //* MATCH FOUND
+// "match-found,opponent:bind___str,playerNum:_"
 #define MATCH_FOUND "match-found"
+#define CLIENT_EXTRACT_OPPONENT_BIND_STR 21
+#define CLIENT_EXTRACT_OPPONENT_BIND_STR_LEN 10
 #define CLIENT_RDY_FOR_MATCH ":match-ready" // before : will be the client bind string that is sending the match ready
 #define SERVER_CLIENT_ACK_MATCH_RDY "match-start:" // after colon will be P1 or P2
 #define CLIENT_INDEX_AFTER_COLON_MATCH_START 12

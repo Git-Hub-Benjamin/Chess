@@ -1,6 +1,42 @@
 #include "textgraphic.hpp"
 
-void online_menu(std::wstring& plyr_id){
+static void option_active_inactive(bool check){
+	if(check)
+		set_terminal_color(GREEN);
+	else
+		set_terminal_color(RED);
+	
+	std::wcout << (check == true ? "Active" : "Inactive") << std::endl;
+	set_terminal_color(DEFAULT);
+}
+
+
+static enum WRITE_COLOR num_to_enum_write_color(int num){
+	switch(num){
+		case 1:
+			return AQUA;
+		case 2:
+			return GREEN;
+		case 3:
+			return BLUE;
+	}
+	return DEFAULT; // ??
+}
+
+void color_option_active_inactive(enum WRITE_COLOR check, int playerNum){
+	enum WRITE_COLOR& colorToChange = playerNum == 1 ? global_player_option.p1_color : global_player_option.p2_color;
+	if(check == colorToChange){
+		set_terminal_color(GREEN);
+		std::wcout << "Active";
+	}else{
+		set_terminal_color(RED);
+		std::wcout << "Inactive";
+	}
+	set_terminal_color(DEFAULT);
+
+}
+
+void online_menu(std::wstring plyr_id){
     std::wcout << "\n\n\n\n\n";
 	std::wcout << "\t\t\t|=====================================|\n";
     std::wcout << "\t\t\t|                                     |\n";
@@ -16,6 +52,40 @@ void online_menu(std::wstring& plyr_id){
     std::wcout << "\t\t\t|                                     |\n";
     std::wcout << "\t\t\t|=====================================|\n";
 	std::wcout << "\n\n\n--> ";
+}
+
+void title_screen(){
+    // menu when starting;
+    std::wcout << "\n\n\n\n\n";
+	std::wcout << "\t\t\t|=====================================|\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|               W-CHESS               |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|           1. Local Game             |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|           2. Online Game            |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|           3. Options                |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|           4. Quit                   |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|=====================================|\n";
+	std::wcout << "\n\n\n" << std::endl;
+}
+
+void option_screen(){
+	std::wcout << "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = =\n";
+	std::wcout << "1. Change colors" << std::endl;
+	std::wcout << "2. Piece moveset highlighting (Local only)" << " | ";
+	option_active_inactive(global_player_option.moveHighlighting);
+	std::wcout << "3. Board history / Undo moves (Local only)" << " | ";
+	option_active_inactive(global_player_option.boardHistory);
+	std::wcout << "4. Flip board on new turn     (Local only)" << " | ";
+	option_active_inactive(global_player_option.flipBoardOnNewTurn);
+	std::wcout << "5. Changes made affect W-Chess Config File | ";
+	option_active_inactive(SETTING_CHANGE_AFFECTS_CONFIG_FILE);
+	std::wcout << "6. W-Chess Config File" << std::endl;
+	std::wcout << "7. Back" << "\n= = = = = = = = = = = = = = = = = = = = = = = = = = = =\n--> ";
 }
 
 void enter_private_lobby_code_menu(){
