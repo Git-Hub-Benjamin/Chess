@@ -47,7 +47,7 @@ void loading_connecting_to_server(){
         std::wcout << L"\rConnecting to server" << dots << std::flush;
         count++;
         dots += L".";
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(750));
     }
 
     std::wcout << std::endl;
@@ -67,6 +67,8 @@ int connect_to_server(int poll_fd, struct sockaddr_in* poll_addr, int game_fd, s
         status = ERROR;
         return 1;
     }
+
+    std::thread init_connection_animation_t(loading_connecting_to_server);
 
     // Send bind string
     std::string bind_str = CLIENT_ID_BIND_MSG;
@@ -100,6 +102,10 @@ int connect_to_server(int poll_fd, struct sockaddr_in* poll_addr, int game_fd, s
 
     status = CONNECTED;
 
+    // Make sure the animation thread joins before continuing execution
+    if(init_connection_animation_t.joinable())
+        init_connection_animation_t.join();
+
     return 0;
 
 }
@@ -111,13 +117,7 @@ int online_game() {
     struct sockaddr_in* server_poll_addr = createIPv4Address("127.0.0.1", 2000);
     struct sockaddr_in* server_game_addr = createIPv4Address("127.0.0.1", 2001);
 
-    std::thread init_connection_animation_t(loading_connecting_to_server);
-
     int res = connect_to_server(client_poll_socket_fd, server_poll_addr, client_game_socket_fd, server_game_addr);
-    
-    // Make sure the animation thread joins before continuing execution
-    if(init_connection_animation_t.joinable())
-        init_connection_animation_t.join();
 
     if(res == 1)
         return 1;

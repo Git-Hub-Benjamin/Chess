@@ -1,5 +1,5 @@
 #include "../chess.hpp"
-#include "./socket/socketutil.h"
+#include "../socket/socketutil.h"
 #include "./server-terminal-communication/servercommands.hpp"
 #include <stdio.h>
 #include <string>

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../chess.hpp"
-#include "../../server/socket/socketutil.h"
+#include "../../socket/socketutil.h"
 #include "../client-text-graphics/textgraphic.hpp"
 #include "../client-terminal-frontend/displaymanager.hpp"
 #include <unistd.h>
