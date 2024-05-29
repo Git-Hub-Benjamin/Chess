@@ -105,6 +105,7 @@ bool notTurn_getMove(int fd, std::wstring& move, std::wstring& moveTo){
 
     std::wcout << "Blocking on the recv for the waiting non turn player" << std::endl;
 
+    // Formatted: "move:()to:()"
     int byte_read = recv(fd, (void*)buffer, sizeof(buffer), 0);
 
     // So this will return the other players move and to, but if the player DC-ed
@@ -116,8 +117,13 @@ bool notTurn_getMove(int fd, std::wstring& move, std::wstring& moveTo){
     if(res_from_server.compare(GAMESTATUS_GAMEOVER_DC) == 0)
         return false;
 
-    move   = convertString(res_from_server.substr(SERVER_CLIENT_INDEX_MOVE_PT_1, SERVER_CLIENT_INDEX_MOVE_PT_2));
-    moveTo = convertString(res_from_server.substr(SERVER_CLIENT_INDEX_TO_PT_1, SERVER_CLIENT_INDEX_TO_PT_2));
+    move += res_from_server[CLIENT_MOVE_INDEX_AFTER_COLON];
+    move += res_from_server[CLIENT_MOVE_INDEX_AFTER_COLON + 1];
+    moveTo += res_from_server[CLIENT_TO_INDEX_AFTER_COLON];
+    moveTo += res_from_server[CLIENT_TO_INDEX_AFTER_COLON + 1];
+
+    std::wcout << "Recieved from server for non turn, Move: " << move << ", MoveTo: " << moveTo << std::endl;
+
 
     return true;
 }
@@ -128,12 +134,8 @@ enum Owner verify_player_server_connection(int fd){
     char buffer[ONLINE_BUFFER_SIZE] = {0};
     std::string match_rdy = bind_str + CLIENT_RDY_FOR_MATCH;
 
-    std::wcout << "Sending self ready for match message..." << std::endl;
-
     send(fd, match_rdy.c_str(), match_rdy.length(), 0);
     int byte_read = recv(fd, buffer, sizeof(buffer), 0);
-
-    std::wcout << "Bytes recieved --> " << byte_read << std::endl;
     
     if(byte_read <= 0)
         exit(EXIT_FAILURE); // FATAL ERROR, IDK WHEN THAT WOULD HAPPEN, SERVER SHOULD NEVER BE DOWN
@@ -141,10 +143,7 @@ enum Owner verify_player_server_connection(int fd){
     buffer[byte_read] = '\0';
     std::string res(buffer);
 
-    std::wcout << "Msg: " << convertString(res) << std::endl;
-    std::wcout << "Trying to find: " << convertString(std::string(SERVER_CLIENT_ACK_MATCH_RDY).substr(0, CLIENT_INDEX_AFTER_COLON_MATCH_START - 2)) << std::endl;
-
-    if(res.find(std::string(SERVER_CLIENT_ACK_MATCH_RDY).substr(0, CLIENT_INDEX_AFTER_COLON_MATCH_START - 2)) == std::string::npos){
+    if(res.find(std::string(SERVER_CLIENT_ACK_MATCH_RDY).substr(0, CLIENT_INDEX_AFTER_COLON_MATCH_START - 1)) == std::string::npos){
         
         if(res.compare(SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT))
             std::wcout << "Something went wrong with your connection to the server..." << std::endl;
@@ -153,7 +152,6 @@ enum Owner verify_player_server_connection(int fd){
         return NONE;
     }
 
-    std::wcout << "Both players successfully connected to lobby, Starting game... Extracting player number --> " << res[CLIENT_INDEX_AFTER_COLON_MATCH_START + 1] << std::endl;
     return static_cast<enum Owner>(res[CLIENT_INDEX_AFTER_COLON_MATCH_START + 1] - 48);
 }
 
@@ -196,9 +194,7 @@ bool start_game_verify(int fd){
 
 void game_loop(int game_fd){
 
-    enum Owner myPlayerNum;
-
-    myPlayerNum = verify_player_server_connection(game_fd);
+    enum Owner myPlayerNum = verify_player_server_connection(game_fd);
         
     if(myPlayerNum == NONE)
         return;
@@ -323,11 +319,15 @@ void game_loop(int game_fd){
                     continue;
                 }
 
+                // Valid move
+
                 if(makeMove(Game, *moveConverter(Game, move), *moveConverter(Game, moveTo)) == 0){
                     std::wcout << "Piece moved." << std::endl;
                 }else{
                     std::wcout << "Piece taken." << std::endl;
                 }
+
+                break;
             }
 
         }else{
@@ -353,8 +353,15 @@ void game_loop(int game_fd){
 
         }
 
+        // The server needs to wait for a recv once before sending pre turn check in
+        // to ad here to client -> server communication standards
+
+        // After it sends this it will be waiting for the pre turn check in
+        if(send(game_fd, (void*)CLIENT_RDY_FOR_NEXT_TURN, sizeof(CLIENT_RDY_FOR_NEXT_TURN), 0) < 0)
+            server_sent_zero_bytes_fatal_error();
+
         // Swap turns
-        Game.currentTurn = Game.currentTurn == PONE ? PTWO : PONE;
+        Game.currentTurn = (Game.currentTurn == PONE ? PTWO : PONE);
 
     }
 }

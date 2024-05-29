@@ -291,7 +291,7 @@ enum Owner fifty_fifty_player_turn(){
 // None --> Bad, close lobby, 
 // P1 --> Client1 will have the first move and be player 1
 // P2 --> Client 2 will have the first move and be player 1
-enum Owner verify_client_connection_init_turn(Client& client1, Client& client2){
+bool verify_client_connection_init_turn(Client& client1, Client& client2){
     // Give each 3 seconds to send back match-rdy msg
 
     bool client1_rdy = false;
@@ -324,13 +324,6 @@ enum Owner verify_client_connection_init_turn(Client& client1, Client& client2){
         // Setup Player num / turn for each client
         std::string send_client = SERVER_CLIENT_ACK_MATCH_RDY;
 
-        //! FOR NOW MAKING CLIENT 1 AS PLAYER 1 SO THEY WILL GO FIRST, CLIENT 1 WILL BE THE MAKER OF THE PRIVATE LOBBY
-        send_client += "P1";
-        send(client1.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
-        send_client[send_client.length() - 1] = '2';
-        send(client2.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
-        return PONE;
-
         if(fifty_fifty_player_turn() == PONE){
             send_client += "P1";
             send(client1.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
@@ -338,14 +331,16 @@ enum Owner verify_client_connection_init_turn(Client& client1, Client& client2){
             send_client[send_client.length() - 1] = '2';
             send(client2.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
             client2.Player = PTWO;
-            return PONE;
         }else{
             send_client += "P2";
             send(client1.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
+            client1.Player = PTWO;
             send_client[send_client.length() - 1] = '1';
             send(client2.Game.fd, (void*)send_client.c_str(), send_client.length(), 0);
-            return PTWO;
+            client2.Player = PONE;
         }
+
+        return true;
     }else if(client1_rdy){
         // Client 2 fault
         std::wcout << "Client2 Fault --> " << convertString(client2.CLIENT_STRING_ID) << std::endl;
@@ -357,7 +352,7 @@ enum Owner verify_client_connection_init_turn(Client& client1, Client& client2){
         send(client2.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT, sizeof(SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT), 0);
         send(client1.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT, sizeof(SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT), 0);
     }
-    return NONE;
+    return false;
 }
 
 void delete_lobby(int index){
@@ -407,27 +402,50 @@ bool begin_game_client_check(int lobby_index){
     return (client1_rdy && client2_rdy);
 }
 
+bool end_turn_client_check_in(int lobby_index){
+    bool client1_rdy = false;
+    bool client2_rdy = false;
+    char buffer[ONLINE_BUFFER_SIZE] = {0};
+    Client& client1 = Client_Lobbies[lobby_index]->client1;
+    Client& client2 = Client_Lobbies[lobby_index]->client2;
+
+    for(int i = 0; i < 3; i++){
+        int byte_read = recv(client1.Game.fd, buffer, sizeof(buffer), MSG_DONTWAIT);
+        if(byte_read > 0){
+            // We dont have to check, if there is more than 0 bytes being sent it means they are ready
+            client1_rdy = true;
+        }
+
+        byte_read = recv(client2.Game.fd, buffer, sizeof(buffer), MSG_DONTWAIT);
+        if(byte_read > 0){
+            // We dont have to check, if there is more than 0 bytes being sent it means they are ready
+            client2_rdy = true;
+        }
+
+        if(client1_rdy && client2_rdy)
+            break; // No point to keep checking
+
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
+    return (client1_rdy && client2_rdy);
+}
+
 void GAME_FOR_TWO_CLIENTS(int lobbies_index){
 
-    Online_ChessGame& Lobby = *Client_Lobbies[lobbies_index];
+    Online_ChessGame& Lobby = *Client_Lobbies[lobbies_index];    
+    ChessGame& Lobby_Game = Lobby.game;
 
-    std::wcout << "Game thread starting on the server, going to send the verify client message to the two clients" << std::endl;
-
-    enum Owner res = verify_client_connection_init_turn(Lobby.client1, Lobby.client2);
-
-    if(res == NONE){
+    if(!verify_client_connection_init_turn(Lobby.client1, Lobby.client2)){
         std::wcout << "client connection was not successful" << std::endl;
         queue_lobby_close(Lobby.lobby_status);
         return; // So self can join with main thread
     }
 
-    std::wcout << "Both clients joined successfully..." << std::endl;
+    // Init these variables
+    Client& currTurnClient = (Lobby_Game.currentTurn == Lobby.client1.Player ? Lobby.client1 : Lobby.client2);
+    Client& notTurnClient  = (&currTurnClient == &Lobby.client1 ? Lobby.client2 : Lobby.client1);
     
-    ChessGame& Lobby_Game = Lobby.game;
-
-    Client& currTurnClient = (Lobby_Game.currentTurn == res ? Lobby.client1 : Lobby.client2);
-    Client& notTurnClient  = &currTurnClient == &Lobby.client1 ? Lobby.client2 : Lobby.client1;
-
     std::wcout << "Clients got turns, Curr turn client is --> " << convertString(currTurnClient.CLIENT_STRING_ID) << std::endl;
     std::wcout << "Clients got turns, Curr Not turn client is --> " << convertString(notTurnClient.CLIENT_STRING_ID) << std::endl;
 
@@ -466,19 +484,30 @@ void GAME_FOR_TWO_CLIENTS(int lobbies_index){
         send(notTurnClient.Game.fd,  (void*)pre_turn_check_in.c_str(), pre_turn_check_in.length(), 0);
 
         std::wcout << "Just sent the pre turn check in: " << convertString(pre_turn_check_in) << std::endl;
-
+        
         while(true){
 
             // Read the formatted valid turn from the current turn client, now we have to validate it
             char buffer[ONLINE_BUFFER_SIZE] = {0};
-            int byte_read = recv(currTurnClient.Game.fd, (void*)buffer, sizeof(buffer), 0);
-            if(byte_read < 0){
-                // handle recv error, idk what to do, send both clients and error message that the server failed?
+            int byte_read = recv(currTurnClient.Game.fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
+            if(byte_read < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)){
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
             }else if(byte_read == 0){
                 send(notTurnClient.Game.fd, (void*)GAMESTATUS_GAMEOVER_DC, sizeof(GAMESTATUS_GAMEOVER_DC), 0);
                 queue_lobby_close(Lobby.lobby_status);
                 return; 
+            }else if(byte_read < 0){
+                // Socket error, close connection with clients, server fault
             }
+
+            // Make sure non turn player has sent non turn check in 
+            byte_read = recv(notTurnClient.Game.fd, buffer, sizeof(buffer), 0);
+            if(byte_read <= 0)
+                // Close conneciton
+
+
+            // Else bytes recieved...
 
             // Formatted like:
             // "move:()to:"
@@ -553,10 +582,21 @@ void GAME_FOR_TWO_CLIENTS(int lobbies_index){
             break;
         }
 
+        if(!end_turn_client_check_in(lobbies_index)){
+            std::wcout << "Client connection died at end turn check." << std::endl;
+            queue_lobby_close(Lobby.lobby_status);
+            return; // So self can join with main thread
+        }
+
+        std::wcout << "Before switch, curr: " << convertString(currTurnClient.CLIENT_STRING_ID) << ", not curr: " << convertString(notTurnClient.CLIENT_STRING_ID) << std::endl;
+
         // Swap turns
         Client& Temp = currTurnClient;
         currTurnClient = notTurnClient;
         notTurnClient = Temp;
+
+        std::wcout << "After switch, curr: " << convertString(currTurnClient.CLIENT_STRING_ID) << ", not curr: " << convertString(notTurnClient.CLIENT_STRING_ID) << std::endl;
+
     }
 }
 

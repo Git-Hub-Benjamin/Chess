@@ -58,6 +58,8 @@
 #define GAMESTATUS_CHECK "gamestatus-check"
 #define GAMESTATUS_ALL_GOOD "gamestatus-good"
 
+#define CLIENT_RDY_FOR_NEXT_TURN "next-turn-ready"
+
 // To the player whos not their turn, after the other player has done their turn
 // gamestat:(-1,0,1, 2)\n // -1 Disconnected, 0 Surrender, 1 Checkmate, 2 (alive but check), 3 alive
 // move:( )\n
