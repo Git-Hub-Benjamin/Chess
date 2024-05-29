@@ -72,9 +72,9 @@
 // To the player whos turn it is
 
 // From client to server:
-// "move:()\nto:()"
-#define CLIENT_MOVE_INDEX_AFTER_COLOR 6 // to 7
-#define CLIENT_TO_INDEX_AFTER_COLOR 11 // to 12
+// "move:()to:()"
+#define CLIENT_MOVE_INDEX_AFTER_COLON 5 // to 6
+#define CLIENT_TO_INDEX_AFTER_COLON 10 // to 11
 
 // After the server verifys the move it will send back this to the client
 // "move:(0,1)\ncheck:(0,1)"

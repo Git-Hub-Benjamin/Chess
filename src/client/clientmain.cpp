@@ -361,6 +361,9 @@ int main()
 
 	std::wcout << "\n\n\n\n\n" << std::endl;
 	
+    //! Required
+	init_moveset();
+
 	// ANNOYING I HAVE TO DO THIS
 	bool firstPrint = true;
 	

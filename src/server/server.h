@@ -35,6 +35,7 @@ struct Client{
     std::string CLIENT_STRING_ID;
     std::string RES_TO_CLIENT_WAITING;
 
+    enum Owner Player;
     enum GAME_MODE client_selected_game_move = NONE_SELECTED;
     enum CLIENT_STATUS status;
     socketTracker Game; 

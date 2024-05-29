@@ -18,11 +18,7 @@ void print_last_turn_msg(){
 
 
 void local_game(bool dev_mode){
-    //! Required
-    if(Pawn1.moves == nullptr)
-        init_moveset();
     
-
     ChessGame Game(dev_mode);
     Game.GameOptions = global_player_option;
 
