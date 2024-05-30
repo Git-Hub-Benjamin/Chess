@@ -71,6 +71,8 @@ ChessGame::ChessGame(){
     init();
 }
 
+
+
 ChessGame::ChessGame(bool dev_mode){
     DEV_MODE_ENABLE = dev_mode;
     gameover = false;
@@ -522,9 +524,6 @@ static bool validateMoveset(ChessGame &game, GameSqaure &from, GameSqaure &to){
 bool kingSafe(ChessGame& game){ // Just checking the king square
     GameSqaure& kingToCheckSafteyFor = *game.KingPositions[game.currentTurn - 1];
 
-    std::wcout << "Got king for " << game.currentTurn << std::endl;
-    kingToCheckSafteyFor.print();
-
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
         for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
             GameSqaure& currentSquare = game.GameBoard[row][col];
@@ -634,8 +633,6 @@ GameSqaure* moveConverter(ChessGame &game, std::wstring& move){
     // convert letter to number (a = 0, b = 1 etc)
     // convert char number to number ('0' = 0 etc)
     // minus 8 is important since (0,0) is flipped since 8 starts at top
-
-    std::wcout << move << "--> [" << (8 - (move[1] - 48)) << "][" << (move[0] - 97) << "]" << std::endl;
 
     return &game.GameBoard[8 - (move[1] - 48)][move[0] - 97];
 }

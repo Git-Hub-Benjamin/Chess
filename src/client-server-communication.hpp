@@ -41,7 +41,7 @@
 #define CLIENT_EXTRACT_OPPONENT_BIND_STR 21
 #define CLIENT_EXTRACT_OPPONENT_BIND_STR_LEN 10
 #define CLIENT_RDY_FOR_MATCH ":match-ready" // before : will be the client bind string that is sending the match ready
-#define SERVER_CLIENT_ACK_MATCH_RDY "match-start:" // after colon will be P1 or P2
+#define SERVER_CLIENT_ACK_MATCH_RDY "match-start" // after colon will be P1 or P2
 #define CLIENT_INDEX_AFTER_COLON_MATCH_START 12
 #define SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT "match-bad-you"
 #define SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT "match-bad-other"
@@ -61,6 +61,7 @@
 #define GAMESTATUS_CHECK "gamestatus-check"
 #define GAMESTATUS_ALL_GOOD "gamestatus-good"
 
+#define CLIENT_NON_TURN_CHECK_IN "non-turn-check-in"
 #define CLIENT_RDY_FOR_NEXT_TURN "next-turn-ready"
 
 // To the player whos not their turn, after the other player has done their turn

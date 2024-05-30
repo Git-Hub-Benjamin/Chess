@@ -6,5 +6,5 @@ enum WRITE_COLOR{
     GREEN,       // Safe king spots? just an idea
     BLUE,
     AQUA,
-    THIN         // thin WHITE
+    BOLD         
 };

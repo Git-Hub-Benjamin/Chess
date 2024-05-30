@@ -41,8 +41,20 @@ int join_private_lobby(int fd){
         // Recieve response from server
         char buffer[ONLINE_BUFFER_SIZE] = {0};
         int bytes_recieved = recv(fd, (void*)buffer, sizeof(buffer), 0);
+
+        if(bytes_recieved < 0){
+            std::wcout << "Recieve error..." << std::endl;
+            return 1;
+        }else if(bytes_recieved == 0){
+            std::wcout << "Server went down..." << std::endl;
+            return 1;
+        }
+
         buffer[bytes_recieved] = '\0';
+
         std::string res_from_server(buffer);
+        std::wcout << "Joining private lobby, from server: " << convertString(res_from_server) << std::endl;
+        
         if(check_for_match_found(res_from_server, oppBindStr, playerNumForMatch)){
             // Match found
             std::wcout << L"\033[2B\033[G" << std::flush;

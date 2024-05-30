@@ -1,23 +1,6 @@
-#include "../chess.hpp"
 #include "../socket/socketutil.h"
 #include "./server-terminal-communication/servercommands.hpp"
-#include <stdio.h>
-#include <string>
-#include <pthread.h> // may user thread
-#include <thread>
-#include <mutex>
-#include <time.h>
-#include <unistd.h>
-#include <random>
 #include "server.h"
-#include <netinet/in.h>
-#include <fcntl.h>
-#include <unordered_map>
-#include <memory>
-#include <csignal>
-#include <execinfo.h>
-#include <atomic>
-#include <sys/stat.h>
 
 
 #define MAX_CLIENT 8
@@ -64,6 +47,16 @@ void close_client(int index){
 
     clients[index] = nullptr; // since a lot of things check against nullptr
     
+}
+
+void queue_lobby_close(enum LOBBY_STATUS& stat){
+    while(stat != AKN_KILL){
+        std::this_thread::yield();
+    }
+    // Very stubbord about this but since the main thread will be setting AKN_KILL
+    // and Joining this thread with the main thread there is a small change that the 
+    // main thread will set AKN_KILL but then this thread gets scheduled meaning that
+    // the main thread never is able to set this thread to join
 }
 
 int add_client(int client_fd, std::string& bind_msg){
@@ -116,7 +109,7 @@ void send_poll_on_active_clients(std::vector<Client*>& check_active){
     }
 
     int count = playing_players_count() + waiting_players_count();
-    std::wcout << "Sending poll msg to " << count << " clients" << std::endl;
+    // std::wcout << "Sending poll msg to " << count << " clients" << std::endl;
 }
 
 
@@ -288,326 +281,12 @@ enum Owner fifty_fifty_player_turn(){
     return PTWO;
 }
 
-// False --> End game, client connection went wrong
-// True  --> Both clients connected continue
-bool verify_client_connection_init_turn(int index){
-    // Give each 3 seconds to send back match-rdy msg
 
-    bool client1_rdy = false;
-    bool client2_rdy = false;
-    Client& client1 = Client_Lobbies[index]->client1;
-    Client& client2 = Client_Lobbies[index]->client2;
-    char buffer[ONLINE_BUFFER_SIZE] = {0};
-
-    for(int i = 0; i < 3; i++){
-        int byte_read = recv(client1.Game.fd, buffer, sizeof(buffer), MSG_DONTWAIT);
-        if(byte_read > 0){
-            // We dont have to check, if there is more than 0 bytes being sent it means they are ready
-            client1_rdy = true;
-        }
-
-        byte_read = recv(client2.Game.fd, buffer, sizeof(buffer), MSG_DONTWAIT);
-        if(byte_read > 0){
-            // We dont have to check, if there is more than 0 bytes being sent it means they are ready
-            client2_rdy = true;
-        }
-
-        if(client1_rdy && client2_rdy)
-            break; // No point to keep checking
-
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-
-    std::wcout << "client 1 rdy? --> " << (client1_rdy ? "True" : "False") << std::endl;
-    std::wcout << "client 2 rdy? --> " << (client2_rdy ? "True" : "False") << std::endl;
-
-    if(client1_rdy && client2_rdy){
-        
-        // If both are ready, the next step is to send the pre turn check in
-        return true;
-
-    }else if(client1_rdy){
-        // Client 2 fault
-        std::wcout << "Client2 Fault --> " << convertString(client2.CLIENT_STRING_ID) << std::endl;
-        send(client1.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT, sizeof(SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT), 0);
-        send(client2.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT, sizeof(SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT), 0);
-    }else{
-        // Client 1 fault
-        std::wcout << "Client1 Fault --> " << convertString(client1.CLIENT_STRING_ID) << std::endl;
-        send(client2.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT, sizeof(SERVER_CLIENT_ACK_MATCH_RDY_BAD_OTHER_FAULT), 0);
-        send(client1.Game.fd, (void*)SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT, sizeof(SERVER_CLIENT_ACK_MATCH_RDY_BAD_PERSONAL_FAULT), 0);
-    }
-    return false;
-}
 
 void delete_lobby(int index){
     delete Client_Lobbies[index];
 }
 
-void queue_lobby_close(enum LOBBY_STATUS& stat){
-    while(stat != AKN_KILL){
-        std::this_thread::yield();
-    }
-    // Very stubbord about this but since the main thread will be setting AKN_KILL
-    // and Joining this thread with the main thread there is a small change that the 
-    // main thread will set AKN_KILL but then this thread gets scheduled meaning that
-    // the main thread never is able to set this thread to join
-}
-
-bool begin_game_client_check(int lobby_index){
-    bool client1_rdy = false;
-    bool client2_rdy = false;
-    char buffer[ONLINE_BUFFER_SIZE] = {0};
-    Client& client1 = Client_Lobbies[lobby_index]->client1;
-    Client& client2 = Client_Lobbies[lobby_index]->client2;
-
-    for(int i = 0; i < 3; i++){
-        int byte_read = recv(client1.Game.fd, buffer, sizeof(buffer), MSG_DONTWAIT);
-        if(byte_read > 0){
-            // We dont have to check, if there is more than 0 bytes being sent it means they are ready
-            client1_rdy = true;
-        }
-
-        byte_read = recv(client2.Game.fd, buffer, sizeof(buffer), MSG_DONTWAIT);
-        if(byte_read > 0){
-            // We dont have to check, if there is more than 0 bytes being sent it means they are ready
-            client2_rdy = true;
-        }
-
-        if(client1_rdy && client2_rdy)
-            break; // No point to keep checking
-
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-
-    std::wcout << "Begin Game client verify, Client 1: " << (client1_rdy == true ? "True" : "False") << std::endl;
-    std::wcout << "Begin Game client verify, Client 2: " << (client2_rdy == true ? "True" : "False") << std::endl;
-
-
-    return (client1_rdy && client2_rdy);
-}
-
-bool end_turn_client_check_in(int lobby_index){
-    bool client1_rdy = false;
-    bool client2_rdy = false;
-    char buffer[ONLINE_BUFFER_SIZE] = {0};
-    Client& client1 = Client_Lobbies[lobby_index]->client1;
-    Client& client2 = Client_Lobbies[lobby_index]->client2;
-
-    for(int i = 0; i < 3; i++){
-        int byte_read = recv(client1.Game.fd, buffer, sizeof(buffer), MSG_DONTWAIT);
-        if(byte_read > 0){
-            // We dont have to check, if there is more than 0 bytes being sent it means they are ready
-            client1_rdy = true;
-        }
-
-        byte_read = recv(client2.Game.fd, buffer, sizeof(buffer), MSG_DONTWAIT);
-        if(byte_read > 0){
-            // We dont have to check, if there is more than 0 bytes being sent it means they are ready
-            client2_rdy = true;
-        }
-
-        if(client1_rdy && client2_rdy)
-            break; // No point to keep checking
-
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-
-    return (client1_rdy && client2_rdy);
-}
-
-bool send_preturn_check_in(int index, std::string& msg){
-    if(send(Client_Lobbies[index]->client1.Game.fd, (void*)msg.c_str(), msg.length(), 0) < 0 || send(Client_Lobbies[index]->client2.Game.fd, (void*)msg.c_str(), msg.length(), 0) < 0)
-        return false;
-    return true;
-}
-
-// -1 - Server fault
-// 0 -- Good
-// 1 -- Client fault
-int recieve_non_turn_client_check_in(Client& nonTurnClient){
-    char buf[ONLINE_BUFFER_SIZE] = {0};
-    int byte_read = recv(nonTurnClient.Game.fd, (void*)buf, sizeof(buf), 0);
-
-    if(byte_read < 0)
-        return -1;
-
-    if(byte_read <= 0)
-        return 1;
-    
-    return 0;
-}
-
-// -1 - Server fault
-// 0 -- Good
-// 1 -- Client fault
-int recieve_turn_client_move(Client& turnClient, std::string& out){
-    char buf[ONLINE_BUFFER_SIZE] = {0};
-    int byte_read = recv(turnClient.Game.fd, (void*)buf, sizeof(buf), 0); 
-
-    if(byte_read < 0)
-        return -1;
-
-    if(byte_read <= 0)
-        return 1;
-
-    buf[byte_read] = '\0';
-    out = buf;
-    return 0;
-}
-
-void format_turn_move(std::string& in, std::wstring& move, std::wstring& to){
-    move += in[CLIENT_MOVE_INDEX_AFTER_COLON];
-    move += in[CLIENT_MOVE_INDEX_AFTER_COLON + 1];
-    to +=   in[CLIENT_TO_INDEX_AFTER_COLON];
-    to +=   in[CLIENT_TO_INDEX_AFTER_COLON + 1];
-}
-
-void convert_move_square(ChessGame& LobbyGame, Client& currTurnClient, GameSqaure* movesquare, GameSqaure* moveToSquare, std::wstring& move, std::wstring& to){
-    if(move.compare(L"KI") == 0){
-        // The client was automatcially put to move the king
-        movesquare = LobbyGame.KingPositions[currTurnClient.Player - 1];
-    }else{
-        movesquare = moveConverter(LobbyGame, move);
-    }
-
-    moveToSquare = moveConverter(LobbyGame, to);
-}
-
-void check_valid_move(ChessGame& LobbyGame, GameSqaure* movePiece, GameSqaure* moveToSquare, std::string& out){
-    out = SERVER_CLIENT_VERIFY_MOVE_VALID;
-
-    if(!verifyMove(LobbyGame, *movePiece, *moveToSquare)){
-        out = SERVER_CLIENT_VERIFY_MOVE_INVALID;
-    }else{
-
-        // Check if making this move puts them in check
-        GameSqaure copyOfSquareBeingMoved = *movePiece;
-        GameSqaure copyOfSquareBeingMovedTo = *moveToSquare;
-
-        int res = makeMove(LobbyGame, *movePiece, *moveToSquare); //! CAUSING SEGMENTATION FAULT, Maybe something to do with copy? it was working fine before...
-        if(res == 2){
-            //! I dont know when makemove would return 2, but for later if i need it
-        }else{
-            if(!kingSafe(LobbyGame)){
-                out = SERVER_CLIENT_VERIFY_MOVE_INVALID_CHECK;
-                makeMove(LobbyGame, copyOfSquareBeingMoved, copyOfSquareBeingMovedTo); // Revert move
-            }
-        }
-    }
-}
-
-void GAME_FOR_TWO_CLIENTS(int lobbies_index){
-
-    // Init these variables
-    Online_ChessGame& Lobby = *Client_Lobbies[lobbies_index];    
-    ChessGame& Lobby_Game = Lobby.game;
-
-    Client& currTurnClient = (Lobby_Game.currentTurn == Lobby.client1.Player ? Lobby.client1 : Lobby.client2);
-    Client& notTurnClient  = (&currTurnClient == &Lobby.client1 ? Lobby.client2 : Lobby.client1);
-
-    // Make sure both clients send ("match-start")
-    if(!verify_client_connection_init_turn(lobbies_index)){
-        std::wcout << "client connection was not successful" << std::endl;
-        queue_lobby_close(Lobby.lobby_status);
-        return; 
-    }
-
-    while(!Lobby_Game.gameover){
-
-        // Make sure to switch currentTurn at the end of turn as always
-        std::string pre_turn_check_in;
-
-        if(!kingSafe(Lobby_Game)){
-            if(!checkMate(Lobby_Game)){ // Check checkmate for the current players turn
-                pre_turn_check_in = GAMESTATUS_CHECK;
-            }else{
-                pre_turn_check_in = GAMESTATUS_CHECKMATE;
-                Lobby_Game.gameover = true;
-                break;
-            }
-        }else{
-            pre_turn_check_in = GAMESTATUS_ALL_GOOD;
-        }
-
-        //! This is where we would do some checks for GAMESTATUS_DC
-
-        if(!send_preturn_check_in(lobbies_index, pre_turn_check_in)){
-            // Tell clients there was a socket error, Server fault
-        }
-
-        int res = recieve_non_turn_client_check_in(notTurnClient);
-        if(res < 0){
-            // Tell clients there was a socket error, Server fault
-        }else if(res > 0){
-            // Client fault, DC
-        }
-
-        while(true){
-
-            std::string response;
-            res = recieve_turn_client_move(currTurnClient, response);
-            if(res < 0){
-                // Tell clients there was a socket error, Server fault
-            }else if(res > 0){
-                // Client fault, DC
-            }
-
-            std::wstring move;
-            std::wstring to;
-            format_turn_move(response, move, to);
-
-            std::wcout << "\n\nClient move: " << move << std::endl;
-            std::wcout << "\n\nClient to  : " <<  to  << std::endl;
-
-            GameSqaure* movePiece;
-            GameSqaure* moveToSquare;
-
-            convert_move_square(Lobby_Game, currTurnClient, movePiece, moveToSquare, move, to);
-
-            std::wcout << "Client movesquare --> ";
-            movePiece->print();
-            std::wcout << "\nClient movetoSquare --> ";
-            moveToSquare->print();
-            std::wcout << std::endl;
-
-            // Got move and to, now check valid
-            std::string validaty_of_move_str;
-            
-            check_valid_move(Lobby_Game, movePiece, moveToSquare, validaty_of_move_str);
-
-            if(send(currTurnClient.Game.fd, (void*)validaty_of_move_str.c_str(), validaty_of_move_str.length(), 0) < 0){
-                // Tell clients there was a socket error, Server fault
-            }
-
-            // If its invalid, we have to do it all again
-            if(validaty_of_move_str.compare(SERVER_CLIENT_VERIFY_MOVE_VALID) != 0)
-                continue;
-
-            // Valid move, the other player is still expecting the move the other player made,
-            // Since we already did the checks on it we can just send it
-
-            send(notTurnClient.Game.fd, (void*)response.c_str(), response.length(), 0);
-            break;
-        }
-
-        if(!end_turn_client_check_in(lobbies_index)){
-            std::wcout << "Client connection died at end turn check." << std::endl;
-            queue_lobby_close(Lobby.lobby_status);
-            return; // So self can join with main thread
-        }
-
-        std::wcout << "Before switch, curr: " << convertString(currTurnClient.CLIENT_STRING_ID) << ", not curr: " << convertString(notTurnClient.CLIENT_STRING_ID) << std::endl;
-
-        // Swap turns
-        Client& Temp = currTurnClient;
-        currTurnClient = notTurnClient;
-        notTurnClient = Temp;
-
-        std::wcout << "After switch, curr: " << convertString(currTurnClient.CLIENT_STRING_ID) << ", not curr: " << convertString(notTurnClient.CLIENT_STRING_ID) << std::endl;
-
-    }
-}
 
 void schedule_rand_queue_clients(std::vector<std::pair<Client&, Client&>>& vec){
     int ready_clients = 0;
@@ -654,8 +333,6 @@ std::string client_update_game_mode(Client* curr_client, std::vector<std::pair<C
     // server activity to clients
     int byte_recieved = recv(curr_client->Game.fd, buffer, sizeof(buffer), MSG_DONTWAIT);
     
-    std::wcout << "Curr client: " << convertString(curr_client->CLIENT_STRING_ID) << ", bytes: " << byte_recieved  << std::endl;
-
     // Means that the client did not choose a gamemode yet, or client connection closed
     if (byte_recieved <= 0)
         return build_string;
@@ -751,6 +428,12 @@ static void display_client_info(Client& curr){
     std::wcout << "= = = = = = =" << std::endl;
 }
 
+static void display_poll_info(Client& curr){
+    std::wcout << "\n= = = = = = =" << std::endl;
+    std::wcout << "Client string: " << convertString(curr.CLIENT_STRING_ID) << ", Poll Fd: " << curr.Game.fd << "/" << curr.Poll.fd << ", \nIndex: " << curr.Game.index << ", \nStatus: " << (curr.status == UNBOUND ? L"Unbound" : curr.status == WAITING ? L"Waiting" : L"Playing") << std::endl;
+    std::wcout << "= = = = = = =" << std::endl;
+}
+
 static void display_type_clients(enum CLIENT_STATUS status){
     int count = 0;
     for(int client_index = 0; client_index < MAX_CLIENT; client_index++){
@@ -759,6 +442,9 @@ static void display_type_clients(enum CLIENT_STATUS status){
             if(status == UNBOUND){
                 display_client_info(*clients[client_index]);
                 count++;
+            }else if(status == POLL){
+                display_poll_info(*clients[client_index]);
+                count++;
             }else if(clients[client_index]->status == status){
                 display_client_info(*clients[client_index]);
                 count++;
@@ -766,7 +452,7 @@ static void display_type_clients(enum CLIENT_STATUS status){
         } 
     }
 
-    set_terminal_color(DEFAULT);
+    set_terminal_color(BOLD);
     if(count == 0)
         if(status != UNBOUND)
             std::wcout << "No clients found with " << (status == WAITING ? "\"Waiting\"" : "\"Playing\"") << " status" << std::endl;
@@ -777,7 +463,7 @@ static void display_type_clients(enum CLIENT_STATUS status){
             std::wcout << count << " client" << (count == 1 ? "" : "s") << " found with " << (status == WAITING ? "\"Waiting\"" : "\"Playing\"") << " status" << std::endl;
         else
             std::wcout << count << " client" << (count == 1 ? "" : "s") << " found on the server..." << std::endl;
-    set_terminal_color(THIN);
+    set_terminal_color(DEFAULT);
 }
 
 static void display_game_lobbies(){
@@ -793,12 +479,12 @@ static void display_private_lobbies_and_owner(){
         std::wcout << "- - - - - - -" << std::endl;
         count++;
     } 
-    set_terminal_color(DEFAULT);
+    set_terminal_color(BOLD);
     if(count == 0)
         std::wcout << "No client private lobbies found..." << std::endl;
     else
         std::wcout << count << " client private lobbies found..." << std::endl;
-    set_terminal_color(THIN);
+    set_terminal_color(DEFAULT);
 }
 
 void handle_command(std::string command){
@@ -817,6 +503,8 @@ void handle_command(std::string command){
         display_private_lobbies_and_owner(); // Display all private lobbies and their creator / maker
     else if(command.compare(SERVER_KILL_LOBBIES_AND_THREAD) == 0 || command.compare(KILL_LOBBY_THREAD_CMD) == 0)
         cleanup_inactive_lobbies(); // this will not work as expected
+    else if(command.compare(POLLING_CLIENTS_CMD) == 0 || command.compare(POLL_CLIENT_CMD) == 0)
+        display_type_clients(POLL);
     else
         std::wcout << "Unknown command --> " << convertString(command) << std::endl;
 }
@@ -847,8 +535,42 @@ int check_for_open_lobby(){
     return -1;
 }
 
-void initalize_client_lobby(std::thread* game_thread, int lobby_index, Client& client1, Client& client2){
-    Client_Lobbies[lobby_index] = new Online_ChessGame(game_thread, lobby_index, client1, client2);
+void initalize_client_lobby(int lobby_index, Client& client1, Client& client2){
+    enum Owner playerSelect = fifty_fifty_player_turn();
+
+    client1.Player = playerSelect;
+    client2.Player = (playerSelect == PONE ? PTWO : PONE);;
+
+    std::string client1_res = MATCH_FOUND;
+    client1_res += ",opponent:";
+    std::string client2_res = client1_res;
+    client1_res += client2.CLIENT_STRING_ID;
+    client2_res += client1.CLIENT_STRING_ID;
+    client1_res += ",playerNum:";
+    client1_res += client1.Player == PONE ? '1' : '2';
+    client2_res += ",playerNum:";
+    client2_res += client2.Player == PONE ? '1' : '2';
+
+    std::wcout << "Client 1 res: " << convertString(client1_res) << std::endl;
+    std::wcout << "Client 2 res: " << convertString(client2_res) << std::endl;
+
+    client1.status = PLAYING;
+    client2.status = PLAYING;
+
+    client1.RES_TO_CLIENT_WAITING = client1_res;
+    client2.RES_TO_CLIENT_WAITING = client2_res;
+
+    // Create new lobby
+    // Since the constructor expects the first client passed to be player one we need to check for that
+    if(client1.Player == PONE)
+        Client_Lobbies[lobby_index] = new Online_ChessGame(lobby_index, client1, client2);
+    else
+        Client_Lobbies[lobby_index] = new Online_ChessGame(lobby_index, client2, client1);
+    
+    // Create thread to execute in lobbies init function, it will wait to main says it is good to go
+    std::thread game_t(&Online_ChessGame::init, Client_Lobbies[lobby_index]);
+    // Main detaches game thread
+    game_t.detach();
 }
 
 // Runs random queue dispatcher 1 time a second, and sends updates to 
@@ -897,35 +619,12 @@ void dispatch_and_send_waiting_updates(){
             continue;
         }
 
-        enum Owner playerSelect = fifty_fifty_player_turn();
-
-        pair.first.Player = playerSelect;
-        pair.second.Player = (playerSelect == PONE ? PTWO : PONE);;
-
-        std::string client1_res = MATCH_FOUND;
-        client1_res += ",opponent:";
-        std::string client2_res = client1_res;
-        client1_res += pair.second.CLIENT_STRING_ID;
-        client2_res += pair.first.CLIENT_STRING_ID;
-        client1_res += ",playerNum:";
-        client1_res += pair.first.Player == PONE ? '1' : '2';
-        client2_res += ",playerNum:";
-        client2_res += pair.second.Player == PONE ? '1' : '2';
-
-        std::wcout << "Client 1 res: " << convertString(client1_res) << std::endl;
-        std::wcout << "Client 2 res: " << convertString(client2_res) << std::endl;
-
-        pair.first.status = PLAYING;
-        pair.second.status = PLAYING;
-
-        std::thread* game_thread;
-        game_thread->detach(); // Dont want main thread waiting for this ever
-        initalize_client_lobby(game_thread, lobby_index, pair.first, pair.second);
+        // Initialize the lobby
+        initalize_client_lobby(lobby_index, pair.first, pair.second);
+        // Have main tell the thread executing the lobby that it is good to start because everything is initalized
+        Client_Lobbies[lobby_index]->start_game();
 
         std::wcout << "Starting game thread" << std::endl;
-
-        // start game thread
-        game_thread = new std::thread(GAME_FOR_TWO_CLIENTS, lobby_index);
     } 
     
     // Send response to clients, if match was found then it will send a match found response
@@ -998,6 +697,8 @@ void signalHandler(int signal) {
 }
 
 int main(){
+
+    std::locale::global(std::locale("en_US.UTF-8"));
 
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);

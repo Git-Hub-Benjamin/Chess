@@ -3,7 +3,7 @@
 #include <iostream>
 
 void set_terminal_color(enum WRITE_COLOR color) {
-    std::wstring col = std::wstring(L"1");// Default color: BOLD WHITE
+    std::wstring col = std::wstring(L"0");// Default color: REGULAR THIN WHITE
     switch (color) {
         case RED:
             col = std::wstring(L"31"); // RED
@@ -17,8 +17,8 @@ void set_terminal_color(enum WRITE_COLOR color) {
         case AQUA:
             col = std::wstring(L"36"); // AQUA
             break;
-        case THIN:
-            col = std::wstring(L"0"); // THIN WHITE
+        case BOLD:
+            col = std::wstring(L"1"); // BOLD WHITE
             break;
         default:
             break;

@@ -20,6 +20,7 @@ static bool take_moves_and_send(int fd, std::string move, std::string to){
     // Example:
     // move:b2to:b4
 
+    std::wcout << "Sending: " << convertString(send_to_server) << ", to server" << std::endl;
     if(send(fd, (void*)send_to_server.c_str(), send_to_server.length(), 0) < 0)
         return false;
     return true;
@@ -80,10 +81,7 @@ static bool notTurn_getMove(int fd, std::wstring& move, std::wstring& moveTo){
 // False -- Error
 // True  -- Good
 static bool verify_player_server_connection(int fd){
-
-    std::string match_rdy = ONLINE_PLAYER_ID + CLIENT_RDY_FOR_MATCH;
-
-    if(send(fd, match_rdy.c_str(), match_rdy.length(), 0) < 0)
+    if(send(fd, SERVER_CLIENT_ACK_MATCH_RDY, sizeof(SERVER_CLIENT_ACK_MATCH_RDY), 0) < 0)
         return false;
     return true;
 }
@@ -119,8 +117,8 @@ static int turnly_check_in(int fd){
     return 4;
 }
 
-static bool start_game_verify(int fd){
-    if(send(fd, CLIENT_RDY_FOR_MATCH, sizeof(CLIENT_RDY_FOR_MATCH), 0) < 0)
+static bool non_turn_check_in(int fd){
+    if(send(fd, CLIENT_NON_TURN_CHECK_IN, sizeof(CLIENT_NON_TURN_CHECK_IN), 0) < 0)
         return false;
     return true;
 }
@@ -140,6 +138,10 @@ void game_loop(int game_fd, enum Owner myPlayerNum, std::string otherPlayerStr){
     std::wcout << "Other: " << convertString(otherPlayerStr) << ", Player: " << (myPlayerNum == PONE ? "Player two" : "Player one") << "\n= = = = =" << std::endl;
 
     while(!game_gameover){
+
+        set_terminal_color(GREEN);
+        std::wcout << "Game Current Turn: " << Game.currentTurn << ", myPlayerNum: " << myPlayerNum << std::endl;
+        set_terminal_color(DEFAULT);
         
         //* Regardless of the turn, you get a pre turn check in from the server
 
@@ -222,6 +224,8 @@ void game_loop(int game_fd, enum Owner myPlayerNum, std::string otherPlayerStr){
                     continue;
                 }
 
+                std::wcout << "Basic validation was made on the move and to, now we are going to send the move to the server" << std::endl;
+
                 // Basic checks are made on the piece and move to piece / square
                 // The server will make verifyMove and other checks for safety purposes
 
@@ -248,6 +252,11 @@ void game_loop(int game_fd, enum Owner myPlayerNum, std::string otherPlayerStr){
             }
 
         }else{
+
+            std::wcout << "Sending server non check in" << std::endl;
+
+            if(!non_turn_check_in(game_fd))
+                // hanlde send socket error
 
             std::wcout << "Other players turn..." << std::endl;
 

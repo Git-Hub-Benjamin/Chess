@@ -148,8 +148,8 @@ void changing_option_from_menu(int option_opt){
 			std::wcout << "1. Player one color\n2. Player two color\n3. Back\n--> ";
 			player_opt = get_menu_option();
 			if(player_opt == 1 || player_opt == 2){
-				std::wcout << "1. Default (Bold White) | "; color_option_active_inactive(DEFAULT, player_opt); std::wcout << std::endl;
-				std::wcout << "2. Thin white 	        | "; color_option_active_inactive(THIN, player_opt); std::wcout << std::endl;
+				std::wcout << "1. Default (Thin White) | "; color_option_active_inactive(DEFAULT, player_opt); std::wcout << std::endl;
+				std::wcout << "2. Bold white 	        | "; color_option_active_inactive(BOLD, player_opt); std::wcout << std::endl;
 				std::wcout << "3. Blue	                | "; color_option_active_inactive(BLUE, player_opt); std::wcout << std::endl;
 				std::wcout << "4. Aqua 	        | "; color_option_active_inactive(AQUA, player_opt); std::wcout << std::endl;
 				std::wcout << "5. Green                | "; color_option_active_inactive(GREEN, player_opt); std::wcout << std::endl;
@@ -168,7 +168,7 @@ void changing_option_from_menu(int option_opt){
 							*currPlayChangingColor = DEFAULT;
 							break;
 						case 2:
-							*currPlayChangingColor = THIN;
+							*currPlayChangingColor = BOLD;
 							break;
 						case 3:
 							*currPlayChangingColor = BLUE;
