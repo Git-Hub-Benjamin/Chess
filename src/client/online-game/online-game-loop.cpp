@@ -205,6 +205,18 @@ void game_loop(int game_fd, enum Owner myPlayerNum, std::string otherPlayerStr){
                     move = L"KI";
                 }
 
+                if(Game.GameOptions.moveHighlighting){
+                    std::vector<GameSqaure*>* squaresPieceCanMoveTo;
+                    GameSqaure* movePiece = moveConverter(Game, move);
+                    squaresPieceCanMoveTo = get_move_to_squares(Game, *movePiece);
+                    if(squaresPieceCanMoveTo->size() > 0) 
+                        print_board_with_moves(Game, *movePiece, *squaresPieceCanMoveTo);
+                    else{
+                        std::wcout << "No valid moves with this piece." << std::endl;
+                        continue;
+                    }
+                }
+
                 std::wcout << "Move to: ";
                 res = getMove(moveTo);
                 if(res != 0){
@@ -230,6 +242,8 @@ void game_loop(int game_fd, enum Owner myPlayerNum, std::string otherPlayerStr){
                 // The server will make verifyMove and other checks for safety purposes
 
                 take_moves_and_send(game_fd, convertWString(move), convertWString(moveTo));
+
+                std::wcout << "Sent to server the move, now we wait for the result from the server" << std::endl;
                 
                 res = server_said_valid_move(game_fd);
                 if(res == -1){
@@ -239,6 +253,8 @@ void game_loop(int game_fd, enum Owner myPlayerNum, std::string otherPlayerStr){
                     std::wcout << "Piece cannot reach that position..." << std::endl;
                     continue;
                 }
+
+                std::wcout << "The move was valid, now we will make the move" << std::endl;
 
                 // Valid move
 
@@ -282,9 +298,13 @@ void game_loop(int game_fd, enum Owner myPlayerNum, std::string otherPlayerStr){
         // The server needs to wait for a recv once before sending pre turn check in
         // to ad here to client -> server communication standards
 
+        std::wcout << "Sending to the server the end check in" << std::endl;
+
         // After it sends this it will be waiting for the pre turn check in
         if(send(game_fd, (void*)CLIENT_RDY_FOR_NEXT_TURN, sizeof(CLIENT_RDY_FOR_NEXT_TURN), 0) < 0)
             server_sent_zero_bytes_fatal_error();
+
+        std::wcout << "Sent to the server the end check in" << std::endl;
 
         // Swap turns
         Game.currentTurn = (Game.currentTurn == PONE ? PTWO : PONE);

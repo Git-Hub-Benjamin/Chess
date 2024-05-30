@@ -251,13 +251,19 @@ void Online_ChessGame::gameloop(){
             
             check_valid_move(Lobby_Game, movePiece, moveToSquare, validaty_of_move_str);
 
+            std::wcout << "Tell the current turn client the validaty of the move" << std::endl;
+
             if(send(current_turn_client.Game.fd, (void*)validaty_of_move_str.c_str(), validaty_of_move_str.length(), 0) < 0){
                 // Tell clients there was a socket error, Server fault
             }
 
+            std::wcout << "Told the current turn client if their move was valid" << std::endl;
+
             // If its invalid, we have to do it all again
             if(validaty_of_move_str.compare(SERVER_CLIENT_VERIFY_MOVE_VALID) != 0)
                 continue;
+
+            std::wcout << "It was a valid move, now we are going to send that move to the non current turn client" << std::endl;
 
             // Valid move, the other player is still expecting the move the other player made,
             // Since we already did the checks on it we can just send it
@@ -265,8 +271,13 @@ void Online_ChessGame::gameloop(){
             if(send(non_current_turn_client.Game.fd, (void*)response.c_str(), response.length(), 0) < 0){
                 // Tell clients there was a socket error, Server fault
             }
+
+            std::wcout << "Told the non current client the move" << std::endl;
+
             break;
         }
+
+        std::wcout << "recieving the end check in from both clients" << std::endl;
 
         if(!end_turn_client_check_in()){
             std::wcout << "Client connection died at end turn check." << std::endl;
@@ -274,10 +285,16 @@ void Online_ChessGame::gameloop(){
             return; // So self can join with main thread
         }
 
-        // Swap turns
-        Client& Temp = current_turn_client;
+        std::wcout << "both clients sent the end check in, continuing to the next game loop" << std::endl;
+
+        // Swap turns, We need to swap Lobby game because the logic of moving pieces depends on it
+        Lobby_Game.currentTurn = (Lobby_Game.currentTurn == PONE ? PTWO : PONE);
+
+        Client temp = current_turn_client;
         current_turn_client = non_current_turn_client;
-        non_current_turn_client = Temp;
+        non_current_turn_client = temp;
+
+        std::wcout << "swapped turns, next game loop" << std::endl;
 
     }
 }
