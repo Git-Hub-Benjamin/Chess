@@ -97,7 +97,7 @@ public:
     bool gameover;
     GameSqaure GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
     GameSqaure* KingPositions[2]; // 2 because there are 2 players, update king position in makeMove function whenever king moves (NOTE CASTLING TOO)
-    GameSqaure& pieceCausingKingCheck = GameBoard[0][0]; 
+    GameSqaure* pieceCausingKingCheck = nullptr; 
     // i dont like doing this, but idk what else to do to get rid of the warning / error,
     // either way this will be updated whenever a piece causes a check on a king
 
@@ -149,5 +149,6 @@ bool verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
 std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from);
 void validateMovePiece(ChessGame& game, GameSqaure& movePiece, std::wstring& msg);
 void validateMoveToPiece(ChessGame& game, GameSqaure& moveToSquare, std::wstring& retMsg);
+bool king_safe_after_move(ChessGame& Game, GameSqaure& movePiece, GameSqaure& moveToSquare, std::wstring* toPrint = nullptr);
 void print_board_with_moves(ChessGame &game, GameSqaure& from, std::vector<GameSqaure*>& vecOfSquare);
 

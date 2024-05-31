@@ -120,20 +120,8 @@ void Online_ChessGame::check_valid_move(ChessGame& LobbyGame, GameSqaure* movePi
     if(!verifyMove(LobbyGame, *movePiece, *moveToSquare)){
         out = SERVER_CLIENT_VERIFY_MOVE_INVALID;
     }else{
-
-        // Check if making this move puts them in check
-        GameSqaure copyOfSquareBeingMoved = *movePiece;
-        GameSqaure copyOfSquareBeingMovedTo = *moveToSquare;
-
-        int res = makeMove(LobbyGame, *movePiece, *moveToSquare); //! CAUSING SEGMENTATION FAULT, Maybe something to do with copy? it was working fine before...
-        if(res == 2){
-            //! I dont know when makemove would return 2, but for later if i need it
-        }else{
-            if(!kingSafe(LobbyGame)){
-                out = SERVER_CLIENT_VERIFY_MOVE_INVALID_CHECK;
-                makeMove(LobbyGame, copyOfSquareBeingMoved, copyOfSquareBeingMovedTo); // Revert move
-            }
-        }
+        if(!king_safe_after_move(LobbyGame, *movePiece, *moveToSquare, nullptr))
+            out = SERVER_CLIENT_VERIFY_MOVE_INVALID_CHECK;
     }
 }
 

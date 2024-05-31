@@ -13,7 +13,7 @@ void print_last_turn_msg(){
     set_terminal_color(RED);
     std::wcout << nextTurnPrint << std::endl;
     set_terminal_color(DEFAULT);
-    nextTurnPrint = L"";
+    nextTurnPrint.clear();
 }
 
 
@@ -37,12 +37,26 @@ void local_game(bool dev_mode){
             if(!checkMate(Game)){ // Check checkmate for the current players turn
                 CURRENT_TURN_IN_CHECK = true;
             }else{
+                print_board(Game);
                 std::wcout << "Player " << (Game.currentTurn == PONE ? "one" : "two") << ", you got check mated!" << std::endl;
                 std::wcout << "Player " << (Game.currentTurn == PONE ? "two" : "one") << ", you win!!" << std::endl;
                 Game.gameover = true;
-                break;
+
+                std::wcout << L"Do you want to reset the game? (y/n): ";
+
+                wchar_t in = std::wcin.get(); // Read a wide character from std::wcin
+                std::wcin.ignore(std::numeric_limits<std::streamsize>::max(), L'\n'); // Clear the input buffer
+
+                if (in == L'y' || in == L'Y') {
+                    Game.reset();
+                    Game.currentTurn = PONE;
+                } else {
+                    break;
+                }
             }
-        }                
+        }    
+
+          
 
         while(true)
         {
@@ -164,23 +178,8 @@ void local_game(bool dev_mode){
             // After making the move we need to see if making this move made a path for the oppenent to put your king in check, so save the GameSquare
             // that we are updating, update it, then check the kings safety, if it makes the players king unsafe, then revert the move
 
-            GameSqaure copyOfSquareBeingMoved = *movePiece;
-            GameSqaure copyOfSquareBeingMovedTo = *moveToSquare;
-
-            res = makeMove(Game, *movePiece, *moveToSquare); //! CAUSING SEGMENTATION FAULT, Maybe something to do with copy? it was working fine before...
-            if(res == 2)
-                continue; //! I dont know when makemove would return 2, but for later if i need it
-            else{
-                if(kingSafe(Game)){
-                    // if(res == 0)
-                    //     toPrint.push_front(std::wstring(L"Piece moved.")); 
-                    // else
-                    //     toPrint.push_front(std::wstring(L"Piece taken."));                 
-                }else{
-                    makeMove(Game, copyOfSquareBeingMoved, copyOfSquareBeingMovedTo); // Revert move
-                    continue;                                                         // Redo move
-                }
-            }
+            if(!king_safe_after_move(Game, *movePiece, *moveToSquare, &nextTurnPrint))
+                continue;
 
             break;
             // Switch turns

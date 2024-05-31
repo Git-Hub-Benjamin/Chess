@@ -268,12 +268,12 @@ static bool unobstructed_path_check(ChessGame &game, GameSqaure& from, GameSqaur
 // True  -> nothing can stop this attack >:)
 // False -> means that not checkmate since a piece can block OR take the rook 
 static bool rook_causing_check(ChessGame &game, GameSqaure& checkedKing, std::vector<GameSqaure*>& teamPieces){
-    GameSqaure temp = game.pieceCausingKingCheck;
+    GameSqaure temp = *game.pieceCausingKingCheck;
                                                                         // if on same x axis, then moving up or down, 
-    int xdir = (game.pieceCausingKingCheck.pos.x == checkedKing.pos.x) ? (game.pieceCausingKingCheck.pos.x - checkedKing.pos.x < 0 ? -1 : 1) : 0;
+    int xdir = (game.pieceCausingKingCheck->pos.x == checkedKing.pos.x) ? (game.pieceCausingKingCheck->pos.x - checkedKing.pos.x < 0 ? -1 : 1) : 0;
                 // if x == 0 then it must be on the same y axis value, so going left or right, 
-    int ydir = xdir == 0 ? game.pieceCausingKingCheck.pos.y - checkedKing.pos.y < 0 ? 1 : -1 : 0;
-    int amount_to_check = xdir == 0 ? std::abs(checkedKing.pos.y - game.pieceCausingKingCheck.pos.y) : std::abs(checkedKing.pos.x - game.pieceCausingKingCheck.pos.x);
+    int ydir = xdir == 0 ? game.pieceCausingKingCheck->pos.y - checkedKing.pos.y < 0 ? 1 : -1 : 0;
+    int amount_to_check = xdir == 0 ? std::abs(checkedKing.pos.y - game.pieceCausingKingCheck->pos.y) : std::abs(checkedKing.pos.x - game.pieceCausingKingCheck->pos.x);
 
     for(int i = 0; i < amount_to_check; i++){
 
@@ -295,11 +295,11 @@ static bool rook_causing_check(ChessGame &game, GameSqaure& checkedKing, std::ve
 // False -> means that not checkmate since a piece can block OR take the bishop
 static bool bishop_causing_check(ChessGame &game, GameSqaure& checkedKing, std::vector<GameSqaure*>& teamPieces){
     // Up Or Down
-    GameSqaure temp = game.pieceCausingKingCheck;
+    GameSqaure temp = *game.pieceCausingKingCheck;
 
-    int xdir = game.pieceCausingKingCheck.pos.x - checkedKing.pos.x < 0 ? -1 : 1;
-    int ydir = game.pieceCausingKingCheck.pos.y - checkedKing.pos.y < 0 ? -1 : 1;
-    int amount_to_check = std::abs(game.pieceCausingKingCheck.pos.x - checkedKing.pos.x); // i dont think this should matter which one you do
+    int xdir = game.pieceCausingKingCheck->pos.x - checkedKing.pos.x < 0 ? -1 : 1;
+    int ydir = game.pieceCausingKingCheck->pos.y - checkedKing.pos.y < 0 ? -1 : 1;
+    int amount_to_check = std::abs(game.pieceCausingKingCheck->pos.x - checkedKing.pos.x); // i dont think this should matter which one you do
     
     for(int i = 0; i < amount_to_check; i++){
         // Iterate over teamPieces to see if they can reach the currentSquare
@@ -322,6 +322,36 @@ void print_messages(std::vector<std::wstring>& msgs){
     for(auto& msg: msgs){
         std::wcout << msg << std::endl; // printt the curr msg
     }
+}
+
+static bool check_king_safety_for_board_square(ChessGame &game, GameSqaure &to){
+    
+    // We need to pretend that the king is not present on the board during these checks
+
+    game.KingPositions[game.currentTurn - 1]->ownership = NONE;
+    game.KingPositions[game.currentTurn - 1]->piece = OPEN;
+    bool res = true;
+
+    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
+        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
+            GameSqaure& currentSquare = game.GameBoard[row][col];
+            if(currentSquare.ownership == NONE || currentSquare.piece == OPEN || currentSquare.ownership == game.currentTurn)
+                continue;
+            
+            if(verifyMove(game, currentSquare, to)){ 
+                // if this returns true then it means that the currentSquare can actually attack the king, 
+                //! BUT this doesnt apply for pawns, we need to pawns we need to do extra check for them 
+                res = false; // KING IS NOT SAFE
+                goto out;
+            }
+        }
+    }
+
+out:
+    // Restore king position
+    game.KingPositions[game.currentTurn - 1]->ownership = game.currentTurn;
+    game.KingPositions[game.currentTurn - 1]->piece = KING;
+    return res;
 }
 
 std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from) {
@@ -348,8 +378,11 @@ std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from)
         // If on board, nothing in the way, and not attacking own teammate, then add it to the vector
         if (onBoard(pointToMoveFrom))
             if (unobstructed_path_check(game, from, game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x]))
-                if (game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x].ownership != game.currentTurn)
+                if (game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x].ownership != game.currentTurn){
+                    if (from.piece == KING && !check_king_safety_for_board_square(game, game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x]))
+                        continue;
                     squares->push_back(&game.GameBoard[pointToMoveFrom.y][pointToMoveFrom.x]);
+                }
 
     }
     return squares; // If this returns with a size of 0, then that means this piece CANNOT make any moves 
@@ -522,6 +555,7 @@ static bool validateMoveset(ChessGame &game, GameSqaure &from, GameSqaure &to){
 //* moving your piece did not put your king in check (kingSafe)
 
 bool kingSafe(ChessGame& game){ // Just checking the king square
+
     GameSqaure& kingToCheckSafteyFor = *game.KingPositions[game.currentTurn - 1];
 
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
@@ -533,13 +567,15 @@ bool kingSafe(ChessGame& game){ // Just checking the king square
             
             if(verifyMove(game, currentSquare, kingToCheckSafteyFor)){ 
                 // if this returns true then it means that the currentSquare can actually attack the king, 
-                // BUT this doesnt apply for pawns, we need to pawns we need to do extra check for them 
+                //! BUT this doesnt apply for pawns, we need to pawns we need to do extra check for them 
                 
-                game.pieceCausingKingCheck = currentSquare; // Needed for checkMate
+                game.pieceCausingKingCheck = &currentSquare; // Needed for checkMate
+                
                 return false; // KING IS NOT SAFE
             }
         }
     }
+
     return true; // KING IS SAFE
 }
 
@@ -569,6 +605,13 @@ bool checkMate(ChessGame &game){ // Checking everything around the king
     // Check each square around the King, if its not on the board SKIP it
     // If its taken by a teammate then SKIP it, bc the king cant take own piece
     // If its taken by an oppnent then we need to check if its a pawn OR knight
+
+    // Since we are checking these pieces assuming the king is moving there we need to also assume the king has moved
+    kingToCheckSafteyFor.ownership = NONE;
+    kingToCheckSafteyFor.piece = OPEN;
+
+    bool res = true;
+
     for(int i = 0; i < kingPossibleMoves; i++){
 
         struct Point currGamePosCheck = kingToCheckSafteyFor.pos;
@@ -590,12 +633,22 @@ bool checkMate(ChessGame &game){ // Checking everything around the king
                 ENEMY_CAN_ATTACK_KING_SURROUNDING_SQUARE = true;
         }
 
-        if(!ENEMY_CAN_ATTACK_KING_SURROUNDING_SQUARE)
-            return false;
+        if(!ENEMY_CAN_ATTACK_KING_SURROUNDING_SQUARE){
+            res = false; // False means that this space is safe because the king can get to it without any enemies reaching the square
+            goto restore_king;
+        }
     }
+restore_king:
+
+    kingToCheckSafteyFor.ownership = game.currentTurn;
+    kingToCheckSafteyFor.piece = KING;
+
+    if(!res)
+        return false;
+    
 
     // Now we need to see if any of the team pieces can block the enemy piece that is causing the team king to be in check
-    switch(game.pieceCausingKingCheck.piece){
+    switch(game.pieceCausingKingCheck->piece){
         case(ROOK):
             return rook_causing_check(game, kingToCheckSafteyFor, teamPieces);
             break;
@@ -609,7 +662,7 @@ bool checkMate(ChessGame &game){ // Checking everything around the king
         case(KNIGHT):
             // For bishop, we just have to check if any teamPieces can attack the knight
             for(GameSqaure* teamPiece: teamPieces){
-                if(verifyMove(game, *teamPiece, game.pieceCausingKingCheck))
+                if(verifyMove(game, *teamPiece, *game.pieceCausingKingCheck))
                     return false; // Some team piece can attack the knight, no gameover
             }
             break;
@@ -618,6 +671,49 @@ bool checkMate(ChessGame &game){ // Checking everything around the king
     }
 
     return true; // This determines if the game is over or not
+}
+
+
+// True --> Yes king safe, next turn
+// False --> No, redo turn
+bool king_safe_after_move(ChessGame& Game, GameSqaure& movePiece, GameSqaure& moveToSquare, std::wstring* toPrint){
+
+    GameSqaure oldFromPiece;
+    oldFromPiece.ownership = movePiece.ownership;
+    oldFromPiece.piece = movePiece.piece;
+    oldFromPiece.pos = movePiece.pos;
+
+    GameSqaure oldFromMoveTo;
+    oldFromMoveTo.ownership = moveToSquare.ownership;
+    oldFromMoveTo.piece = moveToSquare.piece;
+    oldFromMoveTo.pos = moveToSquare.pos;
+
+    int res = makeMove(Game, movePiece, moveToSquare); 
+
+    if(kingSafe(Game)){
+        if(res == 0 && toPrint != nullptr)
+            *toPrint = L"Piece moved."; 
+        else
+            *toPrint = L"Piece taken.";                 
+    }else{
+        // Revert move
+
+        movePiece.ownership = oldFromPiece.ownership;
+        movePiece.piece = oldFromPiece.piece;
+        movePiece.pos = oldFromPiece.pos;
+
+        moveToSquare.ownership = oldFromMoveTo.ownership;
+        moveToSquare.piece = oldFromMoveTo.piece;
+        moveToSquare.pos = oldFromMoveTo.pos;
+
+        Game.KingPositions[Game.currentTurn - 1] = &Game.GameBoard[oldFromPiece.pos.y][oldFromPiece.pos.x];
+        return false;                                                       
+    }
+
+    std::wcout << "King positions" << std::endl;
+    Game.KingPositions[0]->print();
+    Game.KingPositions[1]->print();
+    return true;
 }
 
 
