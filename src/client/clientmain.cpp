@@ -1,13 +1,11 @@
-#include "../chess.hpp"
+#include "../Chess/chess.hpp"
 #include "./option.hpp"
 #include "./client-text-graphics/textgraphic.hpp"
-
-#include <fstream>
 #include <cstdlib>
+#include <fstream>	
 //! Always use wcout, wcout and wcout dont mix
 
 bool running = true;
-extern void local_game(bool);
 extern void online_game();
 
 // GLOBAL
@@ -291,9 +289,6 @@ int main()
 	set_terminal_color(DEFAULT);
 
 	std::wcout << "\n\n\n\n\n" << std::endl;
-	
-    //! Required
-	init_moveset();
 
 	// ANNOYING I HAVE TO DO THIS
 	bool firstPrint = true;
@@ -315,7 +310,8 @@ int main()
 		int opt = get_menu_option();
 		if(opt == 1 || opt == 7){
 			std::wcout << "Global things --> " << global_player_option.p1_color << global_player_option.p2_color << global_player_option.moveHighlighting << global_player_option.boardHistory << global_player_option.flipBoardOnNewTurn << std::endl;
-			local_game(opt == 7 ? true : false);
+			Standard_ChessGame Game(global_player_option, opt == 7 ? true : false);
+			Game.startGame();
 		}else if(opt == 2){
 			online_game();
 		}else if(opt ==3){
@@ -326,8 +322,6 @@ int main()
 			if(option_opt != 7) // Handle anything else, if 7 then just go back
 				changing_option_from_menu(option_opt);	
 		}else if(opt == 4){
-			if(Pawn1.moves == nullptr)
-				uninit_moveset(); // free the heap memory in the moveset
 			running = false;
 			std::wcout << "Have a good day..." << std::endl;
 		}

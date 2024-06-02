@@ -1,5 +1,5 @@
 #pragma once
-#include "../../chess.hpp"
+#include "../../Chess/chess.hpp"
 #include <atomic>
 #include <poll.h>
 #include <thread>

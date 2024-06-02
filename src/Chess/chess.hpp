@@ -6,11 +6,11 @@
 #include <deque>
 #include <vector>
 #include <array>
-#include "./terminal-io/terminal.hpp"
-#include "./terminal-io/colors.hpp"
-#include "./client/option.hpp"
-#include "./client-rand-string/random-string.hpp"
-#include "client-server-communication.hpp"
+#include "../terminal-io/terminal.hpp"
+#include "../terminal-io/colors.hpp"
+#include "../client/option.hpp"
+#include "../client-rand-string/random-string.hpp"
+#include "../client-server-communication.hpp"
 
 #define CONFIG_FILE_NAME "/wchesscfg"
 
@@ -35,17 +35,22 @@
 
 
 struct Point{
-    short m_x;
-    short m_y;
+    int m_x;
+    int m_y;
     
-    Point(short x, short y) : m_x(x), m_y(y) {}
+    Point(){}
+    Point(int x, int y) : m_x(x), m_y(y) {}
 
     Point operator+(const Point& other) const {
         return Point(this->m_x + other.m_x, this->m_y + other.m_y); 
     }
 
-    bool operator==(Point other){
+    bool operator==(const Point other){
         return this->m_x == other.m_x && this->m_y == other.m_y;
+    }
+
+    bool operator==(const Point& other) const {
+        return m_x == other.m_x && m_y == other.m_y;
     }
 };
 
@@ -92,17 +97,21 @@ enum Player{ // Just so we can index into things with this instead of like Owner
     PlayerTwo
 };
 
+extern std::wstring enumPiece_toString(GamePiece);
+
 
 class GameSquare {
 
 private:
 
-    bool firstMoveOccurred = false; // Applies for castling, pawns, etc.
+
+    bool mfirstMoveOccurred = false; // Applies for castling, pawns, etc.
     const Point mPosition;
     Owner mOwner;
     GamePiece mPiece;
 
 public:
+    GameSquare(){}
     GameSquare(Owner owner, GamePiece piece ,Point pos): mOwner(owner), mPiece(piece), mPosition(pos) {}
     GameSquare(GameSquare* ptr): mOwner(ptr->getOwner()), mPiece(ptr->getPiece()), mPosition(ptr->getPosition()) {}
 
@@ -112,6 +121,10 @@ public:
 
     GameSquare operator=(GameSquare other){
         return GameSquare(other.getOwner(), other.getPiece(), other.getPosition());
+    }
+
+    bool operator==(GameSquare other) {
+        return mfirstMoveOccurred == other.getIfFirstMoveMade() && mPosition == other.getPosition() && mOwner == other.getOwner() && mPiece == other.getPiece();
     }
 
     void print(){
@@ -126,23 +139,22 @@ public:
 
     Point getPosition() const { return mPosition; }
 
-    void setFirstMoveMade() { firstMoveOccurred = true; }
-    bool getIfFirstMoveMade() const { return firstMoveOccurred; }
+    void setFirstMoveMade() { mfirstMoveOccurred = true; }
+    bool getIfFirstMoveMade() const { return mfirstMoveOccurred; }
 
 };
 
-std::wstring enumPiece_toString(GamePiece piece) {
-    // Placeholder for the actual implementation
-    switch (piece) {
-        case PAWN: return L"Pawn";
-        case ROOK: return L"Rook";
-        case KNIGHT: return L"Knight";
-        case BISHOP: return L"Bishop";
-        case QUEEN: return L"Queen";
-        case KING: return L"King";
-        default: return L"Unknown";
-    }
-}
+class Move{
+
+    GameSquare& m_moveFrom;
+    GameSquare& m_moveTo;
+
+public:
+    Move(GameSquare& move, GameSquare& to): m_moveFrom(move), m_moveTo(to) {}
+
+    GameSquare& getMoveFrom() const { return m_moveFrom; }
+    GameSquare& getMoveTo() const { return m_moveTo; }
+};
 
 struct TakenPiece{
     std::wstring mMove;
@@ -162,53 +174,53 @@ struct GetMove{
 
 class Standard_ChessGame{
 
+protected:
+
     // print the standard board
     void printBoard();
 
-    // 0 Checkmate on current player
-    // 1 Check on current player
-    // 2 All good
-    int kingSaftey();
+    // print the standard board but with moves from the movefrom
+    void printBoardWithMoves(GetMove);
 
-    // 0 No piece present
-    // 1 Piece does not belong to
-    // 2 Cannot take own piece (After checking NOT castling)
-    // 3 Valid move
-    int validateMove(Move&);
+    // True, Gameover
+    // False not checkmate
+    bool checkMate();
 
-    // 0 Invalid move, Moveset
-    // 1 Invalid move, Piece in way
-    // 2 Invalid move puts you in check
-    // 3 Valid move, piece moved
-    // 4 Valid move, piece taken
-    int makeMove(Move&);
+    // True, basic checks valid
+    // False invalid move
+    bool validateMove(Move&);
 
-    // 0 Invalid move
-    // 1 Piece in way
-    // 2 Valid move
-    int verifyMove(Move& move);
+    // True piece moved
+    // False piece not moved
+    bool makeMove(Move&);
+
+    // True valid move
+    // False invalid move
+    bool verifyMove(Move&);
 
     // True - All good
     // False - Piece in way
-    bool unobstructedPathCheck(Move& move);
+    bool unobstructedPathCheck(Move&);
 
     // True - All good
     // False - Piece in way
-    bool rookClearPath(Move& move);
+    bool rookClearPath(Move&);
 
     // True - All good
     // False - Piece in way
-    bool Standard_ChessGame::bishopClearPath(Move& move);
+    bool bishopClearPath(Move&);
+
+    // True can defend so not checkmate
+    // False cannot defend king, so checkmate
+    bool canDefendKing(std::vector<GameSquare*>&);
 
     // True - All good
     // False - Not good
-    bool Standard_ChessGame::pawnMoveCheck(Move& move);
-
-    bool Standard_ChessGame::checkBishopCausingCheck(std::vector<GameSquare*>& teamPieces);
+    bool pawnMoveCheck(Move&);
 
     // True - Valid move
     // False - Invalid move
-    bool validateMoveset(Move& move);
+    bool validateMoveset(Move&);
 
     // Get move
     GetMove getMove(int which);
@@ -218,13 +230,20 @@ class Standard_ChessGame{
 
     // True - King is safe
     // False - King is NOT safe
-    bool kingSafe();
+    bool kingSafe(GameSquare*);
+
+    // True on board
+    // False not on board
+    bool onBoard(Point&);
 
     // returns owner at point
-    enum Owner Standard_ChessGame::piecePresent(Point p);
+    Owner piecePresent(Point);
    
-    // populaes the possible move vec
-    bool Standard_ChessGame::populatePossibleMoves();
+    // populates the possible move vec
+    bool populatePossibleMoves(GameSquare&);
+
+    // reads the possible moves and comapres to a move
+    bool readPossibleMoves(GameSquare&);
 
     // 2 players, each with 16 pieces
     void initGame();
@@ -239,8 +258,8 @@ class Standard_ChessGame{
 
     // Determines if game is alive
     bool GameOver;
+    bool currTurnInCheck;
 
-public:
     // owner enum is used to track player turn, None will not be used, just 1 & 2
     Player currentTurn;
 
@@ -249,9 +268,15 @@ public:
     GameSquare* pieceCausingKingCheck = nullptr; 
     std::vector<GameSquare *> possibleMoves; 
 
+    // to print next while loop iteration after the board is printed
+    std::wstring toPrint;
+
+public:
+
     bool DEV_MODE_ENABLE = false;;
     void DEV_MODE_PRESET();
-    Standard_ChessGame(bool);
+    Standard_ChessGame(Options, bool);
+    Standard_ChessGame(Options);
     Standard_ChessGame();
 
 
@@ -263,29 +288,6 @@ public:
 
 };
 
-class Move{
-
-    GameSquare& m_moveFrom;
-    GameSquare& m_moveTo;
-
-public:
-    Move(GameSquare& move, GameSquare& to): m_moveFrom(move), m_moveTo(to) {}
-
-    GameSquare& getMoveFrom() const { return m_moveFrom; }
-    GameSquare& getMoveTo() const { return m_moveTo; }
-};
-
-
-// Move checking
-
-// struct Move{
-//     short x;
-//     short y;
-// };
-
-struct Piece_moveset{
-    struct Move* moves;
-};
 
 // Everyone to use, idk how to sort these lmao
 int char_single_digit_to_int(const char c);
@@ -298,14 +300,4 @@ void local_game();
 // Function for chess functionality
 void handleOption();
 
-// Functions for the client
-bool kingSafe(ChessGame& game);
-bool checkMate(ChessGame &game);
-int makeMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
-bool verifyMove(ChessGame &game, GameSqaure &from, GameSqaure &to);
-std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from);
-void validateMovePiece(ChessGame& game, GameSqaure& movePiece, std::wstring& msg);
-void validateMoveToPiece(ChessGame& game, GameSqaure& moveToSquare, std::wstring& retMsg);
-bool king_safe_after_move(ChessGame& Game, GameSqaure& movePiece, GameSqaure& moveToSquare, std::wstring* toPrint = nullptr);
-void print_board_with_moves(ChessGame &game, GameSqaure& from, std::vector<GameSqaure*>& vecOfSquare);
 

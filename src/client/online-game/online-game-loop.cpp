@@ -126,188 +126,190 @@ static bool non_turn_check_in(int fd){
 void game_loop(int game_fd, enum Owner myPlayerNum, std::string otherPlayerStr){
 
     std::wcout << "In client game_loop" << std::endl;
+
+    while (true) {}
+
+    // ChessGame Game;
+    // Game.GameOptions = global_player_option;
+    // bool& game_gameover = Game.gameover;
+
+    // if(!verify_player_server_connection(game_fd))
+    //     return;
     
-    ChessGame Game;
-    Game.GameOptions = global_player_option;
-    bool& game_gameover = Game.gameover;
+    // std::wcout << "= = = = =\nMe: " << convertString(ONLINE_PLAYER_ID) << ", Player: " << (myPlayerNum == PONE ? "Player one" : "Player two") << std::endl;
+    // std::wcout << "Other: " << convertString(otherPlayerStr) << ", Player: " << (myPlayerNum == PONE ? "Player two" : "Player one") << "\n= = = = =" << std::endl;
 
-    if(!verify_player_server_connection(game_fd))
-        return;
-    
-    std::wcout << "= = = = =\nMe: " << convertString(ONLINE_PLAYER_ID) << ", Player: " << (myPlayerNum == PONE ? "Player one" : "Player two") << std::endl;
-    std::wcout << "Other: " << convertString(otherPlayerStr) << ", Player: " << (myPlayerNum == PONE ? "Player two" : "Player one") << "\n= = = = =" << std::endl;
+    // while(!game_gameover){
 
-    while(!game_gameover){
-
-        set_terminal_color(GREEN);
-        std::wcout << "Game Current Turn: " << Game.currentTurn << ", myPlayerNum: " << myPlayerNum << std::endl;
-        set_terminal_color(DEFAULT);
+    //     set_terminal_color(GREEN);
+    //     std::wcout << "Game Current Turn: " << Game.currentTurn << ", myPlayerNum: " << myPlayerNum << std::endl;
+    //     set_terminal_color(DEFAULT);
         
-        //* Regardless of the turn, you get a pre turn check in from the server
+    //     //* Regardless of the turn, you get a pre turn check in from the server
 
-        bool in_check = false;
+    //     bool in_check = false;
 
-        std::wcout << "Recieving the turnly check in..." << std::endl;
-        int res = turnly_check_in(game_fd);
-        std::wcout << "Turnly check in recieved..." << std::endl;
-        if(res < 3){
-            // End game
-            std::wstring end_game_msg;
-            if(res == 0)
-                end_game_msg = L"Gameover, connection problem.";
-            else if(res == 1)
-                if(Game.currentTurn == myPlayerNum)
-                    end_game_msg = L"Gameover, You Lose! You surrendered.";
-                else //! Honestly idk if these should be the other way around
-                    end_game_msg = L"Gameover, You Win! They surrendered.";
-            else
-                if(Game.currentTurn == myPlayerNum)
-                    end_game_msg = L"Gameover, Checkmate, You Win!";
-                else //! Honestly idk if these should be the other way around
-                    end_game_msg = L"Gameover, Checkmate, You lose!";
-            std::wcout << end_game_msg << std::endl;
-            return;
-        }else if(res == 3)
-            in_check = true; // Check
+    //     std::wcout << "Recieving the turnly check in..." << std::endl;
+    //     int res = turnly_check_in(game_fd);
+    //     std::wcout << "Turnly check in recieved..." << std::endl;
+    //     if(res < 3){
+    //         // End game
+    //         std::wstring end_game_msg;
+    //         if(res == 0)
+    //             end_game_msg = L"Gameover, connection problem.";
+    //         else if(res == 1)
+    //             if(Game.currentTurn == myPlayerNum)
+    //                 end_game_msg = L"Gameover, You Lose! You surrendered.";
+    //             else //! Honestly idk if these should be the other way around
+    //                 end_game_msg = L"Gameover, You Win! They surrendered.";
+    //         else
+    //             if(Game.currentTurn == myPlayerNum)
+    //                 end_game_msg = L"Gameover, Checkmate, You Win!";
+    //             else //! Honestly idk if these should be the other way around
+    //                 end_game_msg = L"Gameover, Checkmate, You lose!";
+    //         std::wcout << end_game_msg << std::endl;
+    //         return;
+    //     }else if(res == 3)
+    //         in_check = true; // Check
 
 
-        print_board(Game);
+    //     print_board(Game);
 
-        if(myPlayerNum == Game.currentTurn){
+    //     if(myPlayerNum == Game.currentTurn){
 
-            while(true){
+    //         while(true){
 
-                int res;
+    //             int res;
 
-                std::wstring move;
-                std::wstring moveTo;
-                std::wstring ret_msg;
+    //             std::wstring move;
+    //             std::wstring moveTo;
+    //             std::wstring ret_msg;
 
-                if(!in_check){
-                    std::wcout << "Your move: ";
-                    res = getMove(move);
-                    if(res != 0){ 
-                        // handle
-                        if(res == 1){ // 1 --> Option change, 
-                            // QUIT
-                        }else{
-                            continue; // 2 --> Invalid input
-                        }
-                    }
+    //             if(!in_check){
+    //                 std::wcout << "Your move: ";
+    //                 res = getMove(move);
+    //                 if(res != 0){ 
+    //                     // handle
+    //                     if(res == 1){ // 1 --> Option change, 
+    //                         // QUIT
+    //                     }else{
+    //                         continue; // 2 --> Invalid input
+    //                     }
+    //                 }
 
-                    validateMovePiece(Game, *moveConverter(Game, move), ret_msg);
+    //                 validateMovePiece(Game, *moveConverter(Game, move), ret_msg);
 
-                    if(ret_msg.length() != 0){
-                        std::wcout << ret_msg << std::endl;
-                        continue;
-                    }
-                }else{
-                    move = L"KI";
-                }
+    //                 if(ret_msg.length() != 0){
+    //                     std::wcout << ret_msg << std::endl;
+    //                     continue;
+    //                 }
+    //             }else{
+    //                 move = L"KI";
+    //             }
 
-                if(Game.GameOptions.moveHighlighting){
-                    std::vector<GameSqaure*>* squaresPieceCanMoveTo;
-                    GameSqaure* movePiece = moveConverter(Game, move);
-                    squaresPieceCanMoveTo = get_move_to_squares(Game, *movePiece);
-                    if(squaresPieceCanMoveTo->size() > 0) 
-                        print_board_with_moves(Game, *movePiece, *squaresPieceCanMoveTo);
-                    else{
-                        std::wcout << "No valid moves with this piece." << std::endl;
-                        continue;
-                    }
-                }
+    //             if(Game.GameOptions.moveHighlighting){
+    //                 std::vector<GameSqaure*>* squaresPieceCanMoveTo;
+    //                 GameSqaure* movePiece = moveConverter(Game, move);
+    //                 squaresPieceCanMoveTo = get_move_to_squares(Game, *movePiece);
+    //                 if(squaresPieceCanMoveTo->size() > 0) 
+    //                     print_board_with_moves(Game, *movePiece, *squaresPieceCanMoveTo);
+    //                 else{
+    //                     std::wcout << "No valid moves with this piece." << std::endl;
+    //                     continue;
+    //                 }
+    //             }
 
-                std::wcout << "Move to: ";
-                res = getMove(moveTo);
-                if(res != 0){
-                    // hanlde
-                    // handle
-                    if(res == 1){ // 1 --> Option change, 
-                        // QUIT
-                    }else{
-                        continue; // 2 --> Invalid input
-                    }
-                }
+    //             std::wcout << "Move to: ";
+    //             res = getMove(moveTo);
+    //             if(res != 0){
+    //                 // hanlde
+    //                 // handle
+    //                 if(res == 1){ // 1 --> Option change, 
+    //                     // QUIT
+    //                 }else{
+    //                     continue; // 2 --> Invalid input
+    //                 }
+    //             }
 
-                validateMoveToPiece(Game, *moveConverter(Game, moveTo), ret_msg);
+    //             validateMoveToPiece(Game, *moveConverter(Game, moveTo), ret_msg);
             
-                if(ret_msg.length() != 0){
-                    std::wcout << ret_msg << std::endl;
-                    continue;
-                }
+    //             if(ret_msg.length() != 0){
+    //                 std::wcout << ret_msg << std::endl;
+    //                 continue;
+    //             }
 
-                std::wcout << "Basic validation was made on the move and to, now we are going to send the move to the server" << std::endl;
+    //             std::wcout << "Basic validation was made on the move and to, now we are going to send the move to the server" << std::endl;
 
-                // Basic checks are made on the piece and move to piece / square
-                // The server will make verifyMove and other checks for safety purposes
+    //             // Basic checks are made on the piece and move to piece / square
+    //             // The server will make verifyMove and other checks for safety purposes
 
-                take_moves_and_send(game_fd, convertWString(move), convertWString(moveTo));
+    //             take_moves_and_send(game_fd, convertWString(move), convertWString(moveTo));
 
-                std::wcout << "Sent to server the move, now we wait for the result from the server" << std::endl;
+    //             std::wcout << "Sent to server the move, now we wait for the result from the server" << std::endl;
                 
-                res = server_said_valid_move(game_fd);
-                if(res == -1){
-                    std::wcout << "This puts you in check..." << std::endl;
-                    continue;
-                }else if(res == 0){
-                    std::wcout << "Piece cannot reach that position..." << std::endl;
-                    continue;
-                }
+    //             res = server_said_valid_move(game_fd);
+    //             if(res == -1){
+    //                 std::wcout << "This puts you in check..." << std::endl;
+    //                 continue;
+    //             }else if(res == 0){
+    //                 std::wcout << "Piece cannot reach that position..." << std::endl;
+    //                 continue;
+    //             }
 
-                std::wcout << "The move was valid, now we will make the move" << std::endl;
+    //             std::wcout << "The move was valid, now we will make the move" << std::endl;
 
-                // Valid move
+    //             // Valid move
 
-                if(makeMove(Game, *moveConverter(Game, move), *moveConverter(Game, moveTo)) == 0){
-                    std::wcout << "Piece moved." << std::endl;
-                }else{
-                    std::wcout << "Piece taken." << std::endl;
-                }
+    //             if(makeMove(Game, *moveConverter(Game, move), *moveConverter(Game, moveTo)) == 0){
+    //                 std::wcout << "Piece moved." << std::endl;
+    //             }else{
+    //                 std::wcout << "Piece taken." << std::endl;
+    //             }
 
-                break;
-            }
+    //             break;
+    //         }
 
-        }else{
+    //     }else{
 
-            std::wcout << "Sending server non check in" << std::endl;
+    //         std::wcout << "Sending server non check in" << std::endl;
 
-            if(!non_turn_check_in(game_fd))
-                // hanlde send socket error
+    //         if(!non_turn_check_in(game_fd))
+    //             // hanlde send socket error
 
-            std::wcout << "Other players turn..." << std::endl;
+    //         std::wcout << "Other players turn..." << std::endl;
 
-            // Get other players move from last turn
+    //         // Get other players move from last turn
 
-            std::wstring move;
-            std::wstring moveTo;
+    //         std::wstring move;
+    //         std::wstring moveTo;
 
-            if(notTurn_getMove(game_fd, move, moveTo)){ 
-                // makeMove() with the other players move
+    //         if(notTurn_getMove(game_fd, move, moveTo)){ 
+    //             // makeMove() with the other players move
 
-                if(makeMove(Game, *moveConverter(Game, move), *moveConverter(Game, moveTo)) == 0){
-                    std::wcout << "Opponent moved a piece." << std::endl;
-                }else{
-                    std::wcout << "Opponent took a piece." << std::endl;
-                }
-            }
+    //             if(makeMove(Game, *moveConverter(Game, move), *moveConverter(Game, moveTo)) == 0){
+    //                 std::wcout << "Opponent moved a piece." << std::endl;
+    //             }else{
+    //                 std::wcout << "Opponent took a piece." << std::endl;
+    //             }
+    //         }
 
-            // If there is no getMove because the opponent dc-ed it will handle it on the next loop
+    //         // If there is no getMove because the opponent dc-ed it will handle it on the next loop
 
-        }
+    //     }
 
-        // The server needs to wait for a recv once before sending pre turn check in
-        // to ad here to client -> server communication standards
+    //     // The server needs to wait for a recv once before sending pre turn check in
+    //     // to ad here to client -> server communication standards
 
-        std::wcout << "Sending to the server the end check in" << std::endl;
+    //     std::wcout << "Sending to the server the end check in" << std::endl;
 
-        // After it sends this it will be waiting for the pre turn check in
-        if(send(game_fd, (void*)CLIENT_RDY_FOR_NEXT_TURN, sizeof(CLIENT_RDY_FOR_NEXT_TURN), 0) < 0)
-            server_sent_zero_bytes_fatal_error();
+    //     // After it sends this it will be waiting for the pre turn check in
+    //     if(send(game_fd, (void*)CLIENT_RDY_FOR_NEXT_TURN, sizeof(CLIENT_RDY_FOR_NEXT_TURN), 0) < 0)
+    //         server_sent_zero_bytes_fatal_error();
 
-        std::wcout << "Sent to the server the end check in" << std::endl;
+    //     std::wcout << "Sent to the server the end check in" << std::endl;
 
         // Swap turns
-        Game.currentTurn = (Game.currentTurn == PONE ? PTWO : PONE);
+        //Game.currentTurn = (Game.currentTurn == PONE ? PTWO : PONE);
 
-    }
+//    }
 }
