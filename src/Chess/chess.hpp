@@ -5,6 +5,7 @@
 #include <iostream>
 #include <deque>
 #include <vector>
+#include <array>
 #include "./terminal-io/terminal.hpp"
 #include "./terminal-io/colors.hpp"
 #include "./client/option.hpp"
@@ -21,6 +22,7 @@
 #define STANDARD_CHESSGAME_PLAYER_COUNT 2
 #define STANDARD_CHESSGAME_TEAM_PIECE_COUNT 16
 #define STANDARD_CHESSGAME_TEAM_PIECE_ART_COUNT 7
+#define STANDARD_CHESSGAME_MAXIMUM_PIECE_BOARD_COVERAGE 27
 
 #define PAWN_POSSIBLE_MOVES 4
 #define KNIGHT_POSSIBLE_MOVES 8
@@ -218,8 +220,12 @@ class Standard_ChessGame{
     // False - King is NOT safe
     bool kingSafe();
 
+    // returns owner at point
     enum Owner Standard_ChessGame::piecePresent(Point p);
    
+    // populaes the possible move vec
+    bool Standard_ChessGame::populatePossibleMoves();
+
     // 2 players, each with 16 pieces
     void initGame();
 
@@ -241,6 +247,7 @@ public:
     GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
     GameSquare* KingPositions[STANDARD_CHESSGAME_PLAYER_COUNT];
     GameSquare* pieceCausingKingCheck = nullptr; 
+    std::vector<GameSquare *> possibleMoves; 
 
     bool DEV_MODE_ENABLE = false;;
     void DEV_MODE_PRESET();

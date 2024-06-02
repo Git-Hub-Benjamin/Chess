@@ -1,6 +1,9 @@
 #include "chess.hpp"
 #include <vector>
 #include <unordered_map>
+#include <array>
+
+std::array<int, 40> a;
 
 // Conversion from string to wstring
 std::wstring convertString(const std::string& passed) {
@@ -77,6 +80,8 @@ out:
     game.KingPositions[game.currentTurn - 1]->piece = KING;
     return res;
 }
+
+
 
 std::vector<GameSqaure*>* get_move_to_squares(ChessGame &game, GameSqaure& from) {
     std::vector<GameSqaure*>* squares = new std::vector<GameSqaure*>;

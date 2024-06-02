@@ -353,7 +353,13 @@ bool Standard_ChessGame::checkBishopCausingCheck(std::vector<GameSquare*>& teamP
 
 int Standard_ChessGame::makeMove(Move& move){
 
-    int res = verifyMove(move);
+    int res;
+    
+    if (GameOptions.moveHighlighting) {
+
+    } else {
+        res = verifyMove(move);
+    }
     if ( res < 2 )
         return res;
 
@@ -396,6 +402,12 @@ int Standard_ChessGame::makeMove(Move& move){
         KingPositions[currentTurn] = &move.getMoveFrom();
 
     return 2;
+}
+
+// True - There is at least one move
+// False - No moves from this piece
+bool Standard_ChessGame::populatePossibleMoves() {
+
 }
 
 
@@ -482,6 +494,11 @@ void Standard_ChessGame::startGame(){
         if(!moveFrom.res){
             // Quit
         }
+
+        if (GameOptions.moveHighlighting) {
+
+        }
+
         GetMove moveTo = getMove(TO_MOVE);
         if(!moveTo.res){
             // Quit
@@ -516,6 +533,9 @@ void Standard_ChessGame::startGame(){
 
     // Swap turns
     currentTurn = currentTurn == PlayerOne ? PlayerTwo : PlayerOne;
+
+    // Clear the possibleMoves vec
+    possibleMoves.clear();
 
 }
 
