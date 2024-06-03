@@ -52,6 +52,8 @@ struct Point{
     bool operator==(const Point& other) const {
         return m_x == other.m_x && m_y == other.m_y;
     }
+
+    void print() { std::wcout << "(X: " << m_x << ", Y: " << m_y << "}"; }
 };
 
 enum XWIDTH{
@@ -101,34 +103,47 @@ extern std::wstring enumPiece_toString(GamePiece);
 
 
 class GameSquare {
-
 private:
-
-
     bool mfirstMoveOccurred = false; // Applies for castling, pawns, etc.
-    const Point mPosition;
+    Point mPosition;
     Owner mOwner;
     GamePiece mPiece;
 
 public:
-    GameSquare(){}
-    GameSquare(Owner owner, GamePiece piece ,Point pos): mOwner(owner), mPiece(piece), mPosition(pos) {}
-    GameSquare(GameSquare* ptr): mOwner(ptr->getOwner()), mPiece(ptr->getPiece()), mPosition(ptr->getPosition()) {}
+    // Default constructor should initialize mPosition
+    GameSquare() : mPosition({-1, -1}), mOwner(NONE), mPiece(OPEN) {}
 
-    GameSquare operator=(GameSquare* other){
-        return GameSquare(other->getOwner(), other->getPiece(), other->getPosition());
+    GameSquare(Owner owner, GamePiece piece, Point pos)
+        : mPosition(pos), mOwner(owner), mPiece(piece) {}
+
+    GameSquare(const GameSquare& other)
+        : mPosition(other.mPosition), mOwner(other.mOwner), mPiece(other.mPiece), mfirstMoveOccurred(other.mfirstMoveOccurred) {}
+
+    // Corrected assignment operator
+    GameSquare& operator=(const GameSquare& other) {
+        if (this != &other) {
+            // We can't assign to mPosition because it's const,
+            // so we need to ensure that this assignment operator is only used correctly
+            // where mPosition doesn't need to change.
+            mOwner = other.mOwner;
+            mPiece = other.mPiece;
+            mPosition = other.mPosition;
+            mfirstMoveOccurred = other.mfirstMoveOccurred;
+        }
+        return *this;
     }
 
-    GameSquare operator=(GameSquare other){
-        return GameSquare(other.getOwner(), other.getPiece(), other.getPosition());
+    bool operator==(const GameSquare& other) const {
+        return mfirstMoveOccurred == other.mfirstMoveOccurred &&
+               mPosition == other.mPosition &&
+               mOwner == other.mOwner &&
+               mPiece == other.mPiece;
     }
 
-    bool operator==(GameSquare other) {
-        return mfirstMoveOccurred == other.getIfFirstMoveMade() && mPosition == other.getPosition() && mOwner == other.getOwner() && mPiece == other.getPiece();
-    }
-
-    void print(){
-        std::wcout << "Pos: {" << mPosition.m_x << ", " << mPosition.m_y << "}, Piece: " << enumPiece_toString(mPiece) << ", Owner: " << (mOwner == NONE ? "None" : mOwner == PONE ? "Player one" : "Player two") << std::endl;
+    void print() const {
+        std::wcout << "Pos: {" << mPosition.m_x << ", " << mPosition.m_y << "}, Piece: " 
+                   << enumPiece_toString(mPiece) << ", Owner: " 
+                   << (mOwner == NONE ? "None" : mOwner == PONE ? "Player one" : "Player two") << std::endl;
     }
 
     void setOwner(Owner o) { mOwner = o; }
@@ -141,8 +156,9 @@ public:
 
     void setFirstMoveMade() { mfirstMoveOccurred = true; }
     bool getIfFirstMoveMade() const { return mfirstMoveOccurred; }
-
 };
+
+
 
 class Move{
 
@@ -188,7 +204,7 @@ protected:
 
     // True, basic checks valid
     // False invalid move
-    bool validateMove(Move&);
+    bool validateGameSquare(GameSquare&, int);
 
     // True piece moved
     // False piece not moved
@@ -196,7 +212,7 @@ protected:
 
     // True valid move
     // False invalid move
-    bool verifyMove(Move&);
+    bool verifyMove(Move&, bool);
 
     // True - All good
     // False - Piece in way
@@ -230,7 +246,11 @@ protected:
 
     // True - King is safe
     // False - King is NOT safe
-    bool kingSafe(GameSquare*);
+    bool kingSafe();
+
+    // True king is safe after this move is made
+    // False king is not safe
+    bool kingSafeAfterMove(GameSquare&);
 
     // True on board
     // False not on board
@@ -243,7 +263,7 @@ protected:
     bool populatePossibleMoves(GameSquare&);
 
     // reads the possible moves and comapres to a move
-    bool readPossibleMoves(GameSquare&);
+    bool readPossibleMoves(GameSquare&, bool);
 
     // 2 players, each with 16 pieces
     void initGame();

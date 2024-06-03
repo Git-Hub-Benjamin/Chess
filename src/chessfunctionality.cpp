@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <array>
 
+
 // Conversion from string to wstring
 std::wstring convertString(const std::string& passed) {
     return std::wstring(passed.begin(), passed.end());
@@ -13,21 +14,38 @@ std::string convertWString(std::wstring& passed){
     return std::string(passed.begin(), passed.end());
 }
 
-// Logic functions
-
 std::wstring enumPiece_toString(GamePiece piece) {
-    // Placeholder for the actual implementation
     switch (piece) {
-        case PAWN: return L"Pawn";
-        case ROOK: return L"Rook";
-        case KNIGHT: return L"Knight";
-        case BISHOP: return L"Bishop";
-        case QUEEN: return L"Queen";
-        case KING: return L"King";
-        default: return L"Unknown";
+        case OPEN:
+            return L"OPEN";
+        case PAWN:
+            return L"PAWN";
+        case KNIGHT:
+            return L"KNIGHT";
+        case BISHOP:
+            return L"BISHOP";
+        case ROOK:
+            return L"ROOK";
+        case KING:
+            return L"KING";
+        case QUEEN:
+            return L"QUEEN";
+        default:
+            return L"UNKNOWN";
     }
 }
 
+// Logic functions
+
 int char_single_digit_to_int(const char c){
     return c - 48;
+}
+
+
+std::string toLowercase(const std::string& str) {
+    std::string result;
+    for (char c : str) {
+        result += std::tolower(c);
+    }
+    return result;
 }

@@ -298,6 +298,7 @@ int main()
 	std::string path = home + "/wchesscfg"; 
 	CONFIG_PATH = home + CONFIG_FILE_NAME;
 
+
 	while(running){
 		title_screen();
 		if(firstPrint){

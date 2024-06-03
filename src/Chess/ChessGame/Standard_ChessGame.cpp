@@ -68,31 +68,31 @@ void Standard_ChessGame::reset() {
 }
 
 void Standard_ChessGame::initGame(){
-    memset(&GameBoard, 0, sizeof(GameBoard));
     currentTurn = PlayerOne;
 
-    if(this->DEV_MODE_ENABLE){
+    if (this->DEV_MODE_ENABLE) {
         this->DEV_MODE_PRESET();
-    }else{
-
-        for(int row = 0; row < CHESS_BOARD_HEIGHT; row++)
-        {
-            for(int col = 0; col < CHESS_BOARD_WIDTH; col++)
-            {
+    } else {
+        for (int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
+            for (int col = 0; col < CHESS_BOARD_WIDTH; col++) {
                 GamePiece pieceToPut = OPEN;
-                enum Owner playerOwnerToPut = NONE;
-                if(row < Y2) playerOwnerToPut = PTWO;
-                if(row > Y5) playerOwnerToPut = PONE;
-                if(row == Y0 || row == Y7){
+                Owner playerOwnerToPut = NONE;
 
-                    switch(col){
+                if (row < Y2) playerOwnerToPut = PTWO;
+                if (row > Y5) playerOwnerToPut = PONE;
+
+                if (row == Y0 || row == Y7) {
+                    switch (col) {
                         case X0:
+                        case X7:
                             pieceToPut = ROOK;
                             break;
                         case X1:
+                        case X6:
                             pieceToPut = KNIGHT;
                             break;
                         case X2:
+                        case X5:
                             pieceToPut = BISHOP;
                             break;
                         case X3:
@@ -101,26 +101,18 @@ void Standard_ChessGame::initGame(){
                         case X4:
                             pieceToPut = QUEEN;
                             break;
-                        case X5:
-                            pieceToPut = BISHOP;
-                            break;
-                        case X6:
-                            pieceToPut = KNIGHT;
-                            break;
-                        case X7:
-                            pieceToPut = ROOK;
-                            break;
                     }
                 }
-                if(row == Y1 || row == Y6) 
+
+                if (row == Y1 || row == Y6) 
                     pieceToPut = PAWN;
 
-                GameBoard[row][col] = GameSquare(playerOwnerToPut, pieceToPut, {col, row});
+                GameBoard[row][col] = GameSquare(playerOwnerToPut, pieceToPut, Point(col, row));
 
-                if(pieceToPut == KING)
-                    KingPositions[row == Y0 ? 1 : 0] = &GameBoard[row][col]; // if Y0 then it is player2 King, it not then its player1 king
-                
-                if(pieceToPut == OPEN) // This first move made only applies to pieces with actual pieces there
+                if (pieceToPut == KING)
+                    KingPositions[row == Y0 ? 1 : 0] = &GameBoard[row][col]; // if Y0 then it is player2 King, if not then it's player1 king
+
+                if (pieceToPut == OPEN) // This first move made only applies to pieces with actual pieces there
                     GameBoard[row][col].setFirstMoveMade();
             }
         }
@@ -140,7 +132,6 @@ void Standard_ChessGame::printBoard(){
     for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
         std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
         for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
-
             std::wcout << "| ";
             wchar_t piece;
             if(GameBoard[i][j].getOwner() == NONE)
@@ -189,7 +180,7 @@ void Standard_ChessGame::printBoardWithMoves(GetMove moveFrom) {
             }
 
             // checking if the current square can be acctacked by piece
-            if(readPossibleMoves(GameBoard[row][col])){
+            if(readPossibleMoves(GameBoard[row][col], false)){
                 if(piece == ' ')
                     piece = 'X';
                 set_terminal_color(RED);
@@ -220,16 +211,19 @@ GameSquare& Standard_ChessGame::convertMove(std::wstring move){
 
 // True - Valid move
 // False - Invalid Move
-bool Standard_ChessGame::validateMove(Move& move){
-    if(move.getMoveFrom().getOwner() == NONE)
-        toPrint = L"No piece present.";
+bool Standard_ChessGame::validateGameSquare(GameSquare& square, int which){
+    if (which == FROM_MOVE) {
 
-    if(static_cast<Player>(move.getMoveFrom().getOwner()) != currentTurn)
-        toPrint = L"This piece does not belong to you.";
+        if(square.getOwner() == NONE)
+            toPrint = L"No piece present.";
 
-    if(static_cast<Player>(move.getMoveTo().getOwner()) != currentTurn)
-        toPrint = L"Cannot take your own piece";
+        if(static_cast<Player>(square.getOwner()) != currentTurn)
+            toPrint = L"This piece does not belong to you.";
 
+    } else 
+        if(static_cast<Player>(square.getOwner()) == currentTurn)
+            toPrint = L"Cannot take your own piece";
+    
     if (toPrint.empty())
         return true;
     return false;
@@ -240,9 +234,23 @@ bool Standard_ChessGame::validateMove(Move& move){
 bool Standard_ChessGame::validateMoveset(Move& move){
 
     GamePiece fromPiece = move.getMoveFrom().getPiece();
-    short possibleMoveCounter = PIECE_MOVE_COUNTS[fromPiece];
+    short possibleMoveCounter = PIECE_MOVE_COUNTS[fromPiece - 1];
+
+    if (fromPiece == PAWN && currentTurn == PlayerTwo)
+        fromPiece = OPEN; 
+
+    std::wcout << "In validate moveset, fromPiece: " << enumPiece_toString(fromPiece == OPEN ? PAWN : fromPiece) << ", possible move counter: " << possibleMoveCounter << std::endl;
 
     for(int move_set_count = 0; move_set_count < possibleMoveCounter; move_set_count++){
+        
+        std::wcout << "Calculation: (";
+        move.getMoveFrom().getPosition().print();
+        std::wcout << " + ";
+        Point(pieceMovePtrs[fromPiece][move_set_count][0], pieceMovePtrs[fromPiece][move_set_count][1]).print();
+        std::wcout << ") == ";
+        move.getMoveTo().getPosition().print();
+        std::wcout << std::endl;
+
         if (move.getMoveFrom().getPosition() + Point(pieceMovePtrs[fromPiece][move_set_count][0], pieceMovePtrs[fromPiece][move_set_count][1]) == move.getMoveTo().getPosition()) {
             return true;
         }
@@ -263,14 +271,11 @@ enum Owner Standard_ChessGame::piecePresent(Point p){
 
 // True valid move
 // False invalid move
-bool Standard_ChessGame::verifyMove(Move& move){
-    if(validateMoveset(move)) {
-        if(unobstructedPathCheck(move))
+bool Standard_ChessGame::verifyMove(Move& move, bool ADD_PRINT){
+    if(validateMoveset(move) && unobstructedPathCheck(move))
             return true;
-        else 
-            toPrint = L"Piece in way of move.";
-    }
-    toPrint = L"Invalid move.";
+    if (ADD_PRINT)
+        toPrint = L"Invalid move.";
     return false;
 }
 
@@ -422,7 +427,7 @@ bool Standard_ChessGame::canDefendKing(std::vector<GameSquare*>& teamPieces) {
             // Iterate over teamPieces to see if they can reach the currentSquare
             for(GameSquare* teamPiece: teamPieces){
                 Move move = Move(*teamPiece, GameBoard[pieceCausingCheckPos.m_y][pieceCausingCheckPos.m_x]);
-                if(verifyMove(move))
+                if(verifyMove(move, false))
                     return false; // Some team piece can take or block the enemy piece that is causing the check on the king
             }
 
@@ -432,7 +437,7 @@ bool Standard_ChessGame::canDefendKing(std::vector<GameSquare*>& teamPieces) {
     } else {
         for(auto teamPiece: teamPieces){
             Move move(*teamPiece, *pieceCausingKingCheck);
-            if(verifyMove(move))
+            if(verifyMove(move, false))
                 return false; // Some team piece can attack the knight, no gameover
         }
     } 
@@ -442,14 +447,12 @@ bool Standard_ChessGame::canDefendKing(std::vector<GameSquare*>& teamPieces) {
 
 
 bool Standard_ChessGame::makeMove(Move& move){
-
-    int res;
     
     if (GameOptions.moveHighlighting) {
-        if(!readPossibleMoves(move.getMoveTo()))
+        if(!readPossibleMoves(move.getMoveTo(), true))
             return false;
     } else {
-        if(!verifyMove(move))
+        if(!verifyMove(move, true))
             return false;
     }
 
@@ -471,7 +474,7 @@ bool Standard_ChessGame::makeMove(Move& move){
     move.getMoveFrom().setPiece(OPEN);
     move.getMoveFrom().setOwner(NONE);
 
-    if(kingSafe(nullptr)){
+    if(kingSafe()){
         
         // Mark this gamesquare that a move has been made on this square
         move.getMoveFrom().setFirstMoveMade();
@@ -502,47 +505,50 @@ bool Standard_ChessGame::makeMove(Move& move){
 // If a pointer is passed it will check for saftey against the gamesquare passed
 // True - King safe
 // False - King NOT safe
-bool Standard_ChessGame::kingSafe(GameSquare* from) {
-
-    bool res = true;
+bool Standard_ChessGame::kingSafe() {
 
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
         for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {
 
-            Move mTemp(from == nullptr ? Move(GameBoard[row][col], *KingPositions[currentTurn]) : Move(GameBoard[row][col], *from));
+            GameSquare& curr = GameBoard[row][col];
 
-            if (from != nullptr) {
-                // when we pass a gamesquare (not nullptr) in we are assuming the king as moved there so we need to temporarily remove the king
-                KingPositions[currentTurn ]->setPiece(OPEN);
-                KingPositions[currentTurn]->setOwner(NONE);
-            }
-            
-            if (static_cast<Player>(mTemp.getMoveTo().getOwner()) != currentTurn && mTemp.getMoveTo().getOwner() != NONE)
-                if (verifyMove(mTemp)){
-                    res = false;
-                    goto out;
-                }
+            if (curr.getOwner() == NONE || static_cast<Player>(curr.getOwner()) == currentTurn)
+                continue;
 
-            if (from != nullptr) {
-                // restore king 
-                KingPositions[currentTurn ]->setPiece(KING);
-                KingPositions[currentTurn]->setOwner(static_cast<Owner>(currentTurn));
+            std::wcout << "Current piece checking --> "; curr.getPosition().print(); std::wcout << std::endl;
+
+            Move move(curr, *KingPositions[currentTurn - 1]);
+            if (verifyMove(move, false)) {
+                std::wcout << "Current piece --> "; curr.getPosition().print(); std::wcout << ", Was able to attack the king at "; KingPositions[currentTurn]->getPosition().print(); std::wcout << std::endl;
+                return false;
             }
         }
     }
 
-out:
-    if (from != nullptr) {
-        // restore king 
-        KingPositions[currentTurn ]->setPiece(KING);
-        KingPositions[currentTurn]->setOwner(static_cast<Owner>(currentTurn));
+    return true;
+}
+
+bool Standard_ChessGame::kingSafeAfterMove(GameSquare& to) {
+    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
+        for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {
+
+            GameSquare& curr = GameBoard[row][col];
+
+            if (curr.getOwner() == NONE || static_cast<Player>(curr.getOwner()) == currentTurn)
+                continue;
+
+            Move move(curr, to);
+            if (verifyMove(move, false)) {
+                return false;
+            }
+        }
     }
-    return res;
+    return true;
 }
 
 bool Standard_ChessGame::checkMate(){ // Checking everything around the king
 
-    GameSquare& kingToCheckSafteyFor = *KingPositions[currentTurn];
+    GameSquare& kingToCheckSafteyFor = *KingPositions[currentTurn - 1];
     short kingPossibleMoves = KING_POSSIBLE_MOVES; // 8
     std::vector<GameSquare*> teamPieces;
     std::vector<GameSquare*> enemyPieces;
@@ -586,7 +592,7 @@ bool Standard_ChessGame::checkMate(){ // Checking everything around the king
  
         for(auto enemy: enemyPieces){
             Move move(*enemy, kingToCheckSafteyFor);
-            if(verifyMove(move)) {
+            if(verifyMove(move, false)) {
                 ENEMY_CAN_ATTACK_KING_SURROUNDING_SQUARE = true;
                 goto restore_king;
             }
@@ -632,7 +638,15 @@ restore_king:
 bool Standard_ChessGame::populatePossibleMoves(GameSquare& moveFrom) {
 
     GamePiece fromPiece = moveFrom.getPiece();
-    short possibleMoveCounter = PIECE_MOVE_COUNTS[fromPiece];
+    short possibleMoveCounter = PIECE_MOVE_COUNTS[fromPiece - 1];
+
+    if (fromPiece == PAWN && currentTurn == PlayerTwo)
+        fromPiece = OPEN; 
+
+    std::wcout << "From piece: " << fromPiece << ", Possible moves: " << possibleMoveCounter << std::endl;
+    std::wcout << "movefrom pos: "; moveFrom.getPosition().print();
+    std::wcout << std::endl;
+
 
     for(int move_set_count = 0; move_set_count < possibleMoveCounter; move_set_count++){
 
@@ -643,33 +657,57 @@ bool Standard_ChessGame::populatePossibleMoves(GameSquare& moveFrom) {
         // 3. piece at square owner is not equal to current turn (except speical moves!)
         // 3. if its a king then making sure nothing can reach that square
 
-        Point pTemp(pieceMovePtrs[fromPiece][move_set_count][0], pieceMovePtrs[fromPiece][move_set_count][1]);
+        Point pTemp(moveFrom.getPosition().m_x + pieceMovePtrs[fromPiece][move_set_count][0], moveFrom.getPosition().m_y + pieceMovePtrs[fromPiece][move_set_count][1]);
         Move mTemp(moveFrom, GameBoard[pTemp.m_y][pTemp.m_x]);
 
-        if (onBoard(pTemp))
-            if (unobstructedPathCheck(mTemp)) 
-                if (static_cast<Player>(mTemp.getMoveTo().getOwner()) != currentTurn)
-                    if (mTemp.getMoveTo().getPiece() == KING) {
-                        if (!kingSafe(&moveFrom))
-                            continue;
-                        possibleMoves.push_back(&mTemp.getMoveTo());
+        std::wcout << "Curr point checking: ";
+        pTemp.print();
+        std::wcout << std::endl;
+
+        if (onBoard(pTemp)) {
+            if (unobstructedPathCheck(mTemp)) {
+                if (static_cast<Player>(mTemp.getMoveTo().getOwner()) != currentTurn) {
+                    if (mTemp.getMoveTo().getPiece() == KING && !kingSafeAfterMove(moveFrom)) {
+                        continue;
                     }
-        
+                    possibleMoves.push_back(&mTemp.getMoveTo());
+                    std::wcout << "Added piece to vector" << std::endl;
+                } else {
+                    std::wcout << "Attacking own piece is no no" << std::endl;
+                }
+            } else {
+                std::wcout << "Obstructed path" << std::endl;
+            }
+        } else {
+            std::wcout << "Not on board" << std::endl;
+        }
+
     }
 
     if (possibleMoves.empty())
         toPrint = L"No moves with that piece.";
+
+    std::wcout << "Possible moves vec: " << possibleMoves.size() << std::endl;
 
     return !possibleMoves.empty();
 }
 
 // True found matching move with possibleMoves
 // False not found
-bool Standard_ChessGame::readPossibleMoves(GameSquare& to) {
-    for(auto* Square: possibleMoves) {
-        if(to == Square)
+bool Standard_ChessGame::readPossibleMoves(GameSquare& to, bool ADD_PRINT) {
+    if (ADD_PRINT) {
+        std::wcout << "Trying to get to: ";
+        to.print();
+        std::wcout << "Stored in possibleMoves vec: ";
+    }
+    for(GameSquare* Square: possibleMoves) {
+        if (ADD_PRINT)
+            Square->print();
+        if(to == *Square)
             return true;
     }
+    if (ADD_PRINT)
+        toPrint = L"Invalid move.";
     return false;
 }
 
@@ -678,7 +716,7 @@ GetMove Standard_ChessGame::getMove(int which){
 
     std::wstring temp_dst;
 
-    while(true){
+    while (true){
         bool optionMenu = false;
         // get input
         if (which == 0)
@@ -751,9 +789,10 @@ void Standard_ChessGame::startGame(){
 
     while (!GameOver) {
 
+            // Reset check
             currTurnInCheck = false;
 
-            if (!kingSafe(nullptr)) {
+            if (!kingSafe()) {
                 // if (checkMate()) {
 
                 // } 
@@ -763,20 +802,26 @@ void Standard_ChessGame::startGame(){
 
             while (true) {
 
+                // Clear the possibleMoves vec
+                possibleMoves.clear();
+                
                 printBoard();
 
                 GetMove moveFrom; 
                 
-                if (currTurnInCheck) {
+                if (!currTurnInCheck) {
                     moveFrom = getMove(FROM_MOVE);
                     if(!moveFrom.res){
                         // Quit
                     }
+
+                    if (!validateGameSquare(convertMove(moveFrom.mMove), FROM_MOVE))
+                        continue;
                 }
 
                 if (GameOptions.moveHighlighting) {
 
-                    if (!populatePossibleMoves(currTurnInCheck ? *KingPositions[currentTurn] : convertMove(moveFrom.mMove))) 
+                    if (!populatePossibleMoves(currTurnInCheck ? *KingPositions[currentTurn] : convertMove(moveFrom.mMove)))
                         continue;
 
                     // If an infinte loop happens of printing No moves possible with that piece, it means there is a logic error in checkMate, bc
@@ -794,7 +839,7 @@ void Standard_ChessGame::startGame(){
 
                 Move move(convertMove(moveFrom.mMove), convertMove(moveTo.mMove));
 
-                if (!validateMove(move))
+                if (!validateGameSquare(move.getMoveTo(), TO_MOVE))
                     continue;
 
                 if (!makeMove(move))
@@ -805,9 +850,6 @@ void Standard_ChessGame::startGame(){
 
         // Swap turns
         currentTurn = currentTurn == PlayerOne ? PlayerTwo : PlayerOne;
-
-        // Clear the possibleMoves vec
-        possibleMoves.clear();
     }
 
 }

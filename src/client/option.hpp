@@ -9,8 +9,8 @@ public:
     enum WRITE_COLOR p1_color = DEFAULT;
     enum WRITE_COLOR p2_color = DEFAULT;
 
-    TEXT_PIECE_ART_COLLECTION_SELECTOR whitePlayerArtSelector;
-    TEXT_PIECE_ART_COLLECTION_SELECTOR blackPlayerArtSelector;
+    TEXT_PIECE_ART_COLLECTION_SELECTOR whitePlayerArtSelector = STD_PIECE_ART_P1;
+    TEXT_PIECE_ART_COLLECTION_SELECTOR blackPlayerArtSelector = STD_PIECE_ART_P2;
 
     bool moveHighlighting = false;
     bool boardHistory = false; // UNDO basically
