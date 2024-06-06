@@ -238,7 +238,7 @@ protected:
 
     // True can defend so not checkmate
     // False cannot defend king, so checkmate
-    bool canDefendKing(std::vector<GameSquare*>&);
+    GameSquare* canDefendKing(std::vector<GameSquare*>&);
 
     // True - All good
     // False - Not good
@@ -275,6 +275,9 @@ protected:
     // reads the possible moves and comapres to a move
     bool readPossibleMoves(GameSquare&, bool);
 
+    // Will return a pointer to the one piece that you can move in check, if there is more than one then it will just return a nullptr
+    GameSquare* isolateFromInCheckMoves();
+
     // 2 players, each with 16 pieces
     void initGame();
 
@@ -288,7 +291,10 @@ protected:
 
     // Determines if game is alive
     bool GameOver;
+
     bool currTurnInCheck;
+
+    bool kingCanMakeMove;
 
     // owner enum is used to track player turn, None will not be used, just 1 & 2
     Player currentTurn;
