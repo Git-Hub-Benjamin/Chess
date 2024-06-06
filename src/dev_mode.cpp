@@ -13,55 +13,27 @@ int dev_menu_option(){
 }
 
 void Standard_ChessGame::DEV_MODE_PRESET(){
-    // std::wcout << "1. Rook Preset\n2. Bishop Preset" << std::endl;
-    // switch(dev_menu_option()){
-    //     case 1: // Rook, King // GameBoard[row][col].pos = {col, row};
-            
-    //         break;
-    //     case 2:
-    //         break;
-    // }
 
-    // PLAYER ONE
+    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
+        for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {
+            GameBoard[row][col] = GameSquare(NONE, OPEN, Point(col, row));
+            GameBoard[row][col].setFirstMoveMade();
+        }
+    }
 
-    // this->GameBoard[7][0].ownership = PONE;
-    // this->GameBoard[7][0].piece = ROOK;
-    
-    // this->GameBoard[7][7].ownership = PONE;
-    // this->GameBoard[7][7].piece = ROOK;
-    
-    // this->GameBoard[7][4].ownership = PONE;
-    // this->GameBoard[7][4].piece = KING;
-    // this->KingPositions[0] = &this->GameBoard[7][4];
+    //        Y  X                                 X, Y
+    GameBoard[0][0] = GameSquare(PTWO, ROOK, Point(0, 0));
+    GameBoard[0][7] = GameSquare(PTWO, ROOK, Point(7, 0));
+    GameBoard[0][3] = GameSquare(PTWO, KING, Point(3, 0));
 
-    // this->GameBoard[7][3].ownership = PONE;
-    // this->GameBoard[7][3].piece = QUEEN;
+    GameBoard[7][0] = GameSquare(PONE, ROOK, Point(0, 7));
+    GameBoard[7][7] = GameSquare(PONE, ROOK, Point(7, 7));
+    GameBoard[7][3] = GameSquare(PONE, KING, Point(3, 7));
 
-    // this->GameBoard[7][5].ownership = PONE;
-    // this->GameBoard[7][5].piece = BISHOP;
-
-    // // PLAYER TWO
-
-    // this->GameBoard[0][0].ownership = PTWO;
-    // this->GameBoard[0][0].piece = ROOK;
-    
-    // this->GameBoard[0][7].ownership = PTWO;
-    // this->GameBoard[0][7].piece = ROOK;
-    
-    // this->GameBoard[0][4].ownership = PTWO;
-    // this->GameBoard[0][4].piece = KING;
-    // this->KingPositions[1] = &this->GameBoard[0][4];
-
-    // this->GameBoard[0][3].ownership = PTWO;
-    // this->GameBoard[0][3].piece = QUEEN;
-
-    // //! Important, we need to set the positions of all the remaining squares
-
-    // for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
-    //     for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
-    //         GameBoard[row][col].pos = {col, row};
-    //         //GameBoard[row][col].print();
+    // for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
+    //     for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {
+    //         GameBoard[row][col].print();
+    //         std::wcout << std::endl;
     //     }
     // }
-
 }

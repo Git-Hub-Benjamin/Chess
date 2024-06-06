@@ -53,7 +53,7 @@ struct Point{
         return m_x == other.m_x && m_y == other.m_y;
     }
 
-    void print() { std::wcout << "(X: " << m_x << ", Y: " << m_y << "}"; }
+    void print() { std::wcout << "(X: " << m_x << ", Y: " << m_y << ")"; }
 };
 
 enum XWIDTH{
@@ -143,7 +143,7 @@ public:
     void print() const {
         std::wcout << "Pos: {" << mPosition.m_x << ", " << mPosition.m_y << "}, Piece: " 
                    << enumPiece_toString(mPiece) << ", Owner: " 
-                   << (mOwner == NONE ? "None" : mOwner == PONE ? "Player one" : "Player two") << std::endl;
+                   << (mOwner == NONE ? "None" : mOwner == PONE ? "Player one" : "Player two");
     }
 
     void setOwner(Owner o) { mOwner = o; }
@@ -166,10 +166,19 @@ class Move{
     GameSquare& m_moveTo;
 
 public:
+    
     Move(GameSquare& move, GameSquare& to): m_moveFrom(move), m_moveTo(to) {}
 
     GameSquare& getMoveFrom() const { return m_moveFrom; }
     GameSquare& getMoveTo() const { return m_moveTo; }
+
+    Move operator=(const Move& other) {
+        if (this != &other) {
+            m_moveFrom = other.m_moveFrom;
+            m_moveTo = other.m_moveTo;
+        }
+        return *this;
+    }
 };
 
 struct TakenPiece{
@@ -208,11 +217,12 @@ protected:
 
     // True piece moved
     // False piece not moved
-    bool makeMove(Move&);
+    int makeMove(Move&&);
 
     // True valid move
     // False invalid move
-    bool verifyMove(Move&, bool);
+    bool verifyMove(Move&);
+    bool verifyMove(Move&&);
 
     // True - All good
     // False - Piece in way
@@ -284,7 +294,8 @@ protected:
     Player currentTurn;
 
     GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
-    GameSquare* KingPositions[STANDARD_CHESSGAME_PLAYER_COUNT];
+    GameSquare* whitePlayerKing; 
+    GameSquare* blackPlayerKing;
     GameSquare* pieceCausingKingCheck = nullptr; 
     std::vector<GameSquare *> possibleMoves; 
 
