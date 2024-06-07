@@ -33,6 +33,7 @@
 
 #define ONLINE_BUFFER_SIZE 128
 
+extern void copyStandardBoard(GameSquare [CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], GameSquare [CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]);
 
 struct Point{
     int m_x;
@@ -153,12 +154,28 @@ public:
     GamePiece getPiece() const { return mPiece; }
 
     Point getPosition() const { return mPosition; }
+    void setPosition(Point p) { mPosition = p; }
 
     void setFirstMoveMade() { mfirstMoveOccurred = true; }
     bool getIfFirstMoveMade() const { return mfirstMoveOccurred; }
 };
 
+struct StandardChessGameHistoryState {
+    GameSquare mGameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
+    Player mCurrentTurn;
+    Point mWhitePlayerKingPos; 
+    Point mBlackPlayerKingPos;
+    Point mPieceCausingKingCheckPos; 
 
+    StandardChessGameHistoryState(GameSquare board[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], Player turn, GameSquare* whiteKing, GameSquare* blackKing, GameSquare* checkCausingPiece) :
+    mCurrentTurn(turn), mWhitePlayerKingPos(whiteKing->getPosition()), mBlackPlayerKingPos(blackKing->getPosition()), mPieceCausingKingCheckPos(checkCausingPiece->getPosition())
+    {
+        copyStandardBoard(board, mGameBoard);
+    }
+
+    struct StandardChessGameHistoryState* next;
+
+};
 
 class Move{
 
@@ -203,6 +220,9 @@ protected:
 
     // print the standard board
     void printBoard();
+
+    // flip  the standard board
+    void flipBoard();
 
     // print the standard board but with moves from the movefrom
     void printBoardWithMoves(GetMove);
@@ -291,14 +311,12 @@ protected:
 
     // Determines if game is alive
     bool GameOver;
-
     bool currTurnInCheck;
-
     bool kingCanMakeMove;
 
     // owner enum is used to track player turn, None will not be used, just 1 & 2
     Player currentTurn;
-
+    StandardChessGameHistoryState history;
     GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
     GameSquare* whitePlayerKing; 
     GameSquare* blackPlayerKing;

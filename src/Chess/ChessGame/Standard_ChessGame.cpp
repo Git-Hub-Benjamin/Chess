@@ -1,8 +1,13 @@
 #include "../chess.hpp"
 #include "text-piece-art.hpp"
+#include <random>
 
-static short Pawn1Moves[PAWN_POSSIBLE_MOVES][2] = { {0, -1}, {1, -1}, {-1, -1}, {0, -2} };
-static short Pawn2Moves[PAWN_POSSIBLE_MOVES][2] = { {0, 1},  {-1, 1}, {1, 1}  , {0, 2}  };
+void copyStandardBoard(GameSquare from[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], GameSquare to[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]) {
+    memcpy(to, from, sizeof(GameSquare[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]));
+}
+
+static short PawnUp[PAWN_POSSIBLE_MOVES][2] = { {0, -1}, {1, -1}, {-1, -1}, {0, -2} };
+static short PawnDown[PAWN_POSSIBLE_MOVES][2] = { {0, 1},  {-1, 1}, {1, 1}  , {0, 2}  };
 static short KnightMoves[KNIGHT_POSSIBLE_MOVES][2] = { {1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2} };
 static short KingMoves[KING_POSSIBLE_MOVES][2] = {
     {0, 1}, {1, 1}, {1, 0}, {1, -1}, 
@@ -32,8 +37,8 @@ static short QueenMoves[QUEEN_POSSIBLE_MOVES][2] = {
 };
 
 short (*pieceMovePtrs[])[2] = {
-    Pawn2Moves,
-    Pawn1Moves,
+    PawnDown,
+    PawnUp,
     KnightMoves,
     BishopMoves,
     RookMoves,
@@ -60,6 +65,7 @@ Standard_ChessGame::Standard_ChessGame(Options gOptions, bool dev_mode)
       whitePlayerKing(&GameBoard[7][3])
 {
     initGame();
+    GameOptions.print();
 }
 
 Standard_ChessGame::Standard_ChessGame(Options gOptions)
@@ -78,7 +84,10 @@ void Standard_ChessGame::reset() {
 }
 
 void Standard_ChessGame::initGame(){
-    currentTurn = PlayerOne;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> distribution(0, 1);
+    currentTurn = (static_cast<Player>(distribution(gen) + 1));
 
     if (this->DEV_MODE_ENABLE) {
         this->DEV_MODE_PRESET();
@@ -131,6 +140,7 @@ void Standard_ChessGame::initGame(){
             }
         }
     }
+
 }
 
 std::wstring Standard_ChessGame::playerToString(Player p){
@@ -142,37 +152,42 @@ bool Standard_ChessGame::onBoard(Point& p) {
 }
 
 void Standard_ChessGame::printBoard(){
-    // for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
-    //     for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {
-    //         GameBoard[row][col].print();
-    //     }
-    // }
-
-    // return;
-
     std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
-    for(int i = 0; i < CHESS_BOARD_HEIGHT; i++){
-        std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - i << " ";
-        for(int j = 0; j < CHESS_BOARD_WIDTH; j++){
+    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
+        std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - row << " ";
+        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
             std::wcout << "| ";
             wchar_t piece;
-            if(GameBoard[i][j].getOwner() == NONE)
-                piece = ' ';
-            else if(GameBoard[i][j].getOwner() == PONE){
-                piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[i][j].getPiece()];
-                set_terminal_color(GameOptions.p1_color);
-            }else{
-                piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[i][j].getPiece()];
-                set_terminal_color(GameOptions.p2_color);
+
+            
+            if (GameOptions.flipBoardOnNewTurn && currentTurn == PlayerTwo) {
+                if(GameBoard[7 - row][7 - col].getOwner() == NONE)
+                    piece = ' ';
+                else if(GameBoard[7 - row][7 - col].getOwner() == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+            } else {
+                if(GameBoard[row][col].getOwner() == NONE)
+                    piece = ' ';
+                else if(GameBoard[row][col].getOwner() == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
+                    set_terminal_color(GameOptions.p2_color);
+                }
             }
             
-            // print section --> "| ♟ " ex.
             std::wcout << piece;
             set_terminal_color(DEFAULT);
             std::wcout << " ";
             
         }
-        std::wcout << "| " << CHESS_BOARD_HEIGHT - i << std::endl;
+        std::wcout << "| " << CHESS_BOARD_HEIGHT - row << std::endl;
         std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
     }
     std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n";
@@ -191,30 +206,59 @@ void Standard_ChessGame::printBoardWithMoves(GetMove moveFrom) {
 
             std::wcout << "| ";
             wchar_t piece;
-            if(GameBoard[row][col].getOwner() == NONE)
-                piece = ' ';
-            else if(GameBoard[row][col].getOwner() == PONE){
-                piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
-                set_terminal_color(GameOptions.p1_color);
-            }else{
-                piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
-                set_terminal_color(GameOptions.p2_color);
+
+            if (GameOptions.flipBoardOnNewTurn && currentTurn == PlayerTwo) {
+                  if(GameBoard[7 - row][7 - col].getOwner() == NONE)
+                    piece = ' ';
+                else if(GameBoard[7 - row][7 - col].getOwner() == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+                                // checking if the current square can be acctacked by piece
+                if(readPossibleMoves(GameBoard[7 - row][7 - col], false)){
+                    if(piece == ' ')
+                        piece = 'X';
+                    set_terminal_color(RED);
+                    std::wcout << piece;    
+                    set_terminal_color(DEFAULT);
+                    std::wcout << " ";
+                }else{
+                    
+                    std::wcout << piece; 
+                    set_terminal_color(DEFAULT);
+                    std::wcout << " ";
+                }
+            } else {
+                if(GameBoard[row][col].getOwner() == NONE)
+                    piece = ' ';
+                else if(GameBoard[row][col].getOwner() == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+
+                // checking if the current square can be acctacked by piece
+                if(readPossibleMoves(GameBoard[row][col], false)){
+                    if(piece == ' ')
+                        piece = 'X';
+                    set_terminal_color(RED);
+                    std::wcout << piece;    
+                    set_terminal_color(DEFAULT);
+                    std::wcout << " ";
+                }else{
+                    
+                    std::wcout << piece; 
+                    set_terminal_color(DEFAULT);
+                    std::wcout << " ";
+                }  
             }
 
-            // checking if the current square can be acctacked by piece
-            if(readPossibleMoves(GameBoard[row][col], false)){
-                if(piece == ' ')
-                    piece = 'X';
-                set_terminal_color(RED);
-                std::wcout << piece;    
-                set_terminal_color(DEFAULT);
-                std::wcout << " ";
-            }else{
-                
-                std::wcout << piece; 
-                set_terminal_color(DEFAULT);
-                std::wcout << " ";
-            }    
+              
         }
         std::wcout << "| " << CHESS_BOARD_HEIGHT - row << std::endl;
         std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
@@ -226,12 +270,44 @@ void Standard_ChessGame::printBoardWithMoves(GetMove moveFrom) {
     }
 }
 
+int reflectAxis(int val) {
+    switch (val) {
+        case 7:
+            return 0;
+        case 6:
+            return 1;
+        case 5:
+            return 2;
+        case 4:
+            return 3;
+        case 3:
+            return 4;
+        case 2:
+            return 5;
+        case 1:
+            return 6;
+        case 0:
+            return 7;
+        default:
+            return -1;
+    }
+
+
+}
+
 GameSquare& Standard_ChessGame::convertMove(std::wstring move){
     // convert letter to number (a = 0, b = 1 etc)
     // convert char number to number ('0' = 0 etc)
     // minus 8 is important since (0,0) is flipped since 8 starts at top
 
-    return GameBoard[8 - (move[1] - 48)][move[0] - 97];
+    int row = 8 - (move[1] - 48);
+    int col = move[0] - 97;
+
+    if (GameOptions.flipBoardOnNewTurn && currentTurn == PlayerTwo) 
+        return GameBoard[reflectAxis(row)][reflectAxis(col)];
+        
+    return GameBoard[row][col];
+
 }
 
 // True - Valid move
@@ -773,8 +849,12 @@ bool Standard_ChessGame::populatePossibleMoves(GameSquare& moveFrom) {
 
     }
 
-    if (possibleMoves.empty()) 
-        toPrint = L"No moves with that piece.";
+    if (possibleMoves.empty()) {
+        if (currTurnInCheck)
+            toPrint = L"You need to protect your king.";
+        else
+            toPrint = L"No moves with that piece.";
+    }
 
     return !possibleMoves.empty();
 }
@@ -841,16 +921,18 @@ GetMove Standard_ChessGame::getMove(int which){
         }
 
         if(optionMenu){
-            std::wcout << "\n1. Change Colors\n" << "2. Continue\n" << "3. Quit\n\n--> "; 
+            std::wcout << "\n1. Change Colors\n" << "2. Continue\n" << "3. Toggle Flip Board\n" << "4. Quit\n\n--> "; 
             std::wcin >> temp_dst;
             switch(temp_dst[0]){
                 case L'1':
                     std::wcout << "Not implemented." << std::endl;
-                    break;
+                    continue;
                 case L'2':
                     continue;
-                    break;
                 case L'3':
+                    std::wcout << "Not implemented." << std::endl;
+                    continue;
+                case L'4':
                 case L'q':
                     return GetMove(0);
                 default:

@@ -15,3 +15,4 @@ void display_rand_queue_menu();
 void enter_private_lobby_code_menu();
 void display_private_lobby_code_menu(std::wstring& str);
 void color_option_active_inactive(enum WRITE_COLOR check, int playerNum);
+void piece_art_option_active_inactive(enum TEXT_PIECE_ART_COLLECTION_SELECTOR, int);

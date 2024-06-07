@@ -31,8 +31,12 @@ int get_menu_option(){
 			return 5;
 		if(str[0] == L'6')
 			return 6;
-		if(str[0] == L'D' || str[0] == L'd')
+		if(str[0] == L'7')
 			return 7;
+		if(str[0] == L'8')
+			return 8;
+		if(str[0] == L'D' || str[0] == L'd')
+			return -1;
 		break;
 	}
 	return -1;
@@ -74,6 +78,10 @@ enum CFG_FILE_RET load_config_file(Options& temp){
 			superTemp.p1_color = (enum WRITE_COLOR)val;
 		}else if(option.compare("p2_color") == 0){
 			superTemp.p2_color = (enum WRITE_COLOR)val;
+		}else if(option.compare("p1_art") == 0){
+			superTemp.whitePlayerArtSelector = static_cast<TEXT_PIECE_ART_COLLECTION_SELECTOR>(val);
+		}else if(option.compare("p2_art") == 0){
+			superTemp.blackPlayerArtSelector = static_cast<TEXT_PIECE_ART_COLLECTION_SELECTOR>(val);
 		}else if(option.compare("move_highlighting") == 0){
 			superTemp.moveHighlighting = val == 0 ? false : true;
 		}else if(option.compare("board_history") == 0){
@@ -131,6 +139,8 @@ void overwrite_option_file(){
 		erase_config_file();
 		file << "p1_color:" << global_player_option.p1_color << "\n" << 
 		"p2_color:" << global_player_option.p2_color << "\n" <<
+		"p1_art:" << global_player_option.whitePlayerArtSelector << "\n" <<
+		"p2_art:" << global_player_option.blackPlayerArtSelector << "\n" <<
 		"move_highlighting:" << global_player_option.moveHighlighting << "\n"
 		"board_history:" << global_player_option.boardHistory << "\n" << 
 		"flip_on_turn:" << global_player_option.flipBoardOnNewTurn << "\n";
@@ -183,19 +193,61 @@ void changing_option_from_menu(int option_opt){
 					}
 					std::wcout << "After -> " << (player_opt == 1 ? global_player_option.p1_color : global_player_option.p2_color) << std::endl;
 				}
-			}else if(player_opt == 3)
+			}else
 				back = true;
 			break;
 		case 2:
-			global_player_option.moveHighlighting = !global_player_option.moveHighlighting;
+			std::wcout << "1. Player one art\n2. Player two art\n3. Back\n--> ";
+			player_opt = get_menu_option();
+			if(player_opt == 1){
+				std::wcout << "1. Unicode    " << TEXT_PIECE_ART_COLLECTION[0][1] << " | "; piece_art_option_active_inactive(STD_PIECE_ART_P1, player_opt); std::wcout << std::endl;
+				std::wcout << "2. Characters P | "; piece_art_option_active_inactive(STD_PIECE_CHAR_P1, player_opt); std::wcout << std::endl;
+				std::wcout << "3. Back\n--> ";
+			} else if (player_opt == 2) {
+				std::wcout << "1. Unicode    " << TEXT_PIECE_ART_COLLECTION[1][1] << " | "; piece_art_option_active_inactive(STD_PIECE_ART_P2, player_opt); std::wcout << std::endl;
+				std::wcout << "2. Characters P | "; piece_art_option_active_inactive(STD_PIECE_CHAR_P2, player_opt); std::wcout << std::endl;
+				std::wcout << "3. Back\n--> ";
+			} else {
+				back = true;
+			}
+
+			if (player_opt == 1 || player_opt == 2) {
+				color_opt = get_menu_option();
+				if(color_opt == 3){
+					back = true;
+				}else{
+					
+					enum TEXT_PIECE_ART_COLLECTION_SELECTOR* currPlayerArt = (player_opt == 1 ? &global_player_option.whitePlayerArtSelector : &global_player_option.blackPlayerArtSelector);
+					switch(color_opt){
+						case 1:
+							if (player_opt == 1)
+								*currPlayerArt = STD_PIECE_ART_P1;
+							else 
+								*currPlayerArt = STD_PIECE_ART_P2;
+							break;
+						case 2:
+							if (player_opt == 1)
+								*currPlayerArt = STD_PIECE_CHAR_P1;
+							else 
+								*currPlayerArt = STD_PIECE_CHAR_P2;
+							break;
+						default:
+							back = true;
+							break;
+					}
+				}
+			}
 			break;
 		case 3:
-			global_player_option.boardHistory = !global_player_option.boardHistory;
+			global_player_option.moveHighlighting = !global_player_option.moveHighlighting;
 			break;
 		case 4:
-			global_player_option.flipBoardOnNewTurn = !global_player_option.flipBoardOnNewTurn;
+			global_player_option.boardHistory = !global_player_option.boardHistory;
 			break;
 		case 5:
+			global_player_option.flipBoardOnNewTurn = !global_player_option.flipBoardOnNewTurn;
+			break;
+		case 6:
 			SETTING_CHANGE_AFFECTS_CONFIG_FILE = !SETTING_CHANGE_AFFECTS_CONFIG_FILE;
 			break;
 		default:
@@ -215,6 +267,8 @@ void default_setting_config(){
 	else{
 		file << "p1_color:" << 0 << "\n" << 
 		"p2_color:" << 0 << "\n" <<
+		"p1_art:" << 0 << "\n" <<
+		"p2_art:" << 1 << "\n" <<
 		"move_highlighting:" << 0 << "\n"
 		"board_history:" << 0 << "\n" << 
 		"flip_on_turn:" << 0 << "\n";
@@ -278,6 +332,7 @@ void config_file_options(){
 		erase_config_file();
 		default_setting_config();
 		std::wcout << "Default settings applied to config file." << std::endl;
+		init_config_load();
 	}
 }
 
@@ -305,12 +360,12 @@ int main()
 			init_config_load();
 			firstPrint = !firstPrint;		
 		}
-		std::wcout << "Global things --> " << global_player_option.p1_color << global_player_option.p2_color << global_player_option.moveHighlighting << global_player_option.boardHistory << global_player_option.flipBoardOnNewTurn << std::endl;
+		std::wcout << "Global things --> " << global_player_option.p1_color << global_player_option.p2_color << global_player_option.whitePlayerArtSelector << global_player_option.blackPlayerArtSelector << global_player_option.moveHighlighting << global_player_option.boardHistory << global_player_option.flipBoardOnNewTurn << std::endl;
 
 		std::wcout << "--> ";
 		int opt = get_menu_option();
 		if(opt == 1 || opt == 7){
-			std::wcout << "Global things --> " << global_player_option.p1_color << global_player_option.p2_color << global_player_option.moveHighlighting << global_player_option.boardHistory << global_player_option.flipBoardOnNewTurn << std::endl;
+			std::wcout << "Global things --> " << global_player_option.p1_color << global_player_option.p2_color << global_player_option.whitePlayerArtSelector << global_player_option.blackPlayerArtSelector << global_player_option.moveHighlighting << global_player_option.boardHistory << global_player_option.flipBoardOnNewTurn << std::endl;
 			Standard_ChessGame Game(global_player_option, opt == 7 ? true : false);
 			Game.startGame();
 		}else if(opt == 2){
@@ -318,9 +373,9 @@ int main()
 		}else if(opt ==3){
 			option_screen();
 			int option_opt = get_menu_option();
-			if(option_opt == 6) // For config file options
+			if(option_opt == 7) // For config file options
 				config_file_options();
-			if(option_opt != 7) // Handle anything else, if 7 then just go back
+			if(option_opt != 8) // Handle anything else, if 7 then just go back
 				changing_option_from_menu(option_opt);	
 		}else if(opt == 4){
 			running = false;
