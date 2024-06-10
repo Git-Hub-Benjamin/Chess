@@ -5,20 +5,15 @@
 #include <poll.h>
 #include <termios.h>
 #include <cstring>
-#include <memory>
-#include <atomic>
 #include <mutex>
 #include <fcntl.h>
+#include <cwctype>
+#include <atomic>
 
-#include <iostream>
-#include <string>
 
-std::atomic_bool global_stop;
-std::mutex mtx;
-
-class TerminalController {
+class TerminalController2 {
 public:
-    TerminalController() {
+    TerminalController2() {
         // Store the original terminal settings
         tcgetattr(STDIN_FILENO, &old_tio);
         memcpy(&new_tio, &old_tio, sizeof(struct termios));
@@ -28,7 +23,7 @@ public:
         tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
     }
 
-    ~TerminalController() {
+    ~TerminalController2() {
         // Restore original terminal settings
         tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
     }
@@ -37,154 +32,392 @@ private:
     struct termios old_tio, new_tio;
 };
 
-class DisplayManager {
+class ChessClock2 {
+    int mWhitePlayerTime;
+    int mBlackPlayerTime;
+
 public:
-    DisplayManager(const std::wstring& str, int pipe_fd) : lobbyCode(str), pipe_fd(pipe_fd) {}
-    DisplayManager(int pipe_fd) : pipe_fd(pipe_fd) {}
+    ChessClock2() : mWhitePlayerTime(0), mBlackPlayerTime(0) {}
+    ChessClock2(const ChessClock2& copy) : mWhitePlayerTime(copy.mWhitePlayerTime), mBlackPlayerTime(copy.mBlackPlayerTime) {}
+    void initTime(int white, int black) { mWhitePlayerTime = white; mBlackPlayerTime = black; }
 
-    void start() {
-        std::thread timer_t(&DisplayManager::timer, this);
-        displayCodeAndWait();
-        if (timer_t.joinable())
-            timer_t.join(); // block until the timer meets
+    int getWhiteSeconds() const { return mWhitePlayerTime; }
+    int getBlackSeconds() const { return mBlackPlayerTime; }
+    int* getWhiteTimeAddr() { return &mWhitePlayerTime; }
+    int* getBlackTimeAddr() { return &mBlackPlayerTime; }
+};
+
+enum Player2 {
+    PlayerOne,
+    PlayerTwo
+};
+
+struct GetMove2{
+    std::wstring mMove;
+    int res;
+    GetMove2() : res(-1) {}
+    GetMove2(int res) : res(res) {}
+    GetMove2(std::wstring move, int res) : mMove(std::move(move)), res(res) {}
+};
+
+class Standard_ChessGame2 {
+    ChessClock2 gameClock;
+    int optionMenu();
+    int sanitizeGetMove(std::wstring&);
+    void currTurnChessClock(bool& stop_display, int writePipeFd, const std::wstring& toPrint);
+    std::wstring inputBuffer;
+    bool isClock = true;
+    Player2 currentTurn = PlayerOne;
+public:
+    GetMove2 getMove(int which);
+    Standard_ChessGame2() {
+        gameClock.initTime(5, 5);
     }
+};
 
-    void startTimer() {
-        std::thread timer_t(&DisplayManager::timer, this);
-        
-    }
-
-private:
-    void timer() {
-        int count = 60;
-        while (count != 0 && !stop_display) {
-            // Beggining of the line + Time + current string
-            mtx.lock();
-            std::wcout << "\033[G" << "Time: " << std::to_wstring(count) << " - " << inputBuffer << std::flush;
-            mtx.unlock();
-            count--;
-
-            for(int i = 0; i < 4; i++) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(250));
-                if(stop_display)
-                    break;
-            }
+// 0 QUIT
+// 1 CONTINUE
+int Standard_ChessGame2::optionMenu() {
+    while (true) {
+        std::wstring temp_dst;
+        std::wcout << L"\n1. Change Colors\n" << L"2. Continue\n" << L"3. Print Flipped Board\n" << L"4. Quit\n\n--> "; 
+        std::wcin >> temp_dst;
+        switch(temp_dst[0]) {
+            case L'1':
+                std::wcout << L"Not implemented." << std::endl;
+                continue;
+            case L'2':
+                return 1;
+            case L'3':
+                // Swap current turn and print board
+                // currentTurn = currentTurn == PlayerOne ? PlayerTwo : PlayerOne;
+                // printBoard();
+                // currentTurn = currentTurn == PlayerOne ? PlayerTwo : PlayerOne;
+                continue;
+            case L'4':
+            case L'q':
+                return 0;
+            default:
+                break;
         }
     }
+    return 1;
+}
 
-    void displayCodeAndWait() {
+// -1 invalid input
+// 0 options
+// 1 valid input
+int Standard_ChessGame2::sanitizeGetMove(std::wstring& input) {
+    if(!std::iswalpha(input[0])) 
+        return -1; // Ensure [0] is alphabetical character
+    
+    // Force to lower case
+    input[0] = std::towlower(input[0]); // Force [0] to lower case
+    switch(input[0]) {
+        case L'a': case L'b': case L'c': case L'd':
+        case L'e': case L'f': case L'g': case L'h':
+            break;
+        case L'q': // Valid too but for option
+        case L'x': case L'o':
+            return 0;
+        default: // Ensure one of the characters above
+            return -1; // Ensure [0] is alphabetical character
+    }
+
+    // Make sure length is 2
+    if(input.length() != 2)
+        return -1; // Move must be length of 2
+
+    // Ensure 2nd char is a number
+    if(!std::iswdigit(input[1]) || input[1] == L'0' || input[1] == L'9') // Using std::iswdigit
+        return -1; // Ensure [1] must be a digit and not '0' or '9'
+
+    // Now we know it must be [0] == a-h, [1] == 1 - 8
+    return 1;
+} 
+
+
+void Standard_ChessGame2::currTurnChessClock(bool& stop_display, int writePipeFd, const std::wstring& toPrint) {
+    int& count = *(currentTurn == PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
+    while (count >= 0 && !stop_display) {
+        for (int i = 0; i < 10; i++) {
+            if (stop_display || count == 0)
+                break;
+
+            std::wcout << L"\033[G" << std::to_wstring(count) << L" - Len: " << std::to_wstring(inputBuffer.length()) << " - " << toPrint << inputBuffer << std::flush;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        count--;
+    }
+    write(writePipeFd, "1", 1);
+}
+
+GetMove2 Standard_ChessGame2::getMove(int which) {
+
+    bool currTurnInCheck = false;
+    if (isClock) {
+        bool stopTimerDisplay = false;
+        TerminalController2 terminalcontroller; // Set non-canonical mode
+
+        int pipe_fd[2];
+        if (pipe(pipe_fd) == -1) {
+            std::cerr << "Failed to create pipe" << std::endl;
+            return GetMove2(1); // Adjust return as necessary
+        }
 
         struct pollfd fds[2];
         fds[0].fd = fileno(stdin); // File descriptor for std::cin
         fds[0].events = POLLIN;
-        fds[1].fd = pipe_fd;       // File descriptor for the read end of the pipe
+        fds[1].fd = pipe_fd[0]; // File descriptor for the read end of the pipe
         fds[1].events = POLLIN;
 
-        while (!stop_display) {
+        std::thread clockThread(&Standard_ChessGame2::currTurnChessClock, this, std::ref(stopTimerDisplay), pipe_fd[1], std::wstring(
+            which == 0 ? 
+                (!currTurnInCheck ? L", Move: " : L", You're in check! Move: ")
+                : !currTurnInCheck ? L", To: " : L", You're in check! To: "
+        ));
+
+        while (!stopTimerDisplay) {
             int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
             if (ret > 0) {
                 if (fds[1].revents & POLLIN) {
-                    // Pipe has data to read
-                    char buffer[32];
-                    int byte_read = read(fds[1].fd, (void *)buffer, sizeof(buffer));
-                    if (buffer[0] == '1')
-                        break;
-
-                    // Checking if main thread wants this one to stop
+                    if (clockThread.joinable())
+                        clockThread.join();
+                    return GetMove2(2);
                 }
                 if (fds[0].revents & POLLIN) {
                     char ch;
                     ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
                     if (bytes_read > 0) {
-                        mtx.lock();
                         if (ch == '\n') {
-                            if(inputBuffer == L"!back")
-                                break; // Handle out
+                            int res = sanitizeGetMove(inputBuffer);
+                            if (res == -1)
+                                continue; // Invalid
+
+                            if (res == 0) { // option menu
+                                stopTimerDisplay = true;
+                                clockThread.join();
+
+                                if (optionMenu() == 0)
+                                    return GetMove2(0);
+
+                                inputBuffer.clear();
+                                stopTimerDisplay = false; // reset the flag
+                                std::thread clockThread(&Standard_ChessGame2::currTurnChessClock, this, std::ref(stopTimerDisplay), pipe_fd[1], std::wstring(
+                                    which == 0 ? 
+                                        (!currTurnInCheck ? L", Move: " : L", You're in check! Move: ")
+                                        : !currTurnInCheck ? L", To: " : L", You're in check! To: "
+                                ));
+                                continue;
+                            }
+
+                            stopTimerDisplay = true;
+                            clockThread.join(); // wait for it to join
+                            return GetMove2(inputBuffer, 1);
                         } else if (ch == 127) { // Backspace
                             if (!inputBuffer.empty()) {
                                 inputBuffer.pop_back();
-                                std::wcout << "\033[D \033[D" << std::flush;
+                                std::wcout << L"\b \b" << std::flush; // Handle backspace correctly
                             }
                         } else {
-                            std::wcout << ch << std::flush;
-                            inputBuffer += ch;
+                            inputBuffer += ch; // Append character directly to the inputBuffer
                         }
-                        mtx.unlock();
                     }
                 }
             }
         }
 
-        stop_display.store(true);
-        
-        std::wcout << "\033[GStopping display_code_and_wait...\n" << std::flush;
-    }
+        if (clockThread.joinable())
+            clockThread.join();
 
-    // Members
-    std::atomic_bool stop_display; // Only internal, Main thread can cause stop by writing to the end of the pipe
-    std::wstring lobbyCode; // Only if needed
-    std::wstring inputBuffer; // Current input
-    int pipe_fd; // For communication from main thread
-    struct pollfd fds[2] = {};
-};
-
-int main(){
-    int pipe_fd[2];
-    if (pipe(pipe_fd) == -1) {
-        std::cerr << "Failed to create pipe" << std::endl;
-        return 1;
-    }
-
-    {
-        DisplayManager displayCodeAndWait(pipe_fd[0]);
-        TerminalController terminalcontroller;
-        std::atomic_bool& stop_from_input_t = displayCodeAndWait.stop_display;
-        display_rand_queue_menu();
-        std::thread lobbyInput_t(&DisplayManager::start_input, &displayCodeAndWait);
-
+        return GetMove2(2); //! Ran out of time
+    } else {
         while (true) {
-
-            std::string oppBindStr;
-            enum Owner playerNumForMatch;
-            char buffer[ONLINE_BUFFER_SIZE] = {0};
-
-            int bytes_read = recv(fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
-            if (bytes_read > 0) {
-                buffer[bytes_read] = '\0';
-                std::string res_from_server(buffer);
-
-                if (check_for_match_found(res_from_server, oppBindStr, playerNumForMatch)) {
-                    write(pipe_fd[1], "1", 1);
-                    if (lobbyInput_t.joinable())
-                        lobbyInput_t.join();
-
-                    std::wcout << L"\033[2B\033[G" << std::flush;
-                    game_loop(fd, playerNumForMatch, oppBindStr);
-                    return 0;
-                } else {
-                    std::wcout << L"\033[2B\033[G" << std::flush;
-                    std::wcout << "Error joining lobby for some reason..." << std::endl;
-                    return 1;
-                }
-            } else if (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-                std::wcout << "Error occurred in socket" << std::endl;
-                exit(EXIT_FAILURE);
+            if (which == 0) {
+                if (!currTurnInCheck)
+                    std::wcout << L", Move: ";
+                else
+                    std::wcout << L", You're in check! Move: ";
+            } else {
+                if (!currTurnInCheck)
+                    std::wcout << L", To: ";
+                else
+                    std::wcout << L", You're in check! To: ";
             }
 
-            if (stop_from_input_t) {
-                if (lobbyInput_t.joinable())
-                    lobbyInput_t.join();
+            std::wcin >> inputBuffer;
+            int res = sanitizeGetMove(inputBuffer);
+            if (res == -1)
+                continue; // Invalid
 
-                std::wcout << "Stop from input thread was set to true" << std::endl;
-
-                send(fd, (void*)CLIENT_LEAVE_RANDOM_QUEUE, sizeof(CLIENT_LEAVE_RANDOM_QUEUE), 0);
-                return 1;
+            if (res == 0) {
+                if (optionMenu() == 0)
+                    return GetMove2(0);
+                continue;
             }
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Ensure some delay to prevent busy waiting
+            return GetMove2(inputBuffer, 1);
         }
     }
 }
+
+int main(){
+    std::locale::global(std::locale("en_US.UTF-8"));
+    Standard_ChessGame2 Game;
+    GetMove2 move = Game.getMove(0);
+    std::wcout << L"Move: " << move.mMove << L", Result: " << move.res << std::endl;
+}
+
+
+
+
+
+    // int pipe_fd[2];
+    // if (pipe(pipe_fd) == -1) {
+    //     std::cerr << "Failed to create pipe" << std::endl;
+    //     return 1;
+    // }
+
+    // {
+    //     DisplayManager displayCodeAndWait(pipe_fd[0]);
+    //     TerminalController terminalcontroller;
+    //     std::atomic_bool& stop_from_input_t = displayCodeAndWait.stop_display;
+    //     display_rand_queue_menu();
+    //     std::thread lobbyInput_t(&DisplayManager::start_input, &displayCodeAndWait);
+
+    //     while (true) {
+
+    //         std::string oppBindStr;
+    //         enum Owner playerNumForMatch;
+    //         char buffer[ONLINE_BUFFER_SIZE] = {0};
+
+    //         int bytes_read = recv(fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
+    //         if (bytes_read > 0) {
+    //             buffer[bytes_read] = '\0';
+    //             std::string res_from_server(buffer);
+
+    //             if (check_for_match_found(res_from_server, oppBindStr, playerNumForMatch)) {
+    //                 write(pipe_fd[1], "1", 1);
+    //                 if (lobbyInput_t.joinable())
+    //                     lobbyInput_t.join();
+
+    //                 std::wcout << L"\033[2B\033[G" << std::flush;
+    //                 game_loop(fd, playerNumForMatch, oppBindStr);
+    //                 return 0;
+    //             } else {
+    //                 std::wcout << L"\033[2B\033[G" << std::flush;
+    //                 std::wcout << "Error joining lobby for some reason..." << std::endl;
+    //                 return 1;
+    //             }
+    //         } else if (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+    //             std::wcout << "Error occurred in socket" << std::endl;
+    //             exit(EXIT_FAILURE);
+    //         }
+
+    //         if (stop_from_input_t) {
+    //             if (lobbyInput_t.joinable())
+    //                 lobbyInput_t.join();
+
+    //             std::wcout << "Stop from input thread was set to true" << std::endl;
+
+    //             send(fd, (void*)CLIENT_LEAVE_RANDOM_QUEUE, sizeof(CLIENT_LEAVE_RANDOM_QUEUE), 0);
+    //             return 1;
+    //         }
+
+    //         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Ensure some delay to prevent busy waiting
+    //     }
+    // }
+
+// class DisplayManager {
+// public:
+//     DisplayManager(const std::wstring& str, int pipe_fd) : lobbyCode(str), pipe_fd(pipe_fd) {}
+//     DisplayManager(int pipe_fd) : pipe_fd(pipe_fd) {}
+
+//     void start() {
+//         std::thread timer_t(&DisplayManager::timer, this);
+//         displayCodeAndWait();
+//         if (timer_t.joinable())
+//             timer_t.join(); // block until the timer meets
+//     }
+
+//     void startTimer() {
+//         std::thread timer_t(&DisplayManager::timer, this);
+        
+//     }
+
+// private:
+//     void timer() {
+//         int count = 60;
+//         while (count != 0 && !stop_display) {
+//             // Beggining of the line + Time + current string
+//             mtx.lock();
+//             std::wcout << "\033[G" << "Time: " << std::to_wstring(count) << " - " << inputBuffer << std::flush;
+//             mtx.unlock();
+//             count--;
+
+//             for(int i = 0; i < 4; i++) {
+//                 std::this_thread::sleep_for(std::chrono::milliseconds(250));
+//                 if(stop_display)
+//                     break;
+//             }
+//         }
+//     }
+
+//     void displayCodeAndWait() {
+
+//         struct pollfd fds[2];
+//         fds[0].fd = fileno(stdin); // File descriptor for std::cin
+//         fds[0].events = POLLIN;
+//         fds[1].fd = pipe_fd;       // File descriptor for the read end of the pipe
+//         fds[1].events = POLLIN;
+
+//         while (!stop_display) {
+//             int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
+//             if (ret > 0) {
+//                 if (fds[1].revents & POLLIN) {
+//                     // Pipe has data to read
+//                     char buffer[32];
+//                     int byte_read = read(fds[1].fd, (void *)buffer, sizeof(buffer));
+//                     if (buffer[0] == '1')
+//                         break;
+
+//                     // Checking if main thread wants this one to stop
+//                 }
+//                 if (fds[0].revents & POLLIN) {
+//                     char ch;
+//                     ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
+//                     if (bytes_read > 0) {
+//                         mtx.lock();
+//                         if (ch == '\n') {
+//                             if(inputBuffer == L"!back")
+//                                 break; // Handle out
+//                         } else if (ch == 127) { // Backspace
+//                             if (!inputBuffer.empty()) {
+//                                 inputBuffer.pop_back();
+//                                 std::wcout << "\033[D \033[D" << std::flush;
+//                             }
+//                         } else {
+//                             std::wcout << ch << std::flush;
+//                             inputBuffer += ch;
+//                         }
+//                         mtx.unlock();
+//                     }
+//                 }
+//             }
+//         }
+
+//         stop_display.store(true);
+        
+//         std::wcout << "\033[GStopping display_code_and_wait...\n" << std::flush;
+//     }
+
+//     // Members
+//     std::atomic_bool stop_display; // Only internal, Main thread can cause stop by writing to the end of the pipe
+//     std::wstring lobbyCode; // Only if needed
+//     std::wstring inputBuffer; // Current input
+//     int pipe_fd; // For communication from main thread
+//     struct pollfd fds[2] = {};
+// };
 
 
 // int main() {

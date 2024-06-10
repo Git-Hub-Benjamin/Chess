@@ -3,9 +3,9 @@
 #include <cstring>
 #include <string>
 #include <iostream>
-#include <deque>
 #include <vector>
 #include <array>
+#include <mutex>
 #include "../terminal-io/terminal.hpp"
 #include "../terminal-io/colors.hpp"
 #include "../client/option.hpp"
@@ -283,9 +283,11 @@ protected:
     bool validateMoveset(Move&);
 
     // Get move
+public:
     GetMove getMove(int which);
+private:
     int optionMenu();
-    int sanatizeGetMove(std::wstring&);
+    int sanitizeGetMove(std::wstring&);
 
     // Converts string move to gamesquare
     GameSquare& convertMove(std::wstring);
@@ -335,7 +337,9 @@ protected:
     // For game clock
     bool isClock = false;
     ChessClock gameClock;
-    void currTurnChessClock(bool&, std::wstring&, std::wstring&&);
+    std::wstring inputBuffer;
+    void currTurnChessClock(bool&, int, const std::wstring&);
+;
 
 
     // owner enum is used to track player turn, None will not be used, just 1 & 2
@@ -356,6 +360,7 @@ public:
     void DEV_MODE_PRESET();
     Standard_ChessGame(Options, ChessClock, bool);
     Standard_ChessGame(Options, bool);
+    Standard_ChessGame();
 
 
     // To be used by main thread for gameloop

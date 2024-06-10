@@ -67,7 +67,6 @@ Standard_ChessGame::Standard_ChessGame(Options gOptions, ChessClock clock, bool 
       whitePlayerKing(&GameBoard[7][3])
 {
     initGame();
-    GameOptions.print();
 }
 
 Standard_ChessGame::Standard_ChessGame(Options gOptions, bool dev_mode)
@@ -78,18 +77,7 @@ Standard_ChessGame::Standard_ChessGame(Options gOptions, bool dev_mode)
       whitePlayerKing(&GameBoard[7][3])
 {
     initGame();
-    GameOptions.print();
 }
-
-// Standard_ChessGame::Standard_ChessGame(Options gOptions)
-//     : GameOptions(gOptions),
-//       GameOver(false),
-//       blackPlayerKing(&GameBoard[0][3]),
-//       whitePlayerKing(&GameBoard[7][3])
-// {
-//     initGame();
-// }
-
 
 void Standard_ChessGame::reset() {
     GameOver = false;
@@ -889,18 +877,19 @@ bool Standard_ChessGame::readPossibleMoves(GameSquare& to, bool ADD_PRINT) {
 int Standard_ChessGame::optionMenu() {
     while (true) {
         std::wstring temp_dst;
-        std::wcout << "\n1. Change Colors\n" << "2. Continue\n" << "3. Print Flipped Board\n" << "4. Quit\n\n--> "; 
+        std::wcout << L"\n\n1. Change Colors\n" << L"2. Continue\n" << L"3. Print Flipped Board\n" << L"4. Quit\n\n--> "; 
         std::wcin >> temp_dst;
-        switch(temp_dst[0]){
+        switch(temp_dst[0]) {
             case L'1':
-                std::wcout << "Not implemented." << std::endl;
+                std::wcout << L"Not implemented." << std::endl;
                 continue;
             case L'2':
                 return 1;
             case L'3':
-                currentTurn = currentTurn == PlayerOne ? PlayerTwo : PlayerOne; // Swap
-                printBoard();
-                currentTurn = currentTurn == PlayerOne ? PlayerTwo : PlayerOne; // Swap back
+                // Swap current turn and print board
+                // currentTurn = currentTurn == PlayerOne ? PlayerTwo : PlayerOne;
+                // printBoard();
+                // currentTurn = currentTurn == PlayerOne ? PlayerTwo : PlayerOne;
                 continue;
             case L'4':
             case L'q':
@@ -908,144 +897,177 @@ int Standard_ChessGame::optionMenu() {
             default:
                 break;
         }
-        continue;
     }
     return 1;
 }
 
-
 // -1 invalid input
 // 0 options
 // 1 valid input
-int Standard_ChessGame::sanatizeGetMove(std::wstring& input) {
+int Standard_ChessGame::sanitizeGetMove(std::wstring& input) {
+    if(!std::iswalpha(input[0])) 
+        return -1; // Ensure [0] is alphabetical character
     
-    if(!std::isalpha(input[0])) 
-        return -1; //! make sure [0] is alphabetical character
-    
-    // force to lower
-    input[0] = std::tolower(input[0]); //! force [0] to lower case
-    switch(input[0]){
-        case L'a':
-        case L'b':
-        case L'c':
-        case L'd':
-        case L'e':
-        case L'f':
-        case L'g':
-        case L'h': //* ALL VALID
+    // Force to lower case
+    input[0] = std::towlower(input[0]); // Force [0] to lower case
+    switch(input[0]) {
+        case L'a': case L'b': case L'c': case L'd':
+        case L'e': case L'f': case L'g': case L'h':
             break;
-        case L'q': //* VALID too but for option
-        case L'x':
-        case L'o':
+        case L'q': // Valid too but for option
+        case L'x': case L'o':
             return 0;
-        default: //! make sure one of the character above
-            return -1; //! make sure [0] is alphabetical character
-
+        default: // Ensure one of the characters above
+            return -1; // Ensure [0] is alphabetical character
     }
 
-    // make sure length is 2
+    // Make sure length is 2
     if(input.length() != 2)
-        return -1; //! move must be length of 2
+        return -1; // Move must be length of 2
 
-    // make sure 2 char is a number
-    if(!std::isdigit(input[1]) || input[1] == L'0' || input[1] == L'9') // using std::isdigit
-        return -1; //! make sure [1] must be a digit and not '0' OR '9' 
+    // Ensure 2nd char is a number
+    if(!std::iswdigit(input[1]) || input[1] == L'0' || input[1] == L'9') // Using std::iswdigit
+        return -1; // Ensure [1] must be a digit and not '0' or '9'
 
     // Now we know it must be [0] == a-h, [1] == 1 - 8
-
-    input.append(L"\0"); //! add null terminator in case we want to print
     return 1;
 } 
 
-GetMove Standard_ChessGame::getMove(int which){
 
-    std::wstring temp_dst;
+void Standard_ChessGame::currTurnChessClock(bool& stop_display, int writePipeFd, const std::wstring& toPrint) {
+    int& count = *(currentTurn == PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
+    while (count >= 0 && !stop_display) {
+        for (int i = 0; i < 10; i++) {
+            if (stop_display || count == 0)
+                break;
 
+            std::wcout << L"\033[G" << L"Time: " << std::to_wstring(count) << " - " << toPrint << inputBuffer << std::flush;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        count--;
+    }
+    write(writePipeFd, "1", 1);
+}
+
+//! Weirdest bug ever, this must be defined in the same file for it to work
+class TimerNonCannonicalController { 
+public:
+    TimerNonCannonicalController() {
+        // Store the original terminal settings
+        tcgetattr(STDIN_FILENO, &old_tio);
+        memcpy(&new_tio, &old_tio, sizeof(struct termios));
+        new_tio.c_lflag &= ~(ICANON | ECHO);
+        new_tio.c_cc[VMIN] = 1;
+        new_tio.c_cc[VTIME] = 0;
+        tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+    }
+
+    ~TimerNonCannonicalController() {
+        // Restore original terminal settings
+        tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
+    }
+
+private:
+    struct termios old_tio, new_tio;
+};
+
+GetMove Standard_ChessGame::getMove(int which) {
+
+    bool currTurnInCheck = false;
     if (isClock) {
-        {
-            bool stopTimerDisplay = false;
-            TerminalController terminalcontroller; // set non cannonical mode
-            currTurnChessClock(stopTimerDisplay, temp_dst, std::wstring((
-                which == 0 ? 
-                    (currTurnInCheck ? playerToString(this->currentTurn) + L", Move: " : playerToString(this->currentTurn) + L", You're in check! Move: ")
-                    : currTurnInCheck ? playerToString(this->currentTurn) + L", To: " : playerToString(this->currentTurn) + L", You're in check! To: ")
-            ));
+        bool stopTimerDisplay = false;
+        TimerNonCannonicalController terminalcontroller; // Set non-canonical mode
 
-            int pipe_fd[2];
-            if (pipe(pipe_fd) == -1) {
-                std::cerr << "Failed to create pipe" << std::endl;
-                return 1;
-            }
+        int pipe_fd[2];
+        if (pipe(pipe_fd) == -1) {
+            std::cerr << "Failed to create pipe" << std::endl;
+            return GetMove(1); // Adjust return as necessary
+        }
 
-            struct pollfd fds[2];
-            fds[0].fd = fileno(stdin); // File descriptor for std::cin
-            fds[0].events = POLLIN;
-            fds[1].fd = pipe_fd[0];       // File descriptor for the read end of the pipe
-            fds[1].events = POLLIN;
+        struct pollfd fds[2];
+        fds[0].fd = fileno(stdin); // File descriptor for std::cin
+        fds[0].events = POLLIN;
+        fds[1].fd = pipe_fd[0]; // File descriptor for the read end of the pipe
+        fds[1].events = POLLIN;
 
-            while (!stopTimerDisplay) {
-                int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
-                if (ret > 0) {
-                    if (fds[1].revents & POLLIN) {
-                        // Pipe has data to read
-                        char buffer[32];
-                        int byte_read = read(fds[1].fd, (void *)buffer, sizeof(buffer));
-                        if (buffer[0] == '1')
-                            break;
+        std::thread clockThread(&Standard_ChessGame::currTurnChessClock, this, std::ref(stopTimerDisplay), pipe_fd[1], std::wstring(
+            which == 0 ? 
+                (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ")
+                : !currTurnInCheck ? playerToString(currentTurn) + L", To: " : playerToString(currentTurn) + L", You're in check! To: "
+        ));
 
-                        // Checking if main thread wants this one to stop
-                    }
-                    if (fds[0].revents & POLLIN) {
-                        char ch;
-                        ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
-                        if (bytes_read > 0) {
-                            if (ch == '\n') {
-                                
-                                int res = sanatizeGetMove(temp_dst);
-                                if (res == -1)
-                                    continue; // invlaid
+        while (!stopTimerDisplay) {
+            int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
+            if (ret > 0) {
+                if (fds[1].revents & POLLIN) {
+                    if (clockThread.joinable())
+                        clockThread.join();
+                    return GetMove(2);
+                }
+                if (fds[0].revents & POLLIN) {
+                    char ch;
+                    ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
+                    if (bytes_read > 0) {
+                        if (ch == '\n') {
+                            int res = sanitizeGetMove(inputBuffer);
+                            if (res == -1)
+                                continue; // Invalid
 
-                                if (res == -1)
-                                    continue; // options
-
+                            if (res == 0) { // option menu
                                 stopTimerDisplay = true;
-                                return GetMove(temp_dst, 1);
-                            } else if (ch == 127) { // Backspace
-                                if (!temp_dst.empty()) {
-                                    temp_dst.pop_back();
-                                    std::wcout << "\033[D \033[D" << std::flush;
-                                }
-                            } else {
-                                std::wcout << ch << std::flush;
-                                temp_dst += ch;
+                                clockThread.join();
+
+                                if (optionMenu() == 0)
+                                    return GetMove(0);
+
+                                inputBuffer.clear();
+                                stopTimerDisplay = false; // reset the flag
+                                std::thread clockThread(&Standard_ChessGame::currTurnChessClock, this, std::ref(stopTimerDisplay), pipe_fd[1], std::wstring(
+                                    which == 0 ? 
+                                        (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ")
+                                        : !currTurnInCheck ? playerToString(currentTurn) + L", To: " : playerToString(currentTurn) + L", You're in check! To: "
+                                ));
+                                continue;
                             }
+
+                            stopTimerDisplay = true;
+                            clockThread.join(); // wait for it to join
+                            return GetMove(inputBuffer, 1);
+                        } else if (ch == 127) { // Backspace
+                            if (!inputBuffer.empty()) {
+                                inputBuffer.pop_back();
+                                std::wcout << L"\b \b" << std::flush; // Handle backspace correctly
+                            }
+                        } else {
+                            inputBuffer += ch; // Append character directly to the inputBuffer
                         }
                     }
                 }
             }
         }
 
-        return GetMove(2); //! Rand out of time
+        if (clockThread.joinable())
+            clockThread.join();
 
+        return GetMove(2); //! Ran out of time
     } else {
         while (true) {
-
-            if (which == 0)
-                if (!currTurnInCheck) 
-                    std::wcout << playerToString(this->currentTurn) << L", Move: ";
+            if (which == 0) {
+                if (!currTurnInCheck)
+                    std::wcout << L", Move: ";
                 else
-                    std::wcout << playerToString(this->currentTurn) << L", You're in check! Move: ";
-            else 
-                if (!currTurnInCheck)  
-                    std::wcout << playerToString(this->currentTurn) << L", To: ";
-                else 
-                    std::wcout << playerToString(this->currentTurn) << L", You're in check! To: ";
-            
-            std::wcin >> temp_dst;
-            
-            int res = sanatizeGetMove(temp_dst);
+                    std::wcout << L", You're in check! Move: ";
+            } else {
+                if (!currTurnInCheck)
+                    std::wcout << L", To: ";
+                else
+                    std::wcout << L", You're in check! To: ";
+            }
+
+            std::wcin >> inputBuffer;
+            int res = sanitizeGetMove(inputBuffer);
             if (res == -1)
-                continue; // invlaid
+                continue; // Invalid
 
             if (res == 0) {
                 if (optionMenu() == 0)
@@ -1053,26 +1075,11 @@ GetMove Standard_ChessGame::getMove(int which){
                 continue;
             }
 
-            return GetMove(temp_dst, 1);
-        }
-    }
-
-}
-
-void Standard_ChessGame::currTurnChessClock(bool& stop_display, std::wstring& inputBuffer, std::wstring&& toPrint) {
-    int& count = *(currentTurn == PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
-    while (count != 0 && !stop_display) {
-        // Beggining of the line + Time + current string
-        std::wcout << "\033[G" << std::to_wstring(count) << " - " << toPrint << inputBuffer << std::flush;
-        count--;
-
-        for(int i = 0; i < 4; i++) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(250));
-            if(stop_display)
-                break;
+            return GetMove(inputBuffer, 1);
         }
     }
 }
+
 
 GameSquare* Standard_ChessGame::isolateFromInCheckMoves() {
     int potential_moves_to_get_out_of_check = kingCanMakeMove ? 1 : 0; // Start at 1 if kingCan make a move
@@ -1167,8 +1174,14 @@ void Standard_ChessGame::startGame(){
                     printBoard();
 
                     moveFrom = getMove(FROM_MOVE);
+                    inputBuffer.clear();
                     if(!moveFrom.res){
                         // Quit
+                        GameOver = true;
+                        break;
+                    } else if (isClock && moveFrom.res == 2) {
+                        // Timer ran out, end game, win for other player
+                        std::wcout << "Timer ran out..." << std::endl;
                         GameOver = true;
                         break;
                     }
@@ -1187,8 +1200,14 @@ void Standard_ChessGame::startGame(){
                     printBoardWithMoves(moveFrom);
 
                 GetMove moveTo = getMove(TO_MOVE);
+                inputBuffer.clear();
                 if(!moveTo.res){
                     // Quit
+                    GameOver = true;
+                    break;
+                } else if (isClock && moveFrom.res == 2) {
+                    // Timer ran out, end game, win for other player
+                    std::wcout << "Timer ran out..." << std::endl;
                     GameOver = true;
                     break;
                 }

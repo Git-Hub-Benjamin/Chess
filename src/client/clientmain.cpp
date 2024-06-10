@@ -374,7 +374,6 @@ void config_file_options(){
 	}
 }
 
-
 int main()
 {		
 	// Set the global locale to support UTF-8 encoding
