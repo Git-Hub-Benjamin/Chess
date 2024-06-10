@@ -25,8 +25,8 @@ private:
 class DisplayManager {
 public:
     DisplayManager(const int pipe_fd) : pipe_fd(pipe_fd) { stop_display.store(false); }
+    DisplayManager();
 
-    void start_timer_turn_input(); // For in game when you need to have an input by 60 seconds
     void start_input(); // For queue random when you need to wait for the user to do !back
     std::atomic_bool stop_display; 
     // Instance may need to tell main thread we are stopping
@@ -43,3 +43,4 @@ private:
     int pipe_fd; // For communication from main thread
     struct pollfd fds[2] = {};
 };
+

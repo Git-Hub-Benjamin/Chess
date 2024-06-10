@@ -11,6 +11,7 @@
 #include "../client/option.hpp"
 #include "../client-rand-string/random-string.hpp"
 #include "../client-server-communication.hpp"
+#include "../client/client-terminal-frontend/displaymanager.hpp"
 
 #define CONFIG_FILE_NAME "/wchesscfg"
 
@@ -33,7 +34,7 @@
 
 #define ONLINE_BUFFER_SIZE 128
 
-extern void copyStandardBoard(GameSquare [CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], GameSquare [CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]);
+//extern void copyStandardBoard(GameSquare [CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], GameSquare [CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]);
 
 struct Point{
     int m_x;
@@ -102,6 +103,21 @@ enum Player{ // Just so we can index into things with this instead of like Owner
 
 extern std::wstring enumPiece_toString(GamePiece);
 
+class ChessClock {
+    int mWhitePlayerTime;
+    int mBlackPlayerTime;
+
+public:
+    ChessClock(){}
+    ChessClock(ChessClock& copy) : mWhitePlayerTime(copy.mWhitePlayerTime), mBlackPlayerTime(copy.mBlackPlayerTime) {}
+    void initTime(int white, int black) {mWhitePlayerTime = white; mBlackPlayerTime = black; }
+
+    int getWhiteSeconds() { return mWhitePlayerTime; }
+    int getBlackSeconds() { return mBlackPlayerTime; }
+    int* getWhiteTimeAddr() { return &mWhitePlayerTime; }
+    int* getBlackTimeAddr() { return &mBlackPlayerTime; }
+
+};
 
 class GameSquare {
 private:
@@ -160,22 +176,23 @@ public:
     bool getIfFirstMoveMade() const { return mfirstMoveOccurred; }
 };
 
-struct StandardChessGameHistoryState {
-    GameSquare mGameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
-    Player mCurrentTurn;
-    Point mWhitePlayerKingPos; 
-    Point mBlackPlayerKingPos;
-    Point mPieceCausingKingCheckPos; 
+// struct StandardChessGameHistoryState {
+//     GameSquare mGameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
+//     Player mCurrentTurn;
+//     Point mWhitePlayerKingPos; 
+//     Point mBlackPlayerKingPos;
+//     Point mPieceCausingKingCheckPos; 
 
-    StandardChessGameHistoryState(GameSquare board[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], Player turn, GameSquare* whiteKing, GameSquare* blackKing, GameSquare* checkCausingPiece) :
-    mCurrentTurn(turn), mWhitePlayerKingPos(whiteKing->getPosition()), mBlackPlayerKingPos(blackKing->getPosition()), mPieceCausingKingCheckPos(checkCausingPiece->getPosition())
-    {
-        copyStandardBoard(board, mGameBoard);
-    }
+//     StandardChessGameHistoryState(){}
+//     StandardChessGameHistoryState(GameSquare board[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], Player turn, GameSquare* whiteKing, GameSquare* blackKing, GameSquare* checkCausingPiece) :
+//     mCurrentTurn(turn), mWhitePlayerKingPos(whiteKing->getPosition()), mBlackPlayerKingPos(blackKing->getPosition()), mPieceCausingKingCheckPos(checkCausingPiece->getPosition())
+//     {
+//         copyStandardBoard(board, mGameBoard);
+//     }
 
-    struct StandardChessGameHistoryState* next;
+//     struct StandardChessGameHistoryState* next;
 
-};
+// };
 
 class Move{
 
@@ -220,9 +237,6 @@ protected:
 
     // print the standard board
     void printBoard();
-
-    // flip  the standard board
-    void flipBoard();
 
     // print the standard board but with moves from the movefrom
     void printBoardWithMoves(GetMove);
@@ -270,6 +284,8 @@ protected:
 
     // Get move
     GetMove getMove(int which);
+    int optionMenu();
+    int sanatizeGetMove(std::wstring&);
 
     // Converts string move to gamesquare
     GameSquare& convertMove(std::wstring);
@@ -311,12 +327,20 @@ protected:
 
     // Determines if game is alive
     bool GameOver;
+    
+    // Helper for startGame
     bool currTurnInCheck;
     bool kingCanMakeMove;
+    
+    // For game clock
+    bool isClock = false;
+    ChessClock gameClock;
+    void currTurnChessClock(bool&, std::wstring&, std::wstring&&);
+
 
     // owner enum is used to track player turn, None will not be used, just 1 & 2
     Player currentTurn;
-    StandardChessGameHistoryState history;
+    //StandardChessGameHistoryState history;
     GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
     GameSquare* whitePlayerKing; 
     GameSquare* blackPlayerKing;
@@ -330,9 +354,8 @@ public:
 
     bool DEV_MODE_ENABLE = false;;
     void DEV_MODE_PRESET();
+    Standard_ChessGame(Options, ChessClock, bool);
     Standard_ChessGame(Options, bool);
-    Standard_ChessGame(Options);
-    Standard_ChessGame();
 
 
     // To be used by main thread for gameloop

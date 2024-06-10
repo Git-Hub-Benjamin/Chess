@@ -3,6 +3,7 @@
 #include "./client-text-graphics/textgraphic.hpp"
 #include <cstdlib>
 #include <fstream>	
+#include <chrono>
 //! Always use wcout, wcout and wcout dont mix
 
 bool running = true;
@@ -48,6 +49,43 @@ enum CFG_FILE_RET{
 	TAMPERED,
 	FOUND_BUT_EMPTY
 };
+
+enum CHESS_CLOCK_SETUP_RET {
+	CLOCK_SETUP,
+	CLOCK_NONE,
+	CLOCK_BACK
+};
+
+CHESS_CLOCK_SETUP_RET setup_chess_clock(ChessClock* obj) {
+	configure_clock_screen();
+	std::wcout << "--> ";
+	int opt = get_menu_option();
+
+	if (opt == 1)
+		return CLOCK_NONE;
+	if (opt == 4)
+		return CLOCK_BACK;
+	if (opt == 2) {
+		clock_presets_screen();
+		std::wcout << "--> ";
+		int preset_opt = get_menu_option();
+		if (preset_opt == 4)
+			return CLOCK_BACK;
+		
+		if (preset_opt == 1) 
+			obj->initTime(60 * 3, 60 * 3); // 180 seconds, 3 mins
+		else if (preset_opt == 2)
+			obj->initTime(60 * 5, 60 * 5); // 300 seconds, 5 mins
+		else if (preset_opt == 3)
+			obj->initTime(60 * 15, 60 * 15); // 300 seconds, 5 mins		
+	} 
+	if (opt == 3) {
+		std::wcout << "Unimplemented..." << std::endl;
+		return CLOCK_BACK;
+	}
+
+	return CLOCK_SETUP;
+}
 
 
 // True --> Found
@@ -364,10 +402,26 @@ int main()
 
 		std::wcout << "--> ";
 		int opt = get_menu_option();
-		if(opt == 1 || opt == 7){
-			std::wcout << "Global things --> " << global_player_option.p1_color << global_player_option.p2_color << global_player_option.whitePlayerArtSelector << global_player_option.blackPlayerArtSelector << global_player_option.moveHighlighting << global_player_option.boardHistory << global_player_option.flipBoardOnNewTurn << std::endl;
-			Standard_ChessGame Game(global_player_option, opt == 7 ? true : false);
-			Game.startGame();
+		if(opt == 1 || opt == -1){ // Local Game or Dev Game
+			local_game_screen();
+			std::wcout << "--> ";
+			int local_opt = get_menu_option(); // Standard Game or Quit
+			if (local_opt != 2) {
+				ChessClock chessclock;
+				CHESS_CLOCK_SETUP_RET res = setup_chess_clock(&chessclock);
+				if (res != CLOCK_BACK) {
+					if (local_opt == 1) {
+						if (res == CLOCK_NONE) {
+							Standard_ChessGame Game(global_player_option, opt == 7 ? true : false);
+							Game.startGame();
+						} else {
+							Standard_ChessGame Game(global_player_option, chessclock, opt == 7 ? true : false);
+							Game.startGame();
+						}
+					}
+				}
+			} 
+			
 		}else if(opt == 2){
 			online_game();
 		}else if(opt ==3){

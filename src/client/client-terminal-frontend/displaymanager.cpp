@@ -4,16 +4,6 @@ void DisplayManager::start_input(){
     displayCodeAndWait();
 }
 
-
-
-void DisplayManager::start_timer_turn_input() {
-    timerRequired = true;
-    std::thread timer_t(&DisplayManager::timer, this);
-    displayCodeAndWait();
-    if (timer_t.joinable())
-        timer_t.join(); // block until the timer meets
-}
-
 void DisplayManager::timer() {
     int count = 60;
     while (count != 0 && !stop_display) {

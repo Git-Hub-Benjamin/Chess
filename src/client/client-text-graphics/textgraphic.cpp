@@ -84,6 +84,60 @@ void title_screen(){
 	std::wcout << "\n\n\n" << std::endl;
 }
 
+void local_game_screen() {
+    std::wcout << "\n\n\n\n\n";
+	std::wcout << "\t\t\t|=====================================|\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|               W-CHESS               |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|           1. Standard Game          |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|           2. Quit                   |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|=====================================|\n";
+	std::wcout << "\n\n\n" << std::endl;
+}
+
+void configure_clock_screen(){
+    std::wcout << "\n\n\n\n\n";
+	std::wcout << "\t\t\t|=====================================|\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|               W-CHESS               |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|        1. No Chess Clock            |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|        2. Chess Clock Presets       |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|        3. Chess CLock Custom        |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|        4. Quit                      |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|=====================================|\n";
+	std::wcout << "\n\n\n" << std::endl;
+}
+
+void clock_presets_screen(){
+    std::wcout << "\n\n\n\n\n";
+	std::wcout << "\t\t\t|=====================================|\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|               W-CHESS               |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|            1. 3 mins each           |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|            2. 5 mins each           |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|            3. 15 mins each          |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|            4. Quit                  |\n";
+    std::wcout << "\t\t\t|                                     |\n";
+    std::wcout << "\t\t\t|=====================================|\n";
+	std::wcout << "\n\n\n" << std::endl;
+}
+
 void option_screen(){
 	std::wcout << "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = =\n";
 	std::wcout << "1. Change colors" << std::endl;

@@ -48,14 +48,27 @@ short (*pieceMovePtrs[])[2] = {
 
 int PIECE_MOVE_COUNTS[] = {PAWN_POSSIBLE_MOVES, KNIGHT_POSSIBLE_MOVES, BISHOP_POSSIBLE_MOVES, ROOK_POSSIBLE_MOVES, KING_POSSIBLE_MOVES, QUEEN_POSSIBLE_MOVES};
 
-Standard_ChessGame::Standard_ChessGame()
-    : blackPlayerKing(&GameBoard[0][3]),
+// Standard_ChessGame::Standard_ChessGame()
+//     : blackPlayerKing(&GameBoard[0][3]),
+//       whitePlayerKing(&GameBoard[7][3])
+// {
+//     initGame();
+//     GameOver = false;
+// }
+
+
+Standard_ChessGame::Standard_ChessGame(Options gOptions, ChessClock clock, bool dev_mode)
+    : GameOptions(gOptions),
+      DEV_MODE_ENABLE(dev_mode),
+      GameOver(false),
+      gameClock(clock),
+      isClock(true),
+      blackPlayerKing(&GameBoard[0][3]),
       whitePlayerKing(&GameBoard[7][3])
 {
     initGame();
-    GameOver = false;
+    GameOptions.print();
 }
-
 
 Standard_ChessGame::Standard_ChessGame(Options gOptions, bool dev_mode)
     : GameOptions(gOptions),
@@ -68,14 +81,14 @@ Standard_ChessGame::Standard_ChessGame(Options gOptions, bool dev_mode)
     GameOptions.print();
 }
 
-Standard_ChessGame::Standard_ChessGame(Options gOptions)
-    : GameOptions(gOptions),
-      GameOver(false),
-      blackPlayerKing(&GameBoard[0][3]),
-      whitePlayerKing(&GameBoard[7][3])
-{
-    initGame();
-}
+// Standard_ChessGame::Standard_ChessGame(Options gOptions)
+//     : GameOptions(gOptions),
+//       GameOver(false),
+//       blackPlayerKing(&GameBoard[0][3]),
+//       whitePlayerKing(&GameBoard[7][3])
+// {
+//     initGame();
+// }
 
 
 void Standard_ChessGame::reset() {
@@ -871,88 +884,193 @@ bool Standard_ChessGame::readPossibleMoves(GameSquare& to, bool ADD_PRINT) {
     return false;
 }
 
+// 0 QUIT
+// 1 CONTINUE
+int Standard_ChessGame::optionMenu() {
+    while (true) {
+        std::wstring temp_dst;
+        std::wcout << "\n1. Change Colors\n" << "2. Continue\n" << "3. Print Flipped Board\n" << "4. Quit\n\n--> "; 
+        std::wcin >> temp_dst;
+        switch(temp_dst[0]){
+            case L'1':
+                std::wcout << "Not implemented." << std::endl;
+                continue;
+            case L'2':
+                return 1;
+            case L'3':
+                currentTurn = currentTurn == PlayerOne ? PlayerTwo : PlayerOne; // Swap
+                printBoard();
+                currentTurn = currentTurn == PlayerOne ? PlayerTwo : PlayerOne; // Swap back
+                continue;
+            case L'4':
+            case L'q':
+                return 0;
+            default:
+                break;
+        }
+        continue;
+    }
+    return 1;
+}
+
+
+// -1 invalid input
+// 0 options
+// 1 valid input
+int Standard_ChessGame::sanatizeGetMove(std::wstring& input) {
+    
+    if(!std::isalpha(input[0])) 
+        return -1; //! make sure [0] is alphabetical character
+    
+    // force to lower
+    input[0] = std::tolower(input[0]); //! force [0] to lower case
+    switch(input[0]){
+        case L'a':
+        case L'b':
+        case L'c':
+        case L'd':
+        case L'e':
+        case L'f':
+        case L'g':
+        case L'h': //* ALL VALID
+            break;
+        case L'q': //* VALID too but for option
+        case L'x':
+        case L'o':
+            return 0;
+        default: //! make sure one of the character above
+            return -1; //! make sure [0] is alphabetical character
+
+    }
+
+    // make sure length is 2
+    if(input.length() != 2)
+        return -1; //! move must be length of 2
+
+    // make sure 2 char is a number
+    if(!std::isdigit(input[1]) || input[1] == L'0' || input[1] == L'9') // using std::isdigit
+        return -1; //! make sure [1] must be a digit and not '0' OR '9' 
+
+    // Now we know it must be [0] == a-h, [1] == 1 - 8
+
+    input.append(L"\0"); //! add null terminator in case we want to print
+    return 1;
+} 
 
 GetMove Standard_ChessGame::getMove(int which){
 
     std::wstring temp_dst;
 
-    while (true){
-        bool optionMenu = false;
-        // get input
+    if (isClock) {
+        {
+            bool stopTimerDisplay = false;
+            TerminalController terminalcontroller; // set non cannonical mode
+            currTurnChessClock(stopTimerDisplay, temp_dst, std::wstring((
+                which == 0 ? 
+                    (currTurnInCheck ? playerToString(this->currentTurn) + L", Move: " : playerToString(this->currentTurn) + L", You're in check! Move: ")
+                    : currTurnInCheck ? playerToString(this->currentTurn) + L", To: " : playerToString(this->currentTurn) + L", You're in check! To: ")
+            ));
 
-        if (which == 0)
-            if (!currTurnInCheck) 
-                std::wcout << playerToString(this->currentTurn) << ", Move: ";
-            else
-                std::wcout << playerToString(this->currentTurn) << ", You're in check! Move: ";
-        else 
-            if (!currTurnInCheck)   
-                std::wcout << playerToString(this->currentTurn) << ", To: ";
-            else 
-                std::wcout << playerToString(this->currentTurn) << ", You're in check! To: ";
-
-       
-
-        std::wcin >> temp_dst;
-        
-        if(!std::isalpha(temp_dst[0])) 
-            continue; //! make sure [0] is alphabetical character
-        
-        // force to lower
-        temp_dst[0] = std::tolower(temp_dst[0]); //! force [0] to lower case
-        switch(temp_dst[0]){
-            case L'a':
-            case L'b':
-            case L'c':
-            case L'd':
-            case L'e':
-            case L'f':
-            case L'g':
-            case L'h': //* ALL VALID
-                break;
-            case L'q': //* VALID too but for option
-            case L'x':
-            case L'o':
-                optionMenu = true;
-                break;
-            default: //! make sure one of the character above
-                continue; //! make sure [0] is alphabetical character
-
-        }
-
-        if(optionMenu){
-            std::wcout << "\n1. Change Colors\n" << "2. Continue\n" << "3. Toggle Flip Board\n" << "4. Quit\n\n--> "; 
-            std::wcin >> temp_dst;
-            switch(temp_dst[0]){
-                case L'1':
-                    std::wcout << "Not implemented." << std::endl;
-                    continue;
-                case L'2':
-                    continue;
-                case L'3':
-                    std::wcout << "Not implemented." << std::endl;
-                    continue;
-                case L'4':
-                case L'q':
-                    return GetMove(0);
-                default:
-                    break;
+            int pipe_fd[2];
+            if (pipe(pipe_fd) == -1) {
+                std::cerr << "Failed to create pipe" << std::endl;
+                return 1;
             }
-            continue;
+
+            struct pollfd fds[2];
+            fds[0].fd = fileno(stdin); // File descriptor for std::cin
+            fds[0].events = POLLIN;
+            fds[1].fd = pipe_fd[0];       // File descriptor for the read end of the pipe
+            fds[1].events = POLLIN;
+
+            while (!stopTimerDisplay) {
+                int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
+                if (ret > 0) {
+                    if (fds[1].revents & POLLIN) {
+                        // Pipe has data to read
+                        char buffer[32];
+                        int byte_read = read(fds[1].fd, (void *)buffer, sizeof(buffer));
+                        if (buffer[0] == '1')
+                            break;
+
+                        // Checking if main thread wants this one to stop
+                    }
+                    if (fds[0].revents & POLLIN) {
+                        char ch;
+                        ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
+                        if (bytes_read > 0) {
+                            if (ch == '\n') {
+                                
+                                int res = sanatizeGetMove(temp_dst);
+                                if (res == -1)
+                                    continue; // invlaid
+
+                                if (res == -1)
+                                    continue; // options
+
+                                stopTimerDisplay = true;
+                                return GetMove(temp_dst, 1);
+                            } else if (ch == 127) { // Backspace
+                                if (!temp_dst.empty()) {
+                                    temp_dst.pop_back();
+                                    std::wcout << "\033[D \033[D" << std::flush;
+                                }
+                            } else {
+                                std::wcout << ch << std::flush;
+                                temp_dst += ch;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        // make sure length is 2
-        if(temp_dst.length() != 2)
-            continue; //! move must be length of 2
+        return GetMove(2); //! Rand out of time
 
-        // make sure 2 char is a number
-        if(!std::isdigit(temp_dst[1]) || temp_dst[1] == L'0' || temp_dst[1] == L'9') // using std::isdigit
-            continue; //! make sure [1] must be a digit and not '0' OR '9' 
+    } else {
+        while (true) {
 
-        // Now we know it must be [0] == a-h, [1] == 1 - 8
+            if (which == 0)
+                if (!currTurnInCheck) 
+                    std::wcout << playerToString(this->currentTurn) << L", Move: ";
+                else
+                    std::wcout << playerToString(this->currentTurn) << L", You're in check! Move: ";
+            else 
+                if (!currTurnInCheck)  
+                    std::wcout << playerToString(this->currentTurn) << L", To: ";
+                else 
+                    std::wcout << playerToString(this->currentTurn) << L", You're in check! To: ";
+            
+            std::wcin >> temp_dst;
+            
+            int res = sanatizeGetMove(temp_dst);
+            if (res == -1)
+                continue; // invlaid
 
-        temp_dst.append(L"\0"); //! add null terminator in case we want to print
-        return GetMove(temp_dst, 1);
+            if (res == 0) {
+                if (optionMenu() == 0)
+                    return GetMove(0);
+                continue;
+            }
+
+            return GetMove(temp_dst, 1);
+        }
+    }
+
+}
+
+void Standard_ChessGame::currTurnChessClock(bool& stop_display, std::wstring& inputBuffer, std::wstring&& toPrint) {
+    int& count = *(currentTurn == PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
+    while (count != 0 && !stop_display) {
+        // Beggining of the line + Time + current string
+        std::wcout << "\033[G" << std::to_wstring(count) << " - " << toPrint << inputBuffer << std::flush;
+        count--;
+
+        for(int i = 0; i < 4; i++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            if(stop_display)
+                break;
+        }
     }
 }
 
