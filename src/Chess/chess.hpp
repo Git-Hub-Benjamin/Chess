@@ -5,7 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
-#include <mutex>
+#include <atomic>
 #include "../terminal-io/terminal.hpp"
 #include "../terminal-io/colors.hpp"
 #include "../client/option.hpp"
@@ -286,7 +286,7 @@ protected:
 public:
     GetMove getMove(int which);
 private:
-    int optionMenu();
+    int optionMenu(char);
     int sanitizeGetMove(std::wstring&);
 
     // Converts string move to gamesquare
@@ -338,7 +338,7 @@ private:
     bool isClock = false;
     ChessClock gameClock;
     std::wstring inputBuffer;
-    void currTurnChessClock(bool&, int, const std::wstring&);
+    void currTurnChessClock(std::atomic_bool&, int, const std::wstring&);
 ;
 
 
