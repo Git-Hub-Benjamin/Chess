@@ -12,7 +12,7 @@ int dev_menu_option(){
 	return -1;
 }
 
-void Standard_ChessGame::DEV_MODE_PRESET(){
+void StandardLocalChessGame::DEV_MODE_PRESET(){
 
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
         for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {

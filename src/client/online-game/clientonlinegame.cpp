@@ -125,7 +125,7 @@ int online_game() {
     // Start polling to the server to keep the connection alive
     std::thread poll_thread(poll_to_server, client_poll_socket_fd);
 
-    // Server was able to bind our sockets together, we are now waiting but without a game_mode
+    // Server was able to bind our sockets together, we are now waiting but without a JOIN_MODE
     // On the client we will now show the game modes (Private lobby or random queue)
     // If we choose one we will tell the server
 

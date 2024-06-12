@@ -411,10 +411,10 @@ int main()
 				if (res != CLOCK_BACK) {
 					if (local_opt == 1) {
 						if (res == CLOCK_NONE) {
-							Standard_ChessGame Game(global_player_option, opt == 7 ? true : false);
+							StandardLocalChessGame Game(global_player_option, opt == 7 ? true : false);
 							Game.startGame();
 						} else {
-							Standard_ChessGame Game(global_player_option, chessclock, opt == 7 ? true : false);
+							StandardLocalChessGame Game(global_player_option, chessclock, opt == 7 ? true : false);
 							Game.startGame();
 						}
 					}

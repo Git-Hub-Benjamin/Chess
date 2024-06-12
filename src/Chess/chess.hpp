@@ -6,6 +6,7 @@
 #include <vector>
 #include <array>
 #include <atomic>
+#include <stack>
 #include "../terminal-io/terminal.hpp"
 #include "../terminal-io/colors.hpp"
 #include "../client/option.hpp"
@@ -34,13 +35,15 @@
 
 #define ONLINE_BUFFER_SIZE 128
 
-//extern void copyStandardBoard(GameSquare [CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], GameSquare [CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]);
+extern short (*pieceMovePtrs[])[2];
+extern int PIECE_MOVE_COUNTS[];
+
 
 struct Point{
     int m_x;
     int m_y;
     
-    Point(){}
+    Point() : m_x(-1), m_y(-1) {}
     Point(int x, int y) : m_x(x), m_y(y) {}
 
     Point operator+(const Point& other) const {
@@ -104,13 +107,21 @@ enum Player{ // Just so we can index into things with this instead of like Owner
 extern std::wstring enumPiece_toString(GamePiece);
 
 class ChessClock {
-    int mWhitePlayerTime;
-    int mBlackPlayerTime;
+    int mWhitePlayerTime = -1;
+    int mBlackPlayerTime = -1;
 
 public:
     ChessClock(){}
     ChessClock(ChessClock& copy) : mWhitePlayerTime(copy.mWhitePlayerTime), mBlackPlayerTime(copy.mBlackPlayerTime) {}
     void initTime(int white, int black) {mWhitePlayerTime = white; mBlackPlayerTime = black; }
+
+    ChessClock& operator=(const ChessClock& other) {
+        if (this != &other) {
+            mWhitePlayerTime = other.mWhitePlayerTime;
+            mBlackPlayerTime = other.mBlackPlayerTime;
+        }
+        return *this;
+    }
 
     int getWhiteSeconds() { return mWhitePlayerTime; }
     int getBlackSeconds() { return mBlackPlayerTime; }
@@ -176,23 +187,72 @@ public:
     bool getIfFirstMoveMade() const { return mfirstMoveOccurred; }
 };
 
-// struct StandardChessGameHistoryState {
-//     GameSquare mGameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
-//     Player mCurrentTurn;
-//     Point mWhitePlayerKingPos; 
-//     Point mBlackPlayerKingPos;
-//     Point mPieceCausingKingCheckPos; 
+extern void copyStandardBoard(GameSquare [CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], GameSquare [CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]);
 
-//     StandardChessGameHistoryState(){}
-//     StandardChessGameHistoryState(GameSquare board[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], Player turn, GameSquare* whiteKing, GameSquare* blackKing, GameSquare* checkCausingPiece) :
-//     mCurrentTurn(turn), mWhitePlayerKingPos(whiteKing->getPosition()), mBlackPlayerKingPos(blackKing->getPosition()), mPieceCausingKingCheckPos(checkCausingPiece->getPosition())
-//     {
-//         copyStandardBoard(board, mGameBoard);
-//     }
+struct StandardChessGameHistoryState {
+    GameSquare mGameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
+    bool usingClock = false;
+    ChessClock mClock;
+    Player mCurrentTurn;
+    Point mWhitePlayerKingPos; 
+    Point mBlackPlayerKingPos;
+    Point mPieceCausingKingCheckPos; 
 
-//     struct StandardChessGameHistoryState* next;
+    StandardChessGameHistoryState() {}
 
-// };
+    // Constructor without clock
+    StandardChessGameHistoryState(GameSquare board[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], Player turn, GameSquare* whiteKing, GameSquare* blackKing, GameSquare* checkCausingPiece) :
+        mCurrentTurn(turn), mWhitePlayerKingPos(whiteKing->getPosition()), mBlackPlayerKingPos(blackKing->getPosition()) {
+        if (checkCausingPiece != nullptr) 
+            mPieceCausingKingCheckPos = checkCausingPiece->getPosition();
+        copyStandardBoard(board, mGameBoard);
+    }
+
+    // Constructor with clock
+    StandardChessGameHistoryState(GameSquare board[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], Player turn, GameSquare* whiteKing, GameSquare* blackKing, GameSquare* checkCausingPiece, ChessClock clock) :
+        mCurrentTurn(turn), mWhitePlayerKingPos(whiteKing->getPosition()), mBlackPlayerKingPos(blackKing->getPosition()), mClock(clock) {
+        if (checkCausingPiece != nullptr) 
+            mPieceCausingKingCheckPos = checkCausingPiece->getPosition();
+        else
+            mPieceCausingKingCheckPos = Point();
+        usingClock = true;
+        copyStandardBoard(board, mGameBoard);
+    }
+
+    // Copy constructor
+    StandardChessGameHistoryState(const StandardChessGameHistoryState& copy) :
+        mCurrentTurn(copy.mCurrentTurn), mWhitePlayerKingPos(copy.mWhitePlayerKingPos), mBlackPlayerKingPos(copy.mBlackPlayerKingPos), mPieceCausingKingCheckPos(copy.mPieceCausingKingCheckPos), usingClock(copy.usingClock) {
+        if (copy.usingClock)
+            mClock = copy.mClock;
+        copyStandardBoard(copy.mGameBoard, mGameBoard);
+    }
+    
+    void copyStandardBoard(const GameSquare source[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], GameSquare destination[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]) {
+        memcpy(destination, source, sizeof(GameSquare[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]));
+    }
+
+    void print() {
+        for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
+            for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {
+                mGameBoard[row][col].print();
+                std::wcout << std::endl;
+            }
+        }
+
+        std::wcout << "Current turn: " << mCurrentTurn << ", White time: " << std::to_wstring(mClock.getWhiteSeconds()) << ", Black time: " << std::to_wstring(mClock.getBlackSeconds()) << std::endl; 
+
+        mGameBoard[mWhitePlayerKingPos.m_y][mWhitePlayerKingPos.m_x].print(); std::wcout << std::endl;
+        mGameBoard[mBlackPlayerKingPos.m_y][mBlackPlayerKingPos.m_x].print(); std::wcout << std::endl;
+        
+        if (mPieceCausingKingCheckPos.m_x != -1 && mPieceCausingKingCheckPos.m_y != 1) {
+            mGameBoard[mPieceCausingKingCheckPos.m_y][mPieceCausingKingCheckPos.m_x].print(); std::wcout << std::endl;
+        } else
+            std::wcout << "No piece causing check (nullptr)" << std::endl;
+
+    }
+};
+
+
 
 class Move{
 
@@ -231,27 +291,22 @@ struct GetMove{
     GetMove(std::wstring move, int res): mMove(move), res(res) {}
 };
 
-class Standard_ChessGame{
-
+// To be inheirted by Local Game and Online Game
+class StandardChessGame {
 protected:
 
-    // print the standard board
-    void printBoard();
+    // owner enum is used to track player turn, None will not be used, just 1 & 2
+    Player currentTurn;
+    //StandardChessGameHistoryState history;
+    GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
+    GameSquare* whitePlayerKing; // These pointers need to be set
+    GameSquare* blackPlayerKing;
+    GameSquare* pieceCausingKingCheck = nullptr; 
+    bool currTurnInCheck;
 
-    // print the standard board but with moves from the movefrom
-    void printBoardWithMoves(GetMove);
-
-    // True, Gameover
-    // False not checkmate
-    bool checkMate();
-
-    // True, basic checks valid
-    // False invalid move
-    bool validateGameSquare(GameSquare&, int);
-
-    // True piece moved
-    // False piece not moved
-    int makeMove(Move&&);
+    // True - Valid move
+    // False - Invalid move
+    bool validateMoveset(Move&);
 
     // True valid move
     // False invalid move
@@ -270,27 +325,20 @@ protected:
     // False - Piece in way
     bool bishopClearPath(Move&);
 
-    // True can defend so not checkmate
-    // False cannot defend king, so checkmate
-    GameSquare* canDefendKing(std::vector<GameSquare*>&);
-
     // True - All good
     // False - Not good
     bool pawnMoveCheck(Move&);
 
-    // True - Valid move
-    // False - Invalid move
-    bool validateMoveset(Move&);
+    // returns owner at point
+    Owner piecePresent(Point);
 
-    // Get move
-public:
-    GetMove getMove(int which);
-private:
-    int optionMenu(char);
-    int sanitizeGetMove(std::wstring&);
+    // True, Gameover
+    // False not checkmate
+    bool checkMate();
 
-    // Converts string move to gamesquare
-    GameSquare& convertMove(std::wstring);
+    // True on board
+    // False not on board
+    bool onBoard(Point&);
 
     // True - King is safe
     // False - King is NOT safe
@@ -300,12 +348,61 @@ private:
     // False king is not safe
     bool kingSafeAfterMove(GameSquare&);
 
-    // True on board
-    // False not on board
-    bool onBoard(Point&);
+    // True can defend so not checkmate
+    // False cannot defend king, so checkmate
+    GameSquare* canDefendKing(std::vector<GameSquare*>&);
 
-    // returns owner at point
-    Owner piecePresent(Point);
+    // used in only local chess game, but it is used in canDefend king so ts needed here
+    bool kingCanMakeMove;
+
+    // Determines if game is alive
+    bool GameOver = false;
+
+        // To be used by main thread for gameloop
+    void reset();
+
+    // 2 players, each with 16 pieces
+    void initGame();
+
+    // init random turn 
+    void initTurn();
+
+    // generic convert
+    GameSquare& convertMove(std::wstring);
+
+    // generic makeMove
+    int makeMove(Move& move);
+    // calls generic
+    int makeMove(Move&& move);
+
+
+};
+
+class StandardLocalChessGame : public StandardChessGame {
+
+protected:
+
+    // print the standard board
+    void printBoard();
+
+    // print the standard board but with moves from the movefrom
+    void printBoardWithMoves(GetMove);
+
+    // True, basic checks valid
+    // False invalid move
+    bool validateGameSquare(GameSquare&, int);
+
+    // wrapper function for verify and read possilbe moves so makeMoves could be generic
+    int localMakeMove(Move&&);
+
+    // Get move
+    GetMove getMove(int which);
+    int optionMenu(char);
+    int sanitizeGetMove(std::wstring&);
+    int reflectAxis(int);
+
+    // Converts string move to gamesquare
+    GameSquare& localConvertMove(std::wstring);
    
     // populates the possible move vec
     bool populatePossibleMoves(GameSquare&);
@@ -316,8 +413,8 @@ private:
     // Will return a pointer to the one piece that you can move in check, if there is more than one then it will just return a nullptr
     GameSquare* isolateFromInCheckMoves();
 
-    // 2 players, each with 16 pieces
-    void initGame();
+    bool isLoadingState = false;
+    void loadGameState(StandardChessGameHistoryState&);
 
     std::wstring playerToString(Player);
 
@@ -326,13 +423,7 @@ private:
 
     // Tracks the pieces that were taken during the game
     TakenPiece playerTakenPieces[STANDARD_CHESSGAME_PLAYER_COUNT][STANDARD_CHESSGAME_TEAM_PIECE_COUNT];
-
-    // Determines if game is alive
-    bool GameOver;
     
-    // Helper for startGame
-    bool currTurnInCheck;
-    bool kingCanMakeMove;
     
     // For game clock
     bool isClock = false;
@@ -340,15 +431,10 @@ private:
     std::wstring inputBuffer;
     void currTurnChessClock(std::atomic_bool&, int, const std::wstring&);
 ;
+    // For undo / redo turns
+    std::stack<StandardChessGameHistoryState> undoTurn;
+    std::stack<StandardChessGameHistoryState> redoTurn;
 
-
-    // owner enum is used to track player turn, None will not be used, just 1 & 2
-    Player currentTurn;
-    //StandardChessGameHistoryState history;
-    GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
-    GameSquare* whitePlayerKing; 
-    GameSquare* blackPlayerKing;
-    GameSquare* pieceCausingKingCheck = nullptr; 
     std::vector<GameSquare *> possibleMoves; 
 
     // to print next while loop iteration after the board is printed
@@ -358,17 +444,12 @@ public:
 
     bool DEV_MODE_ENABLE = false;;
     void DEV_MODE_PRESET();
-    Standard_ChessGame(Options, ChessClock, bool);
-    Standard_ChessGame(Options, bool);
-    Standard_ChessGame();
-
-
-    // To be used by main thread for gameloop
-    void reset();
+    StandardLocalChessGame(Options, ChessClock, bool);
+    StandardLocalChessGame(Options, bool);
+    StandardLocalChessGame() {}
 
     // Start a standard game
     void startGame();
-
 };
 
 

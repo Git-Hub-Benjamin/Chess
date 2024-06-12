@@ -1,13 +1,13 @@
 #include "../socket/socketutil.h"
 #include "./server-terminal-communication/servercommands.hpp"
-#include "server.h"
-
+#include "../Chess/chess.hpp"
+#include "server.hpp"
 
 #define MAX_CLIENT 8
 
 std::mutex mtx;
 static Client* clients[MAX_CLIENT] = { nullptr };
-static Online_ChessGame* Client_Lobbies[MAX_CLIENT / 2] = { nullptr };
+static OnlineChessGame* Client_Lobbies[MAX_CLIENT / 2] = { nullptr };
 static std::vector<int> queueLobbiesToDelete;
 static std::unordered_map<std::string, Client*> PRIVATE_LOBBY_CODES;
 std::atomic_bool KILL_SERVER(false);
@@ -281,8 +281,6 @@ enum Owner fifty_fifty_player_turn(){
     return PTWO;
 }
 
-
-
 void delete_lobby(int index){
     delete Client_Lobbies[index];
 }
@@ -301,7 +299,7 @@ void schedule_rand_queue_clients(std::vector<std::pair<Client&, Client&>>& vec){
         if(clients[client_index]->status != WAITING) // Only waiting clients
             continue;
 
-        if(clients[client_index]->client_selected_game_move != QUEUE_RANDOM) // Only queue random game mode selected clients
+        if(clients[client_index]->clientJoinMode != QUEUE_RANDOM) // Only queue random game mode selected clients
             continue;
         
         // found waiting client, increase count
@@ -323,7 +321,7 @@ void schedule_rand_queue_clients(std::vector<std::pair<Client&, Client&>>& vec){
 
 //* IN CLIENT ACCESS LOCK
 // assume not nullptr and the curr_client->status is waiting
-std::string client_update_game_mode(Client* curr_client, std::vector<std::pair<Client&, Client&>>& vec) {
+std::string client_update_JOIN_MODE(Client* curr_client, std::vector<std::pair<Client&, Client&>>& vec) {
     std::string build_string = "";
     char buffer[ONLINE_BUFFER_SIZE] = {0};
 
@@ -362,11 +360,11 @@ std::string client_update_game_mode(Client* curr_client, std::vector<std::pair<C
     }else if(msg_from_client.compare(CLIENT_JOIN_RANDOM_QUEUE) == 0){
         // Handling 2. joining random queue
         build_string += SERVER_CLIENT_JOIN_RAND_QUEUE_GOOD;
-        curr_client->client_selected_game_move = QUEUE_RANDOM;
+        curr_client->clientJoinMode = QUEUE_RANDOM;
     }else if(msg_from_client.compare(CLIENT_LEAVE_RANDOM_QUEUE) == 0){
         // Handling 3. leaving random queue
         build_string += SERVER_CLIENT_LEAVE_RAND_QUEUE_GOOD;
-        curr_client->client_selected_game_move = NONE_SELECTED;
+        curr_client->clientJoinMode = NONE_SELECTED;
     }else if(msg_from_client.compare(CLIENT_CREATE_PRIVATE_LOBBY) == 0){
         // Handling 4. creating a private lobby
         build_string += SERVER_CREATE_LOBBY_GOOD;
@@ -409,7 +407,7 @@ void client_waiting_to_playing(Client& curr){
 
 void cleanup_inactive_lobbies(){
     for(int client_lobbies_index = 0; client_lobbies_index < MAX_CLIENT / 2; client_lobbies_index++){
-        if(Client_Lobbies[client_lobbies_index] != nullptr && Client_Lobbies[client_lobbies_index]->lobby_status == QUEUE_KILL){
+        if(Client_Lobbies[client_lobbies_index] != nullptr && Client_Lobbies[client_lobbies_index]->LobbyStatus == QUEUE_KILL){
             // Looking for valid lobbies and ones that are queued to be killed by the main thread
 
         }
@@ -560,17 +558,23 @@ void initalize_client_lobby(int lobby_index, Client& client1, Client& client2){
     client1.RES_TO_CLIENT_WAITING = client1_res;
     client2.RES_TO_CLIENT_WAITING = client2_res;
 
-    // Create new lobby
+    GAME_MODE OnlineGameMode = STANDARD_CHESSGAME;
+
+    // Create new lobby, this is also where we would change which chess game we would be creating
     // Since the constructor expects the first client passed to be player one we need to check for that
     if(client1.Player == PONE)
-        Client_Lobbies[lobby_index] = new Online_ChessGame(lobby_index, client1, client2);
+        Client_Lobbies[lobby_index] = new StandardServerOnlineChessGame(lobby_index, OnlineGameMode, client1, client2);
     else
-        Client_Lobbies[lobby_index] = new Online_ChessGame(lobby_index, client2, client1);
+        Client_Lobbies[lobby_index] = new StandardServerOnlineChessGame(lobby_index, OnlineGameMode, client2, client1);
     
     // Create thread to execute in lobbies init function, it will wait to main says it is good to go
-    std::thread game_t(&Online_ChessGame::init, Client_Lobbies[lobby_index]);
-    // Main detaches game thread
-    game_t.detach();
+    switch (OnlineGameMode) {
+        case STANDARD_CHESSGAME:
+            std::thread game_t(&StandardServerOnlineChessGame::startGame, static_cast<StandardServerOnlineChessGame*>(Client_Lobbies[lobby_index]));
+            game_t.detach();
+            static_cast<StandardServerOnlineChessGame*>(Client_Lobbies[lobby_index])->setStart();
+        break;
+    }
 }
 
 // Runs random queue dispatcher 1 time a second, and sends updates to 
@@ -593,7 +597,7 @@ void dispatch_and_send_waiting_updates(){
         // Send waiting / active players online to WAITING clients
         std::string response_to_client; //= server_activity_msg;
 
-        response_to_client += client_update_game_mode(curr_client, CLIENTS_TO_DISPATCH);
+        response_to_client += client_update_JOIN_MODE(curr_client, CLIENTS_TO_DISPATCH);
 
         curr_client->RES_TO_CLIENT_WAITING = response_to_client;
 
@@ -620,9 +624,7 @@ void dispatch_and_send_waiting_updates(){
         }
 
         // Initialize the lobby
-        initalize_client_lobby(lobby_index, pair.first, pair.second);
-        // Have main tell the thread executing the lobby that it is good to start because everything is initalized
-        Client_Lobbies[lobby_index]->start_game();
+        initalize_client_lobby(lobby_index, pair.first, pair.second);        
 
         std::wcout << "Starting game thread" << std::endl;
     } 
@@ -745,9 +747,6 @@ const char* fifo_path = "/tmp/serverchessfifo";
         return 1;
     }
     #endif
-
-    //! Required
-    init_moveset();
 
     // init server
     int poll_socket_fd = createTCPIPv4Socket();
