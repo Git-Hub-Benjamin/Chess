@@ -261,11 +261,13 @@ GetMove2 Standard_ChessGame2::getMove(int which) {
     }
 }
 
+
+
 int main(){
-    std::locale::global(std::locale("en_US.UTF-8"));
-    Standard_ChessGame2 Game;
-    GetMove2 move = Game.getMove(0);
-    std::wcout << L"Move: " << move.mMove << L", Result: " << move.res << std::endl;
+    std::wstring hello = L"Hello";
+    std::wcout << hello << std::endl;
+    std::wcin >> hello;
+    std::wcout << hello << std::endl;
 }
 
 

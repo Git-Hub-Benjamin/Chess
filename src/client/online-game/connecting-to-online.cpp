@@ -173,52 +173,57 @@ int create_private_lobby(int fd) {
 
     std::wstring lobby_code = convertString(res_from_server.substr(CLIENT_INDEX_AFTER_COLON_IN_CREATE_LOBBY_CODE, bytes_recieved - 1));
 
-    {
-        DisplayManager displayCodeAndWait(pipe_fd[0]);
-        TerminalController terminalcontroller;
-        std::atomic_bool& stop_from_input_t = displayCodeAndWait.stop_display;
-        display_private_lobby_code_menu(lobby_code);
-        std::thread lobbyInput_t(&DisplayManager::start_input, &displayCodeAndWait);
+    
+    DisplayManager displayCodeAndWait(pipe_fd[0]);
+    TerminalController* terminalcontroller = new TerminalController;
+    std::atomic_bool& stop_from_input_t = displayCodeAndWait.stop_display;
+    display_private_lobby_code_menu(lobby_code);
+    std::thread lobbyInput_t(&DisplayManager::start_input, &displayCodeAndWait);
 
-        while (true) {
+    while (true) {
 
-            std::string oppBindStr;
-            enum Owner playerNumForMatch;
-            char buffer[ONLINE_BUFFER_SIZE] = {0};
+        std::string oppBindStr;
+        enum Owner playerNumForMatch;
+        char buffer[ONLINE_BUFFER_SIZE] = {0};
 
-            int bytes_read = recv(fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
-            if (bytes_read > 0) {
-                buffer[bytes_read] = '\0';
-                std::string res_from_server(buffer);
+        int bytes_read = recv(fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
+        if (bytes_read > 0) {
+            buffer[bytes_read] = '\0';
+            std::string res_from_server(buffer);
 
-                if (check_for_match_found(res_from_server, oppBindStr, playerNumForMatch)) {
-                    write(pipe_fd[1], "1", 1);
-                    if (lobbyInput_t.joinable())
-                        lobbyInput_t.join();
-
-                    std::wcout << L"\033[2B\033[G" << std::flush;
-                    game_loop(fd, playerNumForMatch, oppBindStr);
-                    return 0;
-                } else {
-                    std::wcout << L"\033[2B\033[G" << std::flush;
-                    std::wcout << "Error creating/joining lobby for some reason..." << std::endl;
-                    send(fd, (void*)CLIENT_CLOSE_LOBBY, sizeof(CLIENT_CLOSE_LOBBY), 0);
-                    return 1;
-                }
-            } else if (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-                std::wcout << "Error occurred in socket" << std::endl;
-                exit(EXIT_FAILURE);
-            }
-
-            if (stop_from_input_t) {
+            if (check_for_match_found(res_from_server, oppBindStr, playerNumForMatch)) {
+                write(pipe_fd[1], "1", 1);
                 if (lobbyInput_t.joinable())
                     lobbyInput_t.join();
 
+                // Move 2 down and to the the beggining of the line
+                std::wcout << L"\033[2B\033[G" << std::flush;
+                delete terminalcontroller;
+
+                game_loop(fd, playerNumForMatch, oppBindStr);
+                return 0;
+            } else {
+                std::wcout << L"\033[2B\033[G" << std::flush;
+                std::wcout << "Error creating/joining lobby for some reason..." << std::endl;
                 send(fd, (void*)CLIENT_CLOSE_LOBBY, sizeof(CLIENT_CLOSE_LOBBY), 0);
+                delete terminalcontroller;
                 return 1;
             }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Ensure some delay to prevent busy waiting
+        } else if (bytes_read < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+            std::wcout << "Error occurred in socket" << std::endl;
+            exit(EXIT_FAILURE);
         }
+
+        if (stop_from_input_t) {
+            if (lobbyInput_t.joinable())
+                lobbyInput_t.join();
+
+            send(fd, (void*)CLIENT_CLOSE_LOBBY, sizeof(CLIENT_CLOSE_LOBBY), 0);
+            delete terminalcontroller;
+            return 1;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Ensure some delay to prevent busy waiting
     }
+
 }

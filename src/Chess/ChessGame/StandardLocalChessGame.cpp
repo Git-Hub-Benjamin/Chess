@@ -1,11 +1,11 @@
 #include "../chess.hpp"
 
 StandardLocalChessGame::StandardLocalChessGame(Options gOptions, ChessClock clock, bool dev_mode)
-    : GameOptions(gOptions),
-      DEV_MODE_ENABLE(dev_mode),
-      gameClock(clock),
-      isClock(true)
+    : DEV_MODE_ENABLE(dev_mode),
+      isClock(true),
+      StandardChessGame(LOCAL_CONNECTIVITY, clock)
 {
+    GameOptions = gOptions;
     blackPlayerKing = &GameBoard[0][3];
     whitePlayerKing = &GameBoard[7][3];
     initTurn();
@@ -16,9 +16,9 @@ StandardLocalChessGame::StandardLocalChessGame(Options gOptions, ChessClock cloc
 }
 
 StandardLocalChessGame::StandardLocalChessGame(Options gOptions, bool dev_mode)
-    : GameOptions(gOptions),
-      DEV_MODE_ENABLE(dev_mode)
+    : DEV_MODE_ENABLE(dev_mode), StandardChessGame(LOCAL_CONNECTIVITY)
 {
+    GameOptions = gOptions;
     blackPlayerKing = &GameBoard[0][3];
     whitePlayerKing = &GameBoard[7][3];
     initTurn();
@@ -26,298 +26,6 @@ StandardLocalChessGame::StandardLocalChessGame(Options gOptions, bool dev_mode)
         DEV_MODE_PRESET();
     else 
         initGame();
-}
-
-std::wstring StandardLocalChessGame::playerToString(Player p){
-    return (p == PlayerOne ? L"Player One" : L"Player Two");
-}
-
-void StandardLocalChessGame::printBoard(){
-    std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
-    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
-        std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - row << " ";
-        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
-            std::wcout << "| ";
-            wchar_t piece;
-
-            
-            if (GameOptions.flipBoardOnNewTurn && currentTurn == PlayerTwo) {
-                if(GameBoard[7 - row][7 - col].getOwner() == NONE)
-                    piece = ' ';
-                else if(GameBoard[7 - row][7 - col].getOwner() == PONE){
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
-                    set_terminal_color(GameOptions.p1_color);
-                }else{
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
-                    set_terminal_color(GameOptions.p2_color);
-                }
-            } else {
-                if(GameBoard[row][col].getOwner() == NONE)
-                    piece = ' ';
-                else if(GameBoard[row][col].getOwner() == PONE){
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
-                    set_terminal_color(GameOptions.p1_color);
-                }else{
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
-                    set_terminal_color(GameOptions.p2_color);
-                }
-            }
-            
-            std::wcout << piece;
-            set_terminal_color(DEFAULT);
-            std::wcout << " ";
-            
-        }
-        std::wcout << "| " << CHESS_BOARD_HEIGHT - row << std::endl;
-        std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
-    }
-    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n";
-
-    if (!toPrint.empty()) {
-        std::wcout << toPrint << std::endl;
-        toPrint.clear();
-    }
-}
-
-void StandardLocalChessGame::printBoardWithMoves(GetMove moveFrom) {
-    std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
-    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
-        std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - row << " ";
-        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
-
-            std::wcout << "| ";
-            wchar_t piece;
-
-            if (GameOptions.flipBoardOnNewTurn && currentTurn == PlayerTwo) {
-                  if(GameBoard[7 - row][7 - col].getOwner() == NONE)
-                    piece = ' ';
-                else if(GameBoard[7 - row][7 - col].getOwner() == PONE){
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
-                    set_terminal_color(GameOptions.p1_color);
-                }else{
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
-                    set_terminal_color(GameOptions.p2_color);
-                }
-                                // checking if the current square can be acctacked by piece
-                if(readPossibleMoves(GameBoard[7 - row][7 - col], false)){
-                    if(piece == ' ')
-                        piece = 'X';
-                    set_terminal_color(RED);
-                    std::wcout << piece;    
-                    set_terminal_color(DEFAULT);
-                    std::wcout << " ";
-                }else{
-                    
-                    std::wcout << piece; 
-                    set_terminal_color(DEFAULT);
-                    std::wcout << " ";
-                }
-            } else {
-                if(GameBoard[row][col].getOwner() == NONE)
-                    piece = ' ';
-                else if(GameBoard[row][col].getOwner() == PONE){
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
-                    set_terminal_color(GameOptions.p1_color);
-                }else{
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
-                    set_terminal_color(GameOptions.p2_color);
-                }
-
-                // checking if the current square can be acctacked by piece
-                if(readPossibleMoves(GameBoard[row][col], false)){
-                    if(piece == ' ')
-                        piece = 'X';
-                    set_terminal_color(RED);
-                    std::wcout << piece;    
-                    set_terminal_color(DEFAULT);
-                    std::wcout << " ";
-                }else{
-                    
-                    std::wcout << piece; 
-                    set_terminal_color(DEFAULT);
-                    std::wcout << " ";
-                }  
-            }
-
-              
-        }
-        std::wcout << "| " << CHESS_BOARD_HEIGHT - row << std::endl;
-        std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
-    }
-    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n";
-    if (!toPrint.empty()) {
-        std::wcout << toPrint << std::endl;
-        toPrint.clear();
-    }
-}
-
-int StandardLocalChessGame::reflectAxis(int val) {
-    switch (val) {
-        case 7:
-            return 0;
-        case 6:
-            return 1;
-        case 5:
-            return 2;
-        case 4:
-            return 3;
-        case 3:
-            return 4;
-        case 2:
-            return 5;
-        case 1:
-            return 6;
-        case 0:
-            return 7;
-        default:
-            return -1;
-    }
-
-
-}
-
-//* Adds board flip functionality
-GameSquare& StandardLocalChessGame::localConvertMove(std::wstring move){
-    // convert letter to number (a = 0, b = 1 etc)
-    // convert char number to number ('0' = 0 etc)
-    // minus 8 is important since (0,0) is flipped since 8 starts at top
-
-    int row = 8 - (move[1] - 48);
-    int col = move[0] - 97;
-
-    if (GameOptions.flipBoardOnNewTurn && currentTurn == PlayerTwo) 
-        return GameBoard[reflectAxis(row)][reflectAxis(col)];
-        
-    return GameBoard[row][col];
-
-}
-
-// True - Valid move
-// False - Invalid Move
-bool StandardLocalChessGame::validateGameSquare(GameSquare& square, int which){
-    if (which == FROM_MOVE) {
-
-        if(square.getOwner() == NONE)
-            toPrint = L"No piece present.";
-
-        if(static_cast<Player>(square.getOwner()) != currentTurn)
-            toPrint = L"This piece does not belong to you.";
-
-    } else 
-        if(static_cast<Player>(square.getOwner()) == currentTurn)
-            toPrint = L"Cannot take your own piece";
-    
-    if (toPrint.empty())
-        return true;
-    return false;
-}
-
-int StandardLocalChessGame::localMakeMove(Move&& move) {
-    if (GameOptions.moveHighlighting) 
-        if(!readPossibleMoves(move.getMoveTo(), true))
-            return 0;
-    return makeMove(move);
-}
-
-
-// True - There is at least one move
-// False - No moves from this piece
-bool StandardLocalChessGame::populatePossibleMoves(GameSquare& moveFrom) {
-
-    GamePiece fromPiece = moveFrom.getPiece();
-    short possibleMoveCounter = PIECE_MOVE_COUNTS[fromPiece - 1];
-
-    if (fromPiece == PAWN && currentTurn == PlayerTwo)
-        fromPiece = OPEN; 
-
-    for(int move_set_count = 0; move_set_count < possibleMoveCounter; move_set_count++){
-
-        // Iterating over entire moveset of a piece to see if it is 
-
-        // 1. on the board
-        // 2. unobstructed path
-        // 3. piece at square owner is not equal to current turn (except speical moves!)
-        // 3. if its a king then making sure nothing can reach that square
-
-        Point pTemp(moveFrom.getPosition().m_x + pieceMovePtrs[fromPiece][move_set_count][0], moveFrom.getPosition().m_y + pieceMovePtrs[fromPiece][move_set_count][1]);
-        
-        if (!onBoard(pTemp))
-            continue;
-
-        Move mTemp(moveFrom, GameBoard[pTemp.m_y][pTemp.m_x]);
-
-        if (!currTurnInCheck) {
-            if (mTemp.getMoveTo().getPiece() != KING)
-                if (unobstructedPathCheck(mTemp)) 
-                    if (static_cast<Player>(mTemp.getMoveTo().getOwner()) != currentTurn) {
-                        if (mTemp.getMoveFrom().getPiece() == KING) 
-                            if (!kingSafeAfterMove(mTemp.getMoveTo()))
-                                continue;
-                        possibleMoves.push_back(&mTemp.getMoveTo());
-                    }
-        } else {
-            // See if making this move would make the kingSafe()
-            bool isKingMove = moveFrom.getPiece() == KING;
-            GameSquare saveOldFrom(mTemp.getMoveFrom());
-            GameSquare saveOldTo(mTemp.getMoveTo());
-
-            mTemp.getMoveTo().setPiece(mTemp.getMoveFrom().getPiece());
-            mTemp.getMoveTo().setOwner(mTemp.getMoveFrom().getOwner());
-            mTemp.getMoveFrom().setPiece(OPEN);
-            mTemp.getMoveFrom().setOwner(NONE);
-
-            if (isKingMove) {
-
-                if (currentTurn == PlayerOne) {
-                    whitePlayerKing = &mTemp.getMoveTo();
-                } else {
-                    blackPlayerKing = &mTemp.getMoveTo();
-                }
-            }
-
-            if(kingSafe())
-               possibleMoves.push_back(&mTemp.getMoveTo());
-            
-            // Revert
-            mTemp.getMoveFrom().setPiece(saveOldFrom.getPiece());
-            mTemp.getMoveFrom().setOwner(saveOldFrom.getOwner());
-            mTemp.getMoveTo().setPiece(saveOldTo.getPiece());
-            mTemp.getMoveTo().setOwner(saveOldTo.getOwner());
-
-            // Revert king pos
-            if (isKingMove) {
-
-                if (currentTurn == PlayerOne) {
-                    whitePlayerKing = &mTemp.getMoveFrom();
-                } else {
-                    blackPlayerKing = &mTemp.getMoveFrom();
-                }
-                
-            }
-        }
-
-    }
-
-    if (possibleMoves.empty()) {
-        if (currTurnInCheck)
-            toPrint = L"You need to protect your king.";
-        else
-            toPrint = L"No moves with that piece.";
-    }
-
-    return !possibleMoves.empty();
-}
-
-// True found matching move with possibleMoves
-// False not found
-bool StandardLocalChessGame::readPossibleMoves(GameSquare& to, bool ADD_PRINT) {
-    for(GameSquare* Square: possibleMoves) {
-        if(to == *Square)
-            return true;
-    }
-    if (ADD_PRINT)
-        toPrint = L"Invalid move.";
-    return false;
 }
 
 void StandardLocalChessGame::loadGameState(StandardChessGameHistoryState& state) {
@@ -419,54 +127,6 @@ int StandardLocalChessGame::optionMenu(char ch) {
     }
 }
 
-// -1 invalid input
-// 0 options
-// 1 valid input
-int StandardLocalChessGame::sanitizeGetMove(std::wstring& input) {
-    if(!std::iswalpha(input[0])) 
-        return -1; // Ensure [0] is alphabetical character
-    
-    // Force to lower case
-    input[0] = std::towlower(input[0]); // Force [0] to lower case
-    switch(input[0]) {
-        case L'a': case L'b': case L'c': case L'd':
-        case L'e': case L'f': case L'g': case L'h':
-            break;
-        case L'q': // Valid too but for option
-        case L'x': case L'o':
-            return 0;
-        default: // Ensure one of the characters above
-            return -1; // Ensure [0] is alphabetical character
-    }
-
-    // Make sure length is 2
-    if(input.length() != 2)
-        return -1; // Move must be length of 2
-
-    // Ensure 2nd char is a number
-    if(!std::iswdigit(input[1]) || input[1] == L'0' || input[1] == L'9') // Using std::iswdigit
-        return -1; // Ensure [1] must be a digit and not '0' or '9'
-
-    // Now we know it must be [0] == a-h, [1] == 1 - 8
-    return 1;
-} 
-
-
-void StandardLocalChessGame::currTurnChessClock(std::atomic_bool& stop_display, int writePipeFd, const std::wstring& toPrint) {
-    int& count = *(currentTurn == PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
-    while (count >= 0 && !stop_display) {
-        for (int i = 0; i < 10; i++) {
-            if (stop_display || count == 0)
-                break;
-
-            std::wcout << L"\033[G" << L"Time: " << std::to_wstring(count) << " - " << toPrint << inputBuffer << std::flush;
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        count--;
-    }
-    write(writePipeFd, "1", 1); // telling main thread that the timer ran out of time
-}
-
 //! Weirdest bug ever, this must be defined in the same file for it to work
 class TimerNonCannonicalController { 
 public:
@@ -489,8 +149,81 @@ private:
     struct termios old_tio, new_tio;
 };
 
-GetMove StandardLocalChessGame::getMove(int which) {
-    bool currTurnInCheck = false;
+
+// -1 Puts king in harm way
+// 0 Invalid move
+// 1 Piece taken
+// 2 Piece moved
+int StandardLocalChessGame::makeMove(Move&& move){
+    
+    if (GameOptions.moveHighlighting) {
+        if(!readPossibleMoves(move.getMoveTo())) {
+            toPrint = L"No valid moves with this piece.";
+            return 0;
+        }
+    } else
+        if(!verifyMove(move))
+            return 0;
+
+    // Check if making this move will put their king in check
+
+    bool pieceTake = false;
+    bool isKingMove = move.getMoveFrom().getPiece() == KING ? true : false;
+    GameSquare saveOldFrom(move.getMoveFrom());
+    GameSquare saveOldTo(move.getMoveTo());
+
+
+    if(move.getMoveTo().getPiece() != OPEN)
+        pieceTake = true;
+
+    // Lets move the piece now, This is also where we would do something different in case of castling since you are not setting the from piece to none / open
+    move.getMoveTo().setPiece(move.getMoveFrom().getPiece());
+    move.getMoveTo().setOwner(move.getMoveFrom().getOwner());
+    move.getMoveFrom().setPiece(OPEN);
+    move.getMoveFrom().setOwner(NONE);
+
+    if (isKingMove) {
+
+        if (currentTurn == PlayerOne) {
+            whitePlayerKing = &move.getMoveTo();
+        } else {
+            blackPlayerKing = &move.getMoveTo();
+        }
+
+    }
+
+    if(kingSafe()){
+        
+        // Mark this gamesquare that a move has been made on this square
+        move.getMoveFrom().setFirstMoveMade();
+
+        if(pieceTake)
+            return 1;
+        else 
+            return 2;
+    }
+
+    // Revert move because this made the current turns king not safe
+    move.getMoveFrom().setPiece(saveOldFrom.getPiece());
+    move.getMoveFrom().setOwner(saveOldFrom.getOwner());
+    move.getMoveTo().setPiece(saveOldTo.getPiece());
+    move.getMoveTo().setOwner(saveOldTo.getOwner());
+
+    // Revert king pos
+    if (isKingMove) {
+
+        if (currentTurn == PlayerOne) {
+            whitePlayerKing = &move.getMoveFrom();
+        } else {
+            blackPlayerKing = &move.getMoveFrom();
+        }
+        
+    }
+
+    return 3;
+}
+
+int StandardLocalChessGame::getMove(int which) {
     if (isClock) {
         bool inOptionMenu = false;
         std::atomic_bool stopTimerDisplay = false;
@@ -499,7 +232,7 @@ GetMove StandardLocalChessGame::getMove(int which) {
         int pipe_fd[2];
         if (pipe(pipe_fd) == -1) {
             std::cerr << "Failed to create pipe" << std::endl;
-            return GetMove(1); // Adjust return as necessary
+            return 0; // Adjust return as necessary
         }
 
         struct pollfd fds[2];
@@ -524,7 +257,7 @@ GetMove StandardLocalChessGame::getMove(int which) {
                         continue; // bc this thread was killed to go into option menu not bc it ran out of time
                     if (clockThread.joinable())
                         clockThread.join();
-                    return GetMove(2);
+                    return 2;
                 }
                 if (fds[0].revents & POLLIN) {
                     char ch;
@@ -536,11 +269,11 @@ GetMove StandardLocalChessGame::getMove(int which) {
                                 if (opt_res < 0) {
                                     continue; // invalid opt
                                 } else if (opt_res == 0) {
-                                    return GetMove(0); // QUIT
+                                    return 0; // QUIT
                                 } else if (opt_res == 3 ) {
-                                    return GetMove(3);
+                                    return 3;
                                 } else if (opt_res == 4 ) {
-                                    return GetMove(4);
+                                    return 4;
                                 } else {
                                     inputBuffer.clear(); // Continue game
                                     inOptionMenu = false;
@@ -568,7 +301,7 @@ GetMove StandardLocalChessGame::getMove(int which) {
 
                             stopTimerDisplay = true;
                             clockThread.join(); // wait for it to join
-                            return GetMove(inputBuffer, 1); // Valid input for move
+                            return 1; // Valid input for move
 
                         } else if (ch == 127) { // Backspace
                             if (!inputBuffer.empty()) {
@@ -589,7 +322,7 @@ GetMove StandardLocalChessGame::getMove(int which) {
         if (clockThread.joinable())
             clockThread.join();
 
-        return GetMove(2); //! Ran out of time
+        return 2; //! Ran out of time
 
     } else {
         while (true) {
@@ -619,11 +352,11 @@ GetMove StandardLocalChessGame::getMove(int which) {
                     if (opt_res < 0) {
                         continue; // invalid input
                     } else if (opt_res == 0) {
-                        return GetMove(0); // quit
+                        return 0; // quit
                     } else if (opt_res == 3 ) {
-                        return GetMove(3);
+                        return 3;
                     } else if (opt_res == 4 ) {
-                        return GetMove(4);
+                        return 4;
                     } else {
                         break; // continue game
                     }
@@ -631,7 +364,7 @@ GetMove StandardLocalChessGame::getMove(int which) {
                continue; // Continue to next getmove iteration
             }
 
-            return GetMove(inputBuffer, 1);
+            return 1;
         }
     }
 }
@@ -690,6 +423,21 @@ GameSquare* StandardLocalChessGame::isolateFromInCheckMoves() {
     return isolatedPiece;
 }
 
+void StandardLocalChessGame::currTurnChessClock(std::atomic_bool& stop_display, int writePipeFd, const std::wstring& out) {
+    int& count = *(currentTurn == PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
+    while (count >= 0 && !stop_display) {
+        for (int i = 0; i < 10; i++) {
+            if (stop_display || count == 0)
+                break;
+
+            std::wcout << L"\033[G" << L"Time: " << std::to_wstring(count) << " - " << out << inputBuffer << std::flush;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        count--;
+    }
+    write(writePipeFd, "1", 1); // telling main thread that the timer ran out of time
+}
+
 void StandardLocalChessGame::startGame(){
 
     int game_loop_iteration = 0;
@@ -720,7 +468,7 @@ void StandardLocalChessGame::startGame(){
 
             if (!kingSafe()) {
                 if (checkMate()) {
-                    printBoard();
+                    printBoard(currentTurn);
                     GameOver = true;
                     std::wcout << "GameOver!!" << std::endl;
                     break;
@@ -734,7 +482,8 @@ void StandardLocalChessGame::startGame(){
                 // Clear the possibleMoves vec
                 possibleMoves.clear();
             
-                GetMove moveFrom; 
+                std::wstring moveFrom; 
+                std::wstring moveTo;
                 GameSquare* oneMoveFromCheck = nullptr;
 
                 if (currTurnInCheck) 
@@ -744,59 +493,75 @@ void StandardLocalChessGame::startGame(){
                 // pointer it means that there is only 1 possible move from check so we dont have to ask for a move
                 if(oneMoveFromCheck == nullptr) {
 
-                    printBoard();
+                    printBoard(currentTurn);
 
-                    moveFrom = getMove(FROM_MOVE);
+                    int res = getMove(FROM_MOVE);
+                    moveFrom = inputBuffer;
                     inputBuffer.clear();
-                    if(!moveFrom.res){
+                    if(!res){
                         // Quit
                         GameOver = true;
                         break;
-                    } else if (isClock && moveFrom.res == 2) {
+                    } else if (res == 2) {
                         // Timer ran out, end game, win for other player
                         std::wcout << "Timer ran out..." << std::endl;
                         GameOver = true;
                         break;
-                    } else if (GameOptions.boardHistory && (moveFrom.res == 3 || moveFrom.res == 4)) {
+                    } else if (GameOptions.boardHistory && (res == 3 || res == 4)) {
                         // Undoing turn
-                        if (moveFrom.res == 3)
+                        if (res == 3)
                             std::wcout << "Undoing turn..." << std::endl;
                         else
                             std::wcout << "Redoing turn..." << std::endl;
                         isLoadingState = true;
                         break;
                     }
-
                 }
 
-                if (oneMoveFromCheck == nullptr)
-                    if (!validateGameSquare(localConvertMove(moveFrom.mMove), FROM_MOVE))
+                if (oneMoveFromCheck == nullptr) {
+                    int res = validateGameSquare(convertMove(moveFrom, currentTurn), FROM_MOVE);
+                    if (res == 0) {
+                        toPrint = L"No piece present.";
                         continue;
+                    } else if (res == 1) {
+                        toPrint = L"This piece does not belong to you.";
+                        continue;
+                    }
+                }
 
                 // Still going to populate this even if piece highlighting is not enabled so we can print when a piece has no valid moves
-                if (!populatePossibleMoves((oneMoveFromCheck == nullptr ? localConvertMove(moveFrom.mMove) : *oneMoveFromCheck)))
+                if (!populatePossibleMoves((oneMoveFromCheck == nullptr ? convertMove(moveFrom, currentTurn) : *oneMoveFromCheck))) {
+                    if (currTurnInCheck)
+                        toPrint = L"You need to protect your king.";
+                    else
+                        toPrint = L"No moves with that piece.";
                     continue;
+                }
 
                 if (GameOptions.moveHighlighting) 
-                    printBoardWithMoves(moveFrom);
+                    printBoardWithMoves(currentTurn);
 
-                GetMove moveTo = getMove(TO_MOVE);
+                int res = getMove(TO_MOVE);
+                moveTo = inputBuffer;
                 inputBuffer.clear();
-                if(!moveTo.res){
+                if(!res){
                     // Quit
                     GameOver = true;
                     break;
-                } else if (isClock && moveFrom.res == 2) {
+                } else if (isClock && res == 2) {
                     // Timer ran out, end game, win for other player
                     std::wcout << "Timer ran out..." << std::endl;
                     GameOver = true;
                     break;
                 }
 
-                if (!validateGameSquare(localConvertMove(moveTo.mMove), TO_MOVE))
+                res = validateGameSquare(convertMove(moveTo, currentTurn), FROM_MOVE);
+                if (res == 2) {
+                    toPrint = L"Cannot take your own piece.";
                     continue;
+                }
 
-                int moveRes = localMakeMove(Move(oneMoveFromCheck == nullptr ? localConvertMove(moveFrom.mMove) : *oneMoveFromCheck, localConvertMove(moveTo.mMove)));
+                int moveRes = makeMove(Move(oneMoveFromCheck == nullptr ? convertMove(moveFrom, currentTurn) : *oneMoveFromCheck, convertMove(moveTo, currentTurn)));
                 if (moveRes == -1)
                     toPrint = L"This puts your king in danger!";
                 else if(moveRes == 0)

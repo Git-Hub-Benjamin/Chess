@@ -26,6 +26,7 @@ static bool take_moves_and_send(int fd, std::string move, std::string to){
     return true;
 }
 
+// -2 Server error
 // -1 Puts self in check, so you cant make this move
 // 0  Invalid move
 // 1  Valid move
@@ -34,7 +35,7 @@ static int server_said_valid_move(int fd){
     int bytes_read = recv(fd, (void*)buffer, sizeof(buffer), 0);
 
     if(bytes_read <= 0)
-        server_sent_zero_bytes_fatal_error();
+        return -2;
 
     buffer[bytes_read] = '\0';
     std::string res_from_server(buffer);
@@ -117,7 +118,7 @@ static int turnly_check_in(int fd){
     return 4;
 }
 
-static bool non_turn_check_in(int fd){
+static bool nonTurnSpecificCheckIn(int fd){
     if(send(fd, CLIENT_NON_TURN_CHECK_IN, sizeof(CLIENT_NON_TURN_CHECK_IN), 0) < 0)
         return false;
     return true;

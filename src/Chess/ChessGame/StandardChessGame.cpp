@@ -138,85 +138,329 @@ bool StandardChessGame::validateMoveset(Move& move){
     return false;
 }
 
-// Double refrence overload for makeMove
-int StandardChessGame::makeMove(Move&& move) {return makeMove(move); }
+// True - There is at least one move
+// False - No moves from this piece
+bool StandardChessGame::populatePossibleMoves(GameSquare& moveFrom) {
 
-// -1 Puts king in harm way
-// 0 Invalid move
-// 1 Piece taken
-// 2 Piece moved
-int StandardChessGame::makeMove(Move& move){
-    
-    if(!verifyMove(move))
-        return 0;
+    GamePiece fromPiece = moveFrom.getPiece();
+    short possibleMoveCounter = PIECE_MOVE_COUNTS[fromPiece - 1];
 
-    // Check if making this move will put their king in check
+    if (fromPiece == PAWN && currentTurn == PlayerTwo)
+        fromPiece = OPEN; 
 
-    bool pieceTake = false;
-    bool isKingMove = move.getMoveFrom().getPiece() == KING ? true : false;
-    GameSquare saveOldFrom(move.getMoveFrom());
-    GameSquare saveOldTo(move.getMoveTo());
+    for(int move_set_count = 0; move_set_count < possibleMoveCounter; move_set_count++){
 
+        // Iterating over entire moveset of a piece to see if it is 
 
-    if(move.getMoveTo().getPiece() != OPEN)
-        pieceTake = true;
+        // 1. on the board
+        // 2. unobstructed path
+        // 3. piece at square owner is not equal to current turn (except speical moves!)
+        // 3. if its a king then making sure nothing can reach that square
 
-    // Lets move the piece now, This is also where we would do something different in case of castling since you are not setting the from piece to none / open
-    move.getMoveTo().setPiece(move.getMoveFrom().getPiece());
-    move.getMoveTo().setOwner(move.getMoveFrom().getOwner());
-    move.getMoveFrom().setPiece(OPEN);
-    move.getMoveFrom().setOwner(NONE);
+        Point pTemp(moveFrom.getPosition().m_x + pieceMovePtrs[fromPiece][move_set_count][0], moveFrom.getPosition().m_y + pieceMovePtrs[fromPiece][move_set_count][1]);
+        
+        if (!onBoard(pTemp))
+            continue;
 
-    if (isKingMove) {
+        Move mTemp(moveFrom, GameBoard[pTemp.m_y][pTemp.m_x]);
 
-        if (currentTurn == PlayerOne) {
-            whitePlayerKing = &move.getMoveTo();
+        if (!currTurnInCheck) {
+            if (mTemp.getMoveTo().getPiece() != KING)
+                if (unobstructedPathCheck(mTemp)) 
+                    if (static_cast<Player>(mTemp.getMoveTo().getOwner()) != currentTurn) {
+                        if (mTemp.getMoveFrom().getPiece() == KING) 
+                            if (!kingSafeAfterMove(mTemp.getMoveTo()))
+                                continue;
+                        possibleMoves.push_back(&mTemp.getMoveTo());
+                    }
         } else {
-            blackPlayerKing = &move.getMoveTo();
+            // See if making this move would make the kingSafe()
+            bool isKingMove = moveFrom.getPiece() == KING;
+            GameSquare saveOldFrom(mTemp.getMoveFrom());
+            GameSquare saveOldTo(mTemp.getMoveTo());
+
+            mTemp.getMoveTo().setPiece(mTemp.getMoveFrom().getPiece());
+            mTemp.getMoveTo().setOwner(mTemp.getMoveFrom().getOwner());
+            mTemp.getMoveFrom().setPiece(OPEN);
+            mTemp.getMoveFrom().setOwner(NONE);
+
+            if (isKingMove) {
+
+                if (currentTurn == PlayerOne) {
+                    whitePlayerKing = &mTemp.getMoveTo();
+                } else {
+                    blackPlayerKing = &mTemp.getMoveTo();
+                }
+            }
+
+            if(kingSafe())
+               possibleMoves.push_back(&mTemp.getMoveTo());
+            
+            // Revert
+            mTemp.getMoveFrom().setPiece(saveOldFrom.getPiece());
+            mTemp.getMoveFrom().setOwner(saveOldFrom.getOwner());
+            mTemp.getMoveTo().setPiece(saveOldTo.getPiece());
+            mTemp.getMoveTo().setOwner(saveOldTo.getOwner());
+
+            // Revert king pos
+            if (isKingMove) {
+
+                if (currentTurn == PlayerOne) {
+                    whitePlayerKing = &mTemp.getMoveFrom();
+                } else {
+                    blackPlayerKing = &mTemp.getMoveFrom();
+                }
+                
+            }
         }
 
     }
 
-    if(kingSafe()){
-        
-        // Mark this gamesquare that a move has been made on this square
-        move.getMoveFrom().setFirstMoveMade();
+    return !possibleMoves.empty();
+}
 
-        if(pieceTake)
+// True found matching move with possibleMoves
+// False not found
+bool StandardChessGame::readPossibleMoves(GameSquare& to) {
+    for(GameSquare* Square: possibleMoves) {
+        if(to == *Square)
+            return true;
+    }
+    return false;
+}
+
+
+// No Piece Present - 0
+// This Piece Does not belong to you - 1
+// Cannot take your own piece - 2
+// Valid - 3
+int StandardChessGame::validateGameSquare(GameSquare& square, int which){
+    if (which == FROM_MOVE) {
+
+        if(square.getOwner() == NONE)
+            return 0;
+
+        if(static_cast<Player>(square.getOwner()) != currentTurn)
             return 1;
-        else 
+
+    } else {
+        if(static_cast<Player>(square.getOwner()) == currentTurn)
             return 2;
-
-        return true;
     }
-
-    // Revert move because this made the current turns king not safe
-    move.getMoveFrom().setPiece(saveOldFrom.getPiece());
-    move.getMoveFrom().setOwner(saveOldFrom.getOwner());
-    move.getMoveTo().setPiece(saveOldTo.getPiece());
-    move.getMoveTo().setOwner(saveOldTo.getOwner());
-
-    // Revert king pos
-    if (isKingMove) {
-
-        if (currentTurn == PlayerOne) {
-            whitePlayerKing = &move.getMoveFrom();
-        } else {
-            blackPlayerKing = &move.getMoveFrom();
-        }
-        
-    }
-
+    
     return 3;
 }
 
-GameSquare& StandardChessGame::convertMove(std::wstring move){
+void StandardChessGame::printBoard(Player playerSideToPrint){
+    std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
+        std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - row << " ";
+        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
+            std::wcout << "| ";
+            wchar_t piece;
+
+
+            if ((GameConnectivity == ONLINE_CONNECTIVITY && playerSideToPrint == PlayerTwo) || (GameConnectivity == LOCAL_CONNECTIVITY && GameOptions.flipBoardOnNewTurn && playerSideToPrint == PlayerTwo)) {
+                if(GameBoard[7 - row][7 - col].getOwner() == NONE)
+                    piece = ' ';
+                else if(GameBoard[7 - row][7 - col].getOwner() == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+            } else {
+                if(GameBoard[row][col].getOwner() == NONE)
+                    piece = ' ';
+                else if(GameBoard[row][col].getOwner() == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+            }
+            
+            // if (GameOptions.flipBoardOnNewTurn && currentTurn == PlayerTwo) {
+            //     if(GameBoard[7 - row][7 - col].getOwner() == NONE)
+            //         piece = ' ';
+            //     else if(GameBoard[7 - row][7 - col].getOwner() == PONE){
+            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+            //         set_terminal_color(GameOptions.p1_color);
+            //     }else{
+            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+            //         set_terminal_color(GameOptions.p2_color);
+            //     }
+            // } else {
+            //     if(GameBoard[row][col].getOwner() == NONE)
+            //         piece = ' ';
+            //     else if(GameBoard[row][col].getOwner() == PONE){
+            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
+            //         set_terminal_color(GameOptions.p1_color);
+            //     }else{
+            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
+            //         set_terminal_color(GameOptions.p2_color);
+            //     }
+            // }
+            
+            std::wcout << piece;
+            set_terminal_color(DEFAULT);
+            std::wcout << " ";
+            
+        }
+        std::wcout << "| " << CHESS_BOARD_HEIGHT - row << std::endl;
+        std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
+    }
+    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n";
+
+    if (!toPrint.empty()) {
+        std::wcout << toPrint << std::endl;
+        toPrint.clear();
+    }
+}
+
+void StandardChessGame::printBoardWithMoves(Player playerSideToPrint) {
+    std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
+        std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - row << " ";
+        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
+
+            std::wcout << "| ";
+            wchar_t piece;
+
+            if ((GameConnectivity == ONLINE_CONNECTIVITY && playerSideToPrint == PlayerTwo) || (GameConnectivity == LOCAL_CONNECTIVITY && GameOptions.flipBoardOnNewTurn && playerSideToPrint == PlayerTwo)) {
+                  if(GameBoard[7 - row][7 - col].getOwner() == NONE)
+                    piece = ' ';
+                else if(GameBoard[7 - row][7 - col].getOwner() == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+                                // checking if the current square can be acctacked by piece
+                if(readPossibleMoves(GameBoard[7 - row][7 - col])){
+                    if(piece == ' ')
+                        piece = 'X';
+                    set_terminal_color(RED);
+                    std::wcout << piece;    
+                    set_terminal_color(DEFAULT);
+                    std::wcout << " ";
+                }else{
+                    std::wcout << piece; 
+                    set_terminal_color(DEFAULT);
+                    std::wcout << " ";
+                }
+            } else {
+                if(GameBoard[row][col].getOwner() == NONE)
+                    piece = ' ';
+                else if(GameBoard[row][col].getOwner() == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+
+                // checking if the current square can be acctacked by piece
+                if(readPossibleMoves(GameBoard[row][col])){
+                    if(piece == ' ')
+                        piece = 'X';
+                    set_terminal_color(RED);
+                    std::wcout << piece;    
+                    set_terminal_color(DEFAULT);
+                    std::wcout << " ";
+                }else{
+                    
+                    std::wcout << piece; 
+                    set_terminal_color(DEFAULT);
+                    std::wcout << " ";
+                }  
+            }
+
+              
+        }
+        std::wcout << "| " << CHESS_BOARD_HEIGHT - row << std::endl;
+        std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
+    }
+    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n";
+    if (!toPrint.empty()) {
+        std::wcout << toPrint << std::endl;
+        toPrint.clear();
+    }
+}
+
+int StandardChessGame::reflectAxis(int val) {
+    switch (val) {
+        case 7:
+            return 0;
+        case 6:
+            return 1;
+        case 5:
+            return 2;
+        case 4:
+            return 3;
+        case 3:
+            return 4;
+        case 2:
+            return 5;
+        case 1:
+            return 6;
+        case 0:
+            return 7;
+        default:
+            return -1;
+    }
+}
+
+// -1 invalid input
+// 0 options
+// 1 valid input
+int StandardChessGame::sanitizeGetMove(std::wstring& input) {
+    if(!std::iswalpha(input[0])) 
+        return -1; // Ensure [0] is alphabetical character
+    
+    // Force to lower case
+    input[0] = std::towlower(input[0]); // Force [0] to lower case
+    switch(input[0]) {
+        case L'a': case L'b': case L'c': case L'd':
+        case L'e': case L'f': case L'g': case L'h':
+            break;
+        case L'q': // Valid too but for option
+        case L'x': case L'o':
+            return 0;
+        default: // Ensure one of the characters above
+            return -1; // Ensure [0] is alphabetical character
+    }
+
+    // Make sure length is 2
+    if(input.length() != 2)
+        return -1; // Move must be length of 2
+
+    // Ensure 2nd char is a number
+    if(!std::iswdigit(input[1]) || input[1] == L'0' || input[1] == L'9') // Using std::iswdigit
+        return -1; // Ensure [1] must be a digit and not '0' or '9'
+
+    // Now we know it must be [0] == a-h, [1] == 1 - 8
+    return 1;
+} 
+
+std::wstring StandardChessGame::playerToString(Player p){
+    return (p == PlayerOne ? L"Player One" : L"Player Two");
+}
+
+GameSquare& StandardChessGame::convertMove(std::wstring move, Player sideToConvert){
     // convert letter to number (a = 0, b = 1 etc)
     // convert char number to number ('0' = 0 etc)
     // minus 8 is important since (0,0) is flipped since 8 starts at top
 
     int row = 8 - (move[1] - 48);
     int col = move[0] - 97;
+
+    if ((GameConnectivity == ONLINE_CONNECTIVITY && sideToConvert == PlayerTwo) ||
+        (GameConnectivity == LOCAL_CONNECTIVITY && GameOptions.flipBoardOnNewTurn && sideToConvert == PlayerTwo))
+            return GameBoard[reflectAxis(row)][reflectAxis(col)];
         
     return GameBoard[row][col];
 

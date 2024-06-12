@@ -104,6 +104,11 @@ enum Player{ // Just so we can index into things with this instead of like Owner
     PlayerTwo
 };
 
+enum GAME_CONNECTIVITY {
+    LOCAL_CONNECTIVITY,
+    ONLINE_CONNECTIVITY
+};
+
 extern std::wstring enumPiece_toString(GamePiece);
 
 class ChessClock {
@@ -283,27 +288,20 @@ struct TakenPiece{
     TakenPiece(GamePiece piece, std::wstring move, std::wstring to) : mPiece(piece), mMove(move), mTo(to) {}
 };
 
-struct GetMove{
-    std::wstring mMove;
-    int res;
-    GetMove(){}
-    GetMove(int res): res(res){}
-    GetMove(std::wstring move, int res): mMove(move), res(res) {}
-};
-
-// To be inheirted by Local Game and Online Game
+// To be inherited by Local Game and Online Game
 class StandardChessGame {
 protected:
-
     // owner enum is used to track player turn, None will not be used, just 1 & 2
     Player currentTurn;
-    //StandardChessGameHistoryState history;
+
+    // Used to track the game board and kings' positions
     GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
     GameSquare* whitePlayerKing; // These pointers need to be set
     GameSquare* blackPlayerKing;
     GameSquare* pieceCausingKingCheck = nullptr; 
     bool currTurnInCheck;
 
+    // Moveset validation functions
     // True - Valid move
     // False - Invalid move
     bool validateMoveset(Move&);
@@ -313,33 +311,33 @@ protected:
     bool verifyMove(Move&);
     bool verifyMove(Move&&);
 
+    // Path clearance check functions
     // True - All good
     // False - Piece in way
     bool unobstructedPathCheck(Move&);
-
-    // True - All good
-    // False - Piece in way
     bool rookClearPath(Move&);
-
-    // True - All good
-    // False - Piece in way
     bool bishopClearPath(Move&);
 
+    // Pawn movement check
     // True - All good
     // False - Not good
     bool pawnMoveCheck(Move&);
 
+    // Piece presence check
     // returns owner at point
     Owner piecePresent(Point);
 
+    // Checkmate functions
     // True, Gameover
     // False not checkmate
     bool checkMate();
 
+    // Board boundary check
     // True on board
     // False not on board
     bool onBoard(Point&);
 
+    // King safety checks
     // True - King is safe
     // False - King is NOT safe
     bool kingSafe();
@@ -348,17 +346,19 @@ protected:
     // False king is not safe
     bool kingSafeAfterMove(GameSquare&);
 
+    // Defense functions
     // True can defend so not checkmate
     // False cannot defend king, so checkmate
     GameSquare* canDefendKing(std::vector<GameSquare*>&);
 
-    // used in only local chess game, but it is used in canDefend king so ts needed here
+    // used in only local chess game, but it is used in canDefend king so it's needed here
     bool kingCanMakeMove;
 
     // Determines if game is alive
     bool GameOver = false;
 
-        // To be used by main thread for gameloop
+    // Game initialization functions
+    // To be used by main thread for gameloop
     void reset();
 
     // 2 players, each with 16 pieces
@@ -367,48 +367,85 @@ protected:
     // init random turn 
     void initTurn();
 
+    // Move conversion functions
     // generic convert
-    GameSquare& convertMove(std::wstring);
+    GameSquare& convertMove(std::wstring, Player);
+    int reflectAxis(int);
 
+    // Move execution functions
     // generic makeMove
     int makeMove(Move& move);
     // calls generic
-    int makeMove(Move&& move);
+    virtual int makeMove(Move&& move) = 0;
 
+    // Options regarding game
+    Options GameOptions;
 
+    // Possible move functions
+    // populates the possible move vec
+    bool populatePossibleMoves(GameSquare&);
+
+    // reads the possible moves and compares to a move
+    bool readPossibleMoves(GameSquare&);
+
+    // Board printing functions
+    // print the standard board
+    void printBoard(Player);
+
+    // print the standard board but with moves from the movefrom
+    void printBoardWithMoves(Player);
+
+    // Game square validation
+    // No Piece Present - 0
+    // This Piece Does not belong to you - 1
+    // Cannot take your own piece - 2
+    // Valid - 3
+    int validateGameSquare(GameSquare&, int);
+
+    // Vector to hold possible moves
+    std::vector<GameSquare *> possibleMoves; 
+
+    // Virtual function to get a move, to be implemented by subclasses
+    virtual int getMove(int) = 0;
+    int sanitizeGetMove(std::wstring&);
+
+    // String to print next while loop iteration after the board is printed
+    std::wstring toPrint;
+
+    // Game connectivity
+    GAME_CONNECTIVITY GameConnectivity;
+
+    // Game clock and input buffer
+    ChessClock gameClock;
+    std::wstring inputBuffer; 
+
+    // Function to handle current turn chess clock
+    virtual void currTurnChessClock(std::atomic_bool& stop, int pipe, const std::wstring& msgToOutput) = 0;
+
+    // Utility function to convert player to string
+    std::wstring playerToString(Player);
+
+    // Only to be called from subclasses
+    StandardChessGame(){}
+    StandardChessGame(GAME_CONNECTIVITY CONNECTIVITY) : GameConnectivity(CONNECTIVITY) {}
+    StandardChessGame(GAME_CONNECTIVITY CONNECTIVITY, ChessClock clock) : GameConnectivity(CONNECTIVITY), gameClock(clock) {}
 };
 
+
+
+
+//! Move this to a client only header since the server online chess game is in its own
 class StandardLocalChessGame : public StandardChessGame {
 
 protected:
 
-    // print the standard board
-    void printBoard();
-
-    // print the standard board but with moves from the movefrom
-    void printBoardWithMoves(GetMove);
-
-    // True, basic checks valid
-    // False invalid move
-    bool validateGameSquare(GameSquare&, int);
-
-    // wrapper function for verify and read possilbe moves so makeMoves could be generic
-    int localMakeMove(Move&&);
+    // overrie
+    int makeMove(Move&&) override;
 
     // Get move
-    GetMove getMove(int which);
+    int getMove(int) override;
+    void currTurnChessClock(std::atomic_bool&, int, const std::wstring&) override;
     int optionMenu(char);
-    int sanitizeGetMove(std::wstring&);
-    int reflectAxis(int);
-
-    // Converts string move to gamesquare
-    GameSquare& localConvertMove(std::wstring);
-   
-    // populates the possible move vec
-    bool populatePossibleMoves(GameSquare&);
-
-    // reads the possible moves and comapres to a move
-    bool readPossibleMoves(GameSquare&, bool);
 
     // Will return a pointer to the one piece that you can move in check, if there is more than one then it will just return a nullptr
     GameSquare* isolateFromInCheckMoves();
@@ -416,29 +453,17 @@ protected:
     bool isLoadingState = false;
     void loadGameState(StandardChessGameHistoryState&);
 
-    std::wstring playerToString(Player);
-
-    // Options regarding game
-    Options GameOptions;
-
     // Tracks the pieces that were taken during the game
     TakenPiece playerTakenPieces[STANDARD_CHESSGAME_PLAYER_COUNT][STANDARD_CHESSGAME_TEAM_PIECE_COUNT];
     
     
-    // For game clock
+    // For game clock, Local only tho
     bool isClock = false;
-    ChessClock gameClock;
-    std::wstring inputBuffer;
-    void currTurnChessClock(std::atomic_bool&, int, const std::wstring&);
 ;
     // For undo / redo turns
     std::stack<StandardChessGameHistoryState> undoTurn;
     std::stack<StandardChessGameHistoryState> redoTurn;
 
-    std::vector<GameSquare *> possibleMoves; 
-
-    // to print next while loop iteration after the board is printed
-    std::wstring toPrint;
 
 public:
 
@@ -452,6 +477,32 @@ public:
     void startGame();
 };
 
+class StandardOnlineChessGame : public StandardChessGame {
+    
+    int pipeFds[2]; // For use by pipe and poll for timer and getting input in non cannonical mode
+    int gameSocketFd;
+    Player playerNum;
+    std::wstring oppossingPlayerString;
+
+    int makeMove(Move&&) override;
+    int getMove(int) override;
+    
+    int preTurnCheckIn();
+    bool readyForNextTurn();
+    int serverSaidValidMove();
+    bool nonTurnSpecificCheckIn();
+    bool verifyGameServerConnection();
+    bool takeMovesAndSend(std::wstring, std::wstring);
+    int notTurnRecieveMove(std::wstring& move, std::wstring& moveTo);
+    void currTurnChessClock(std::atomic_bool&, int, const std::wstring&) override;
+
+
+public:
+
+    StandardOnlineChessGame(Options, int);
+    StandardOnlineChessGame(){}
+    void startGame();
+};
 
 // Everyone to use, idk how to sort these lmao
 int char_single_digit_to_int(const char c);
