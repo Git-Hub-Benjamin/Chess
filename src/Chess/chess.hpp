@@ -37,7 +37,7 @@
 
 extern short (*pieceMovePtrs[])[2];
 extern int PIECE_MOVE_COUNTS[];
-
+extern Options global_player_option;
 
 struct Point{
     int m_x;
@@ -372,11 +372,8 @@ protected:
     GameSquare& convertMove(std::wstring, Player);
     int reflectAxis(int);
 
-    // Move execution functions
-    // generic makeMove
-    int makeMove(Move& move);
     // calls generic
-    virtual int makeMove(Move&& move) = 0;
+    virtual int makeMove(Move&& move); // basic implementation, can override tho
 
     // Options regarding game
     Options GameOptions;
@@ -405,8 +402,7 @@ protected:
     // Vector to hold possible moves
     std::vector<GameSquare *> possibleMoves; 
 
-    // Virtual function to get a move, to be implemented by subclasses
-    virtual int getMove(int) = 0;
+    // Not pure, bc Server Chess Std game does not need this
     int sanitizeGetMove(std::wstring&);
 
     // String to print next while loop iteration after the board is printed
@@ -419,9 +415,6 @@ protected:
     ChessClock gameClock;
     std::wstring inputBuffer; 
 
-    // Function to handle current turn chess clock
-    virtual void currTurnChessClock(std::atomic_bool& stop, int pipe, const std::wstring& msgToOutput) = 0;
-
     // Utility function to convert player to string
     std::wstring playerToString(Player);
 
@@ -431,20 +424,23 @@ protected:
     StandardChessGame(GAME_CONNECTIVITY CONNECTIVITY, ChessClock clock) : GameConnectivity(CONNECTIVITY), gameClock(clock) {}
 };
 
-
+// Things that do not need to be exposed for the server side of chess game logic
+class ClientChessGame {
+protected:
+    virtual int getMove(int) = 0;
+    // Function to handle current turn chess clock
+    virtual void currTurnChessClock(bool& stop, int pipe, const std::wstring& msgToOutput) = 0;
+};
 
 
 //! Move this to a client only header since the server online chess game is in its own
-class StandardLocalChessGame : public StandardChessGame {
+class StandardLocalChessGame : public StandardChessGame, public ClientChessGame{
 
 protected:
 
-    // overrie
-    int makeMove(Move&&) override;
-
     // Get move
     int getMove(int) override;
-    void currTurnChessClock(std::atomic_bool&, int, const std::wstring&) override;
+    void currTurnChessClock(bool&, int, const std::wstring&) override;
     int optionMenu(char);
 
     // Will return a pointer to the one piece that you can move in check, if there is more than one then it will just return a nullptr
@@ -477,9 +473,9 @@ public:
     void startGame();
 };
 
-class StandardOnlineChessGame : public StandardChessGame {
+class StandardOnlineChessGame : public StandardChessGame, public ClientChessGame {
     
-    int pipeFds[2]; // For use by pipe and poll for timer and getting input in non cannonical mode
+    int* pipeFds; // For use by pipe and poll for timer and getting input in non cannonical mode
     int gameSocketFd;
     Player playerNum;
     std::wstring oppossingPlayerString;
@@ -494,25 +490,21 @@ class StandardOnlineChessGame : public StandardChessGame {
     bool verifyGameServerConnection();
     bool takeMovesAndSend(std::wstring, std::wstring);
     int notTurnRecieveMove(std::wstring& move, std::wstring& moveTo);
-    void currTurnChessClock(std::atomic_bool&, int, const std::wstring&) override;
+    void currTurnChessClock(bool&, int, const std::wstring&) override;
 
 
 public:
 
-    StandardOnlineChessGame(Options, int);
+    StandardOnlineChessGame(int, Player, std::wstring);
     StandardOnlineChessGame(){}
     void startGame();
+
+    ~StandardOnlineChessGame() { delete pipeFds; }
 };
 
 // Everyone to use, idk how to sort these lmao
 int char_single_digit_to_int(const char c);
 std::wstring convertString(const std::string& passed);
 std::string convertWString(std::wstring& passed);
-
-// Functions for client main
-void local_game();
-
-// Function for chess functionality
-void handleOption();
 
 

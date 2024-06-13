@@ -229,6 +229,73 @@ bool StandardChessGame::readPossibleMoves(GameSquare& to) {
     return false;
 }
 
+// -1 Puts king in harm way
+// 0 Invalid move
+// 1 Piece taken
+// 2 Piece moved
+int StandardChessGame::makeMove(Move&& move){
+    
+    if(!readPossibleMoves(move.getMoveTo())) 
+        return 0;
+
+    // Check if making this move will put their king in check
+
+    bool pieceTake = false;
+    bool isKingMove = move.getMoveFrom().getPiece() == KING ? true : false;
+    GameSquare saveOldFrom(move.getMoveFrom());
+    GameSquare saveOldTo(move.getMoveTo());
+
+
+    if(move.getMoveTo().getPiece() != OPEN)
+        pieceTake = true;
+
+    // Lets move the piece now, This is also where we would do something different in case of castling since you are not setting the from piece to none / open
+    move.getMoveTo().setPiece(move.getMoveFrom().getPiece());
+    move.getMoveTo().setOwner(move.getMoveFrom().getOwner());
+    move.getMoveFrom().setPiece(OPEN);
+    move.getMoveFrom().setOwner(NONE);
+
+    if (isKingMove) {
+
+        if (currentTurn == PlayerOne) {
+            whitePlayerKing = &move.getMoveTo();
+        } else {
+            blackPlayerKing = &move.getMoveTo();
+        }
+
+    }
+
+    if(kingSafe()){
+        
+        // Mark this gamesquare that a move has been made on this square
+        move.getMoveFrom().setFirstMoveMade();
+
+        if(pieceTake)
+            return 1;
+        else 
+            return 2;
+    }
+
+    // Revert move because this made the current turns king not safe
+    move.getMoveFrom().setPiece(saveOldFrom.getPiece());
+    move.getMoveFrom().setOwner(saveOldFrom.getOwner());
+    move.getMoveTo().setPiece(saveOldTo.getPiece());
+    move.getMoveTo().setOwner(saveOldTo.getOwner());
+
+    // Revert king pos
+    if (isKingMove) {
+
+        if (currentTurn == PlayerOne) {
+            whitePlayerKing = &move.getMoveFrom();
+        } else {
+            blackPlayerKing = &move.getMoveFrom();
+        }
+        
+    }
+
+    return 3;
+}
+
 
 // No Piece Present - 0
 // This Piece Does not belong to you - 1

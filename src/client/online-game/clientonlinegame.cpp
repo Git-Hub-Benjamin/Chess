@@ -132,15 +132,16 @@ int online_game() {
     while(true){
         online_menu(convertString(ONLINE_PLAYER_ID));
         int online_opt = get_menu_option();
+        JOIN_GAME_INFO info;
         if(online_opt == 1){
             // Random queue
-            rand_queue_wait(client_game_socket_fd);
+            info = randomQueue(client_game_socket_fd);
         }else if(online_opt == 2){
             // Create private lobby
-            create_private_lobby(client_game_socket_fd);
+            info = createPrivateLobby(client_game_socket_fd);
         }else if(online_opt == 3){
             // Join private lobby
-            join_private_lobby(client_game_socket_fd);
+            info = joinPrivateLobby(client_game_socket_fd);
         }else{
             // Tell server to close Game Socket, this will also clean up the poll socket associated with it
             ONLINE_QUIT = true;
@@ -151,5 +152,14 @@ int online_game() {
             close(client_poll_socket_fd);
             return 0;
         }
+
+        if (info.joinState == 2) {
+            std::wcout << "My player num sent from server: " << (info.myPlayerNum == PlayerOne ? L"Player One" : L"Player Two") << std::endl;
+            StandardOnlineChessGame Game(client_game_socket_fd, info.myPlayerNum, convertString(info.opposingPlayerStr));
+            Game.startGame();
+        } else if (info.joinState == 1) 
+            std::wcout << "Something went wrong on your end..." << std::endl;
+        else if (info.joinState == 0)
+            std::wcout << "Something went wrong on theo server end..." << std::endl;
     }   
 }

@@ -150,83 +150,10 @@ private:
 };
 
 
-// -1 Puts king in harm way
-// 0 Invalid move
-// 1 Piece taken
-// 2 Piece moved
-int StandardLocalChessGame::makeMove(Move&& move){
-    
-    if (GameOptions.moveHighlighting) {
-        if(!readPossibleMoves(move.getMoveTo())) {
-            toPrint = L"No valid moves with this piece.";
-            return 0;
-        }
-    } else
-        if(!verifyMove(move))
-            return 0;
-
-    // Check if making this move will put their king in check
-
-    bool pieceTake = false;
-    bool isKingMove = move.getMoveFrom().getPiece() == KING ? true : false;
-    GameSquare saveOldFrom(move.getMoveFrom());
-    GameSquare saveOldTo(move.getMoveTo());
-
-
-    if(move.getMoveTo().getPiece() != OPEN)
-        pieceTake = true;
-
-    // Lets move the piece now, This is also where we would do something different in case of castling since you are not setting the from piece to none / open
-    move.getMoveTo().setPiece(move.getMoveFrom().getPiece());
-    move.getMoveTo().setOwner(move.getMoveFrom().getOwner());
-    move.getMoveFrom().setPiece(OPEN);
-    move.getMoveFrom().setOwner(NONE);
-
-    if (isKingMove) {
-
-        if (currentTurn == PlayerOne) {
-            whitePlayerKing = &move.getMoveTo();
-        } else {
-            blackPlayerKing = &move.getMoveTo();
-        }
-
-    }
-
-    if(kingSafe()){
-        
-        // Mark this gamesquare that a move has been made on this square
-        move.getMoveFrom().setFirstMoveMade();
-
-        if(pieceTake)
-            return 1;
-        else 
-            return 2;
-    }
-
-    // Revert move because this made the current turns king not safe
-    move.getMoveFrom().setPiece(saveOldFrom.getPiece());
-    move.getMoveFrom().setOwner(saveOldFrom.getOwner());
-    move.getMoveTo().setPiece(saveOldTo.getPiece());
-    move.getMoveTo().setOwner(saveOldTo.getOwner());
-
-    // Revert king pos
-    if (isKingMove) {
-
-        if (currentTurn == PlayerOne) {
-            whitePlayerKing = &move.getMoveFrom();
-        } else {
-            blackPlayerKing = &move.getMoveFrom();
-        }
-        
-    }
-
-    return 3;
-}
-
 int StandardLocalChessGame::getMove(int which) {
     if (isClock) {
         bool inOptionMenu = false;
-        std::atomic_bool stopTimerDisplay = false;
+        bool stopTimerDisplay = false;
         TimerNonCannonicalController terminalcontroller; // Set non-canonical mode
 
         int pipe_fd[2];
@@ -423,7 +350,7 @@ GameSquare* StandardLocalChessGame::isolateFromInCheckMoves() {
     return isolatedPiece;
 }
 
-void StandardLocalChessGame::currTurnChessClock(std::atomic_bool& stop_display, int writePipeFd, const std::wstring& out) {
+void StandardLocalChessGame::currTurnChessClock(bool& stop_display, int writePipeFd, const std::wstring& out) {
     int& count = *(currentTurn == PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
     while (count >= 0 && !stop_display) {
         for (int i = 0; i < 10; i++) {

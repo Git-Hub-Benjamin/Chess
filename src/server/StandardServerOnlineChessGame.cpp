@@ -91,7 +91,7 @@ void StandardServerOnlineChessGame::startGame(){
             // Got move and to, now check valid
             std::string validatyOfMoveStr;
             
-            int moveRes = makeMove(Move(convertMove(move), convertMove(to)));
+            int moveRes = makeMove(Move(convertMove(move, currentTurn), convertMove(to, currentTurn)));
             if (moveRes == -1)
                 validatyOfMoveStr = SERVER_CLIENT_VERIFY_MOVE_INVALID_CHECK;
             else if(moveRes == 0)

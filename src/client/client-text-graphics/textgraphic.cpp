@@ -164,7 +164,7 @@ void enter_private_lobby_code_menu(){
     std::wcout.flush();
 }
 
-void display_private_lobby_code_menu(std::wstring& str){
+void displayPrivateLobbyCodeMenu(std::wstring& str){
     std::wcout << L"\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = =" << std::endl;
     std::wcout << L"(!back) to go back" << std::endl;
     std::wcout << L"Lobby Code: " << str << std::endl;

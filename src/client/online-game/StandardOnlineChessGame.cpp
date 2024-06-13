@@ -1,29 +1,8 @@
 #include "../../Chess/chess.hpp"
 #include "../../server/server.hpp"
 
-//! Weirdest bug ever, this must be defined in the same file for it to work
-class TimerNonCannonicalControllerOnline { 
-public:
-    TimerNonCannonicalControllerOnline() {
-        // Store the original terminal settings
-        tcgetattr(STDIN_FILENO, &old_tio);
-        memcpy(&new_tio, &old_tio, sizeof(struct termios));
-        new_tio.c_lflag &= ~(ICANON | ECHO);
-        new_tio.c_cc[VMIN] = 1;
-        new_tio.c_cc[VTIME] = 0;
-        tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
-    }
 
-    ~TimerNonCannonicalControllerOnline() {
-        // Restore original terminal settings
-        tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
-    }
-
-private:
-    struct termios old_tio, new_tio;
-};
-
-void StandardOnlineChessGame::currTurnChessClock(std::atomic_bool& stop, int writePipe, const std::wstring& out) {
+void StandardOnlineChessGame::currTurnChessClock(bool& stop, int writePipe, const std::wstring& out) {
     int& count = *(currentTurn == PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
     int smallCount = count <= 60 ? count : 60;
     bool needSmallCount = count != smallCount; 
@@ -64,13 +43,35 @@ bool StandardOnlineChessGame::takeMovesAndSend(std::wstring move, std::wstring t
     return true;
 }
 
+//! Weirdest bug ever, this must be defined in the same file for it to work
+class TimerNonCannonicalControllerOnline { 
+public:
+    TimerNonCannonicalControllerOnline() {
+        // Store the original terminal settings
+        tcgetattr(STDIN_FILENO, &old_tio);
+        memcpy(&new_tio, &old_tio, sizeof(struct termios));
+        new_tio.c_lflag &= ~(ICANON | ECHO);
+        new_tio.c_cc[VMIN] = 1;
+        new_tio.c_cc[VTIME] = 0;
+        tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+    }
+
+    ~TimerNonCannonicalControllerOnline() {
+        // Restore original terminal settings
+        tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
+    }
+
+private:
+    struct termios old_tio, new_tio;
+};
+
 // -1 Server sent data DC
 // 0 - Server sent data Surrender
 // 1 - Timer ran out of time
 // 2 - All good
 int StandardOnlineChessGame::getMove(int which) {
 
-    std::atomic_bool stopTimerDisplay = false;
+    bool stopTimerDisplay = false;
     TimerNonCannonicalControllerOnline terminalcontroller; // Set non-canonical mode
 
     struct pollfd fds[3];
@@ -157,10 +158,14 @@ int StandardOnlineChessGame::getMove(int which) {
     return 2; //! Ran out of time
 }
 
-StandardOnlineChessGame::StandardOnlineChessGame(Options gOptions, int fd)
-    : gameSocketFd(fd), StandardChessGame(ONLINE_CONNECTIVITY)
+StandardOnlineChessGame::StandardOnlineChessGame(int fd, Player player, std::wstring opStr)
+    : gameSocketFd(fd), StandardChessGame(ONLINE_CONNECTIVITY), playerNum(player), oppossingPlayerString(opStr)
 {
-    GameOptions = gOptions;
+    currentTurn = PlayerOne; // PlayerOne will always go first, it depends on which client is which player, that is the 50/50 chance
+    GameOptions = global_player_option;
+    pipeFds = new int[2];
+    if (pipe(pipeFds) == -1)
+        exit(EXIT_FAILURE); // IDK HOW ELSE TO HANDLE ERROR IN CONSTRUCTOR
 }
 
 
@@ -330,6 +335,7 @@ void StandardOnlineChessGame::startGame() {
         
         // Most of the time res = 4 will be sent which means, All is good, proceed
 
+        std::wcout << "PlayerNum: " << playerNum << ", CurrentTurn: " << currentTurn << std::endl;
 
         if (playerNum == currentTurn) {
 
@@ -367,7 +373,7 @@ void StandardOnlineChessGame::startGame() {
                 if (GameOptions.moveHighlighting) 
                     printBoardWithMoves(playerNum);
 
-                int res = getMove(TO_MOVE);
+                res = getMove(TO_MOVE);
                 if (res == -1) {
                     // DC
                 } else if (res == 0) {
@@ -408,7 +414,7 @@ void StandardOnlineChessGame::startGame() {
 
         } else {
 
-            if (!nonTurnSpecificCheckIn)
+            if (!nonTurnSpecificCheckIn())
                 return; // Handle socket error
             
             int res = notTurnRecieveMove(moveFrom, moveTo);

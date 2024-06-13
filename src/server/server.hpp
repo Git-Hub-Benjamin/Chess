@@ -81,12 +81,27 @@ protected:
     Client& nonCurruentTurnClient;
     GAME_MODE GameMode;
 
-    bool initClientConnection();
-    bool endOfTurnClientsCheckIn();
-    int nonTurnSpecificClientCheckIn();
-    int recieveCurrTurnMove(std::string&);
-    bool sendPreTurnCheckIn(std::string& msg);
-    int threeSecVerifyClientTimeout(std::string&);
+    // Start of Game make sure both send match start
+    bool initClientConnection(); 
+    // Utility function, makes both clients send msg within 3 seconds
+    // 0 Both responded
+    // 1 Only currTurnClient Responded
+    // 2 Only nonCurrTurnClient Responded
+    int threeSecVerifyClientTimeout(std::string&); 
+    // Send preTurn check in msg to both clients about state of game
+    bool sendPreTurnCheckIn(std::string& msg); 
+    // before waiting to listen for curr turn client listen for specific check in from non turn client
+    // -1 - Server fault
+    // 0 -- Good
+    // 1 -- Client fault
+    int nonTurnSpecificClientCheckIn(); 
+    // blocking, waits for curr turn client to send turn / move
+    // -1 - Server fault
+    // 0 -- Good
+    // 1 -- Client fault
+    int recieveCurrTurnMove(std::string&); 
+    // similar to pre turn check in just end of turn check in
+    bool endOfTurnClientsCheckIn(); 
 
     virtual void startGame() = 0; // To be overidden by game to be called
 
