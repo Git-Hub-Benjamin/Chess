@@ -1,0 +1,6 @@
+-fix local game not working when move highlighitng is not activated, i think this is 
+because the logic in startgame is trying to use the possibleMovesVec to check valid move but it is not filled 
+
+- implement move history (redo and undo)
+- implement changing art & color during local game
+- implement being able to cancel / change (from move) when choosing (to move)

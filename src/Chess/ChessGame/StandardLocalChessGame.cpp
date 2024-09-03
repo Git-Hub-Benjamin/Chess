@@ -96,8 +96,8 @@ void StandardLocalChessGame::loadGameState(StandardChessGameHistoryState &state)
 // -1 Invalid
 // 0 QUIT
 // 1 CONTINUE
-// 3 Undo (Game state change)
-// 4 Redo (Game state change)
+// 2 Undo (Game state change)
+// 3 Redo (Game state change)
 
 int StandardLocalChessGame::optionMenu(char ch)
 {
@@ -174,52 +174,80 @@ private:
     struct termios old_tio, new_tio;
 };
 
-//! TODO : FIX PRESSING UP ARROW OR DOWNO ARRAY FUCKS EVERYTHING UP
-int StandardLocalChessGame::getMove(int which)
-{
+namespace getMove {
+    enum getMove {
+        ERROR = -1,
+        QUIT,
+        VALID,
+        TIMER_RAN_OUT
+    };
+}
 
-    if (isClock)
-    {
-        bool inOptionMenu = false;
-        bool stopTimerDisplay = false;
+namespace sanitizeGetMove {
+    enum sanitizeGetMove {
+        INVALID = -1,
+        OPTIONS,
+        VALID
+    };
+}
+
+// -1 Invalid
+// 0 QUIT
+// 1 CONTINUE
+// 2 Undo (Game state change)
+// 3 Redo (Game state change)
+
+namespace optionMenu {
+    enum optionMenu {
+        INVALID = -1,
+        QUIT,
+        CONTINUE,
+        UNDO,
+        REDO
+    };
+}
+
+int StandardLocalChessGame::getMove(int which) {
+
+    // Needs non canonical mode
+    if (isClock || GameOptions.moveHighlighting) {
         TimerNonCannonicalController terminalcontroller; // Set non-canonical mode
-
+        
         int pipe_fd[2];
-        if (pipe(pipe_fd) == -1)
-        {
+        if (pipe(pipe_fd) == -1) {
             std::cerr << "Failed to create pipe" << std::endl;
-            return 0; // Adjust return as necessary
+            return getMove::ERROR; // Adjust return as necessary
         }
-
+        
         struct pollfd fds[2];
         fds[0].fd = fileno(stdin); // File descriptor for std::cin
         fds[0].events = POLLIN;
         fds[1].fd = pipe_fd[0]; // File descriptor for the read end of the pipe
         fds[1].events = POLLIN;
 
-        std::thread clockThread(&StandardLocalChessGame::currTurnChessClock, this, std::ref(stopTimerDisplay), pipe_fd[1], std::wstring(which == 0 ? (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ") : !currTurnInCheck ? playerToString(currentTurn) + L", To: "
-                                                                                                                                                                                                                                                                                                    : playerToString(currentTurn) + L", You're in check! To: "));
-
+        bool validMoveForMoveHighlightingPrintBoard = false;
+        
+        bool inOptionMenu = false;
+        bool stopTimerDisplay = false;
         bool clearingBufferFromArrowClick = false;
+        std::thread clockThread;
 
-        while (!stopTimerDisplay || inOptionMenu)
-        {
+        if (isClock)
+            clockThread = std::thread(&StandardLocalChessGame::currTurnChessClock, this, std::ref(stopTimerDisplay), pipe_fd[1], std::wstring(which == 0 ? (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ") : !currTurnInCheck ? playerToString(currentTurn) + L", To: " : playerToString(currentTurn) + L", You're in check! To: "));
+        else 
+            std::wcout << (which == 0 ? (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ") : !currTurnInCheck ? playerToString(currentTurn) + L", To: " : playerToString(currentTurn) + L", You're in check! To: ") << std::flush;
+
+        while (true) {
+            char ch;
             int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
-            if (ret > 0)
-            {
-                if (fds[1].revents & POLLIN)
-                {
-                    char ch;
+            if (ret > 0) {
+                if (fds[1].revents & POLLIN) {
                     read(pipe_fd[0], &ch, 1);
-                    if (inOptionMenu)
-                        continue; // bc this thread was killed to go into option menu not bc it ran out of time
                     if (clockThread.joinable())
                         clockThread.join();
-                    return 2;
+                    return getMove::TIMER_RAN_OUT;
                 }
-                if (fds[0].revents & POLLIN)
-                {
-                    char ch;
+                if (fds[0].revents & POLLIN) {
                     ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
                     if (bytes_read > 0)
                     {
@@ -229,116 +257,130 @@ int StandardLocalChessGame::getMove(int which)
                         }
                         if (ch == 27)
                             clearingBufferFromArrowClick = true;
-                        else if (ch == '\n')
-                        {
-                            if (inOptionMenu)
-                            {
-                                int opt_res = optionMenu(inputBuffer[0]);
-                                if (opt_res < 0)
-                                {
-                                    continue; // invalid opt
-                                }
-                                else if (opt_res == 0)
-                                {
-                                    return 0; // QUIT
-                                }
-                                else if (opt_res == 3)
-                                {
-                                    return 3;
-                                }
-                                else if (opt_res == 4)
-                                {
-                                    return 4;
-                                }
-                                else {
-                                    inputBuffer.clear(); // Continue game
-                                    inOptionMenu = false;
-                                    stopTimerDisplay = false; // reset the flag
-                                    clockThread = std::thread(&StandardLocalChessGame::currTurnChessClock, this, std::ref(stopTimerDisplay), pipe_fd[1], std::wstring(which == 0 ? (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ") : !currTurnInCheck ? playerToString(currentTurn) + L", To: "
-                                                                                                                                                                                                                                                                                                                                  : playerToString(currentTurn) + L", You're in check! To: "));
-                                    continue;
-                                }
-                            }
-                            int sant_res = sanitizeGetMove(inputBuffer);
-                            if (sant_res == -1)
-                                continue; // Invalid
+                        else if (ch == '\n') {
+                            if (inOptionMenu) {
 
-                            if (sant_res == 0)
-                            { // option menu
-                                stopTimerDisplay = true;
-                                if (clockThread.joinable())
-                                    clockThread.join();
-                                inOptionMenu = true;
-                                if (GameOptions.boardHistory)
-                                    std::wcout << L"\n\n1. Change Colors\n"
-                                               << L"2. Change Art\n"
-                                               << L"3. Undo Turn\n"
-                                               << L"4. Redo Turn\n"
-                                               << L"5. Continue\n"
-                                               << L"6. Quit\n"
-                                               << "\n--> " << std::flush;
-                                else
-                                    std::wcout << L"\n\n1. Change Colors\n"
-                                               << L"2. Change Art\n"
-                                               << L"3. Continue\n"
-                                               << L"4. Quit\n"
-                                               << "\n--> " << std::flush;
-                                inputBuffer.clear();
-                                continue;
+                                switch (optionMenu(inputBuffer[0])) {
+                                    case optionMenu::INVALID: // Invalid input
+                                        continue; 
+                                    case optionMenu::QUIT: // Quit game
+                                        return getMove::QUIT;
+                                    case optionMenu::CONTINUE: // Continue game
+                                        inputBuffer.clear(); 
+                                        inOptionMenu = false;
+
+                                        if (isClock) {
+                                            stopTimerDisplay = false; // reset the flag
+                                            clockThread = std::thread(&StandardLocalChessGame::currTurnChessClock, this, std::ref(stopTimerDisplay), pipe_fd[1], std::wstring(which == 0 ? (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ") : !currTurnInCheck ? playerToString(currentTurn) + L", To: "
+                                                                                                                                                                                                                                                                                                                                        : playerToString(currentTurn) + L", You're in check! To: "));
+                                        }
+
+                                        std::wcout << L"\033[2K\r";
+                                        std::wcout << (which == 0 ? 
+                                            (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ")
+                                            : !currTurnInCheck ? playerToString(currentTurn) + L", To: " : playerToString(currentTurn) + L", You're in check! To: ") 
+                                        << inputBuffer << std::flush;
+                                        continue;
+                                    case optionMenu::UNDO: // Undo (unimplemented)
+                                        continue;
+                                    case optionMenu::REDO: // Redo (unimplemented)
+                                        continue;
+                                }
+                            } else {
+
+                                switch(sanitizeGetMove(inputBuffer)) {
+                                    case sanitizeGetMove::INVALID: // Invalid move
+                                        continue; 
+                                    case sanitizeGetMove::OPTIONS: // Option menu
+                                        if (isClock) { // Stop timer temporarily if enabled 
+                                            stopTimerDisplay = true;
+                                            if (clockThread.joinable())
+                                                clockThread.join();
+                                        }
+                                        inOptionMenu = true; // Mark that we are in the option menu
+                                        if (GameOptions.boardHistory)
+                                            std::wcout << L"\n\n1. Change Colors\n"
+                                                        << L"2. Change Art\n"
+                                                        << L"3. Undo Turn\n"
+                                                        << L"4. Redo Turn\n"
+                                                        << L"5. Continue\n"
+                                                        << L"6. Quit\n"
+                                                        << "\n--> " << std::flush;
+                                        else
+                                            std::wcout << L"\n\n1. Change Colors\n"
+                                                        << L"2. Change Art\n"
+                                                        << L"3. Continue\n"
+                                                        << L"4. Quit\n"
+                                                        << "\n--> " << std::flush;
+                                        inputBuffer.clear(); // Delete buffer when entering option menu
+                                        continue;
+                                    default: // Valid move
+                                        break; 
+                                }
                             }
 
                             stopTimerDisplay = true;
                             if (clockThread.joinable())
                                 clockThread.join();
-                            return 1;           // Valid input for move
-                        }
-                        else if (ch == 127)
-                        { // Backspace
-                            if (!inputBuffer.empty())
-                            {
+                            std::wcout << std::endl;
+                            return getMove::VALID;           // Valid input for move
+
+                        } else if (ch == 127) { // Backspace
+                            if (!inputBuffer.empty()) {
                                 inputBuffer.pop_back();
                                 std::wcout << L"\b \b" << std::flush; // Handle backspace correctly
                             }
-                        }
-                        else
-                        {
-                            // std::wcout << "Char num: " << (int)ch << std::endl;
+                        } else {
                             inputBuffer += ch; // Append character directly to the inputBuffer
 
                             if (inOptionMenu)
                                 std::wcout << inputBuffer << std::flush;
-
-                            if (GameOptions.moveHighlighting)
-                                if (sanitizeGetMove(inputBuffer) == 1) {
-                                    stopTimerDisplay = true;
-                                    if (clockThread.joinable())
-                                        clockThread.join();
-                                    return 5;
-                                }
                         }
                     }
                 }
+
+                // Every time an event happens (keystroke) if move highlighting is enabled check for a new board print
+
+                if (GameOptions.moveHighlighting) {
+                    if (sanitizeGetMove(inputBuffer) == 1 && validateGameSquare(convertMove(inputBuffer, currentTurn), FROM_MOVE) == 3) {
+                        // This move is valid (on the board) and belongs to the player
+                        if (populatePossibleMoves(convertMove(inputBuffer, currentTurn))) {
+                            printBoardWithMoves(currentTurn);
+                            validMoveForMoveHighlightingPrintBoard = true;
+                        } else
+                            possibleMoves.clear(); // i dont think we need this?
+                    } else {
+                        if (validMoveForMoveHighlightingPrintBoard) {
+                            validMoveForMoveHighlightingPrintBoard = false;
+                            possibleMoves.clear();
+                            printBoard(currentTurn);
+                        }
+                    }
+                }
+
+                // If there is no clock then we need to print the new buffer to the screen
+
+                if (!isClock && !inOptionMenu) { // Clear line and return cursor to the beginning
+                    std::wcout << L"\033[2K\r";
+                    std::wcout << (which == 0 ? 
+                        (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ")
+                        : !currTurnInCheck ? playerToString(currentTurn) + L", To: " : playerToString(currentTurn) + L", You're in check! To: ") 
+                    << inputBuffer << std::flush;
+                } else if (inOptionMenu) {
+                    std::wcout << L"\033[2K\r";
+                    std::wcout << "--> " << inputBuffer << std::flush;
+                }
             }
         }
-
-        if (clockThread.joinable())
-            clockThread.join();
-
-        return 2; //! Ran out of time
-    }
-    else
-    {
-        while (true)
-        {
-            if (which == 0)
-            {
+    } else {
+        while (true) {
+            if (which == 0) {
                 if (!currTurnInCheck)
                     std::wcout << playerToString(currentTurn) << L", Move: ";
                 else
                     std::wcout << playerToString(currentTurn) << L", You're in check! Move: ";
             }
-            else
-            {
+            else {
                 if (!currTurnInCheck)
                     std::wcout << playerToString(currentTurn) << L", To: ";
                 else
@@ -346,54 +388,46 @@ int StandardLocalChessGame::getMove(int which)
             }
 
             std::wcin >> inputBuffer;
-            int res = sanitizeGetMove(inputBuffer);
-            if (res == -1)
-                continue; // Invalid
-
-            if (res == 0)
-            {
-                if (GameOptions.boardHistory)
-                    std::wcout << L"\n\n1. Change Colors\n"
-                               << L"2. Change Art\n"
-                               << L"3. Undo Turn\n"
-                               << L"4. Redo Turn\n"
-                               << L"5. Continue\n"
-                               << L"6. Quit\n"
-                               << "\n--> " << std::flush;
-                else
-                    std::wcout << L"\n\n1. Change Colors\n"
-                               << L"2. Change Art\n"
-                               << L"3. Continue\n"
-                               << L"4. Quit\n"
-                               << "\n--> " << std::flush;
-                inputBuffer.clear();
-                std::wcin >> inputBuffer;
-                int opt_res = optionMenu(inputBuffer[0]);
-                if (opt_res < 0)
-                {
-                    continue; // invalid input
+            
+            switch(sanitizeGetMove(inputBuffer)) {
+                case sanitizeGetMove::INVALID: // Invalid
+                    continue;
+                case sanitizeGetMove::OPTIONS:
+                    if (GameOptions.boardHistory)
+                        std::wcout << L"\n\n1. Change Colors\n"
+                                    << L"2. Change Art\n"
+                                    << L"3. Undo Turn\n"
+                                    << L"4. Redo Turn\n"
+                                    << L"5. Continue\n"
+                                    << L"6. Quit\n"
+                                    << "\n--> " << std::flush;
+                    else
+                        std::wcout << L"\n\n1. Change Colors\n"
+                                    << L"2. Change Art\n"
+                                    << L"3. Continue\n"
+                                    << L"4. Quit\n"
+                                    << "\n--> " << std::flush;
+                    inputBuffer.clear();
+                    std::wcin >> inputBuffer;
+                    switch (optionMenu(inputBuffer[0])) {
+                        case optionMenu::INVALID: // Invalid input
+                            continue; 
+                        case optionMenu::QUIT: // Quit game
+                            return getMove::QUIT;
+                        case optionMenu::CONTINUE: // Continue game
+                            inputBuffer.clear(); 
+                            continue;
+                        case optionMenu::UNDO: // Undo (unimplemented)
+                            continue;
+                        case optionMenu::REDO: // Redo (unimplemented)
+                            continue;
+                    }
+                default:
+                    break;
                 }
-                else if (opt_res == 0)
-                {
-                    return 0; // quit
-                }
-                else if (opt_res == 3)
-                {
-                    return 3;
-                }
-                else if (opt_res == 4)
-                {
-                    return 4;
-                }
-                else
-                {
-                    break; // continue game
-                }
-            }
-            continue; // Continue to next getmove iteration
+            break; // Continue to next getmove iteration
         }
-
-        return 1;
+        return getMove::VALID;
     }
 }
 
@@ -514,25 +548,21 @@ void StandardLocalChessGame::startGame()
         currTurnInCheck = false;
         kingCanMakeMove = true;
 
-        if (!kingSafe())
-        {
-            if (checkMate())
-            {
+        if (!kingSafe()) {
+            if (checkMate()) {
                 printBoard(currentTurn);
                 GameOver = true;
                 std::wcout << "GameOver!!" << std::endl;
                 break;
             }
-            else
-            {
+            else {
                 currTurnInCheck = true;
             }
         }
 
         bool skipInitalPrintForMoveHighlighting = false;
 
-        while (true)
-        {
+        while (true) {
 
             // Clear the possibleMoves vec
             possibleMoves.clear();
@@ -550,23 +580,17 @@ void StandardLocalChessGame::startGame()
             // pointer it means that there is only 1 possible move from check so we dont have to ask for a move
             if (oneMoveFromCheck == nullptr)
             {
-                if (!skipInitalPrintForMoveHighlighting)
-                    printBoard(currentTurn);
+                printBoard(currentTurn);
 
                 int res = getMove(FROM_MOVE);
                 moveFrom = inputBuffer;
-                if (res == 5) {
-                    enteredMove = false;
-                    skipInitalPrintForMoveHighlighting = true;
-                } else // we dont need to clear it for movehighlighting because the user didnt confirm this move with enter yet
-                    inputBuffer.clear();
+                inputBuffer.clear();
                 if (!res) {
                     // Quit
                     GameOver = true;
                     break;
                 }
-                else if (res == 2)
-                {
+                else if (res == 2) {
                     // Timer ran out, end game, win for other player
                     std::wcout << "Timer ran out..." << std::endl;
                     GameOver = true;
@@ -581,11 +605,8 @@ void StandardLocalChessGame::startGame()
                     isLoadingState = true;
                     break;
                 } 
-            }
-
-            if (oneMoveFromCheck == nullptr)
-            {
-                int res = validateGameSquare(convertMove(moveFrom, currentTurn), FROM_MOVE);
+    
+                res = validateGameSquare(convertMove(moveFrom, currentTurn), FROM_MOVE);
                 if (res == 0)
                 {
                     if (enteredMove)
@@ -598,9 +619,13 @@ void StandardLocalChessGame::startGame()
                         toPrint = L"This piece does not belong to you.";
                     continue;
                 }
+            } else {
+                populatePossibleMoves(*oneMoveFromCheck);
+                printBoardWithMoves(currentTurn);
             }
 
-            // Still going to populate this even if piece highlighting is not enabled so we can print when a piece has no valid moves
+            /*
+            Still going to populate this even if piece highlighting is not enabled so we can print when a piece has no valid moves
             if (!populatePossibleMoves((oneMoveFromCheck == nullptr ? convertMove(moveFrom, currentTurn) : *oneMoveFromCheck))) {
                 if (enteredMove) {
                     if (currTurnInCheck)
@@ -610,24 +635,19 @@ void StandardLocalChessGame::startGame()
                     continue;
                 }
             }
+            */
 
-            if (GameOptions.moveHighlighting)
-                printBoardWithMoves(currentTurn);
 
-            if (!enteredMove)
-                continue;
 
             int res = getMove(TO_MOVE);
             moveTo = inputBuffer;
             inputBuffer.clear();
-            if (!res)
-            {
+            if (!res) {
                 // Quit
                 GameOver = true;
                 break;
             }
-            else if (isClock && res == 2)
-            {
+            else if (res == 2) {
                 // Timer ran out, end game, win for other player
                 std::wcout << "Timer ran out..." << std::endl;
                 GameOver = true;
