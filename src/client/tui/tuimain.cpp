@@ -1,9 +1,10 @@
-#include "../Chess/chess.hpp"
-#include "./option.hpp"
-#include "./client-text-graphics/textgraphic.hpp"
+#include "../../Chess/chess.hpp"
+#include "../option.hpp"
+#include "../client-text-graphics/textgraphic.hpp"
 #include <cstdlib>
 #include <fstream>	
 #include <chrono>
+#include "../online-game/online-mode.hpp"
 //! Always use wcout, wcout and wcout dont mix
 
 bool running = true;
@@ -374,11 +375,16 @@ void config_file_options(){
 	}
 }
 
+extern JOIN_GAME_INFO createPrivateLobby2(int);
+
 int main()
 {		
 	// Set the global locale to support UTF-8 encoding
     std::locale::global(std::locale("en_US.UTF-8"));
 	set_terminal_color(DEFAULT);
+
+																																																																																																																															// StandardOnlineChessGame Game(0, PlayerOne, L"HelloThere");
+																																																																																																																															// Game.startGame();
 
 	std::wcout << "\n\n\n\n\n" << std::endl;
 

@@ -1,6 +1,6 @@
 SOCKET = ./src/socket/sockethelper.cpp
-SERVER_FILES = ./src/server/servermain.cpp ./src/server/OnlineChessGame.cpp ./src/server/StandardServerOnlineChessGame.cpp ./src/Chess/ChessGame/text-piece-art.cpp $(CHESS_FUNC)
-CLIENT_FILES = ./src/client/clientmain.cpp ./src/client/online-game/clientonlinegame.cpp ./src/client/client-terminal-frontend/displaymanager.cpp ./src/client/client-text-graphics/textgraphic.cpp ./src/client/online-game/connecting-to-online.cpp ./src/Chess/ChessGame/text-piece-art.cpp ./src/Chess/ChessGame/StandardLocalChessGame.cpp ./src/client/online-game/StandardOnlineChessGame.cpp $(CHESS_FUNC)
+SERVER_FILES = ./src/server/ServerMain.cpp ./src/server/OnlineChessGame.cpp ./src/server/StandardServerOnlineChessGame.cpp ./src/Chess/ChessGame/text-piece-art.cpp ./src/server/WChessServer.cpp $(CHESS_FUNC)
+CLIENT_FILES = ./src/client/online-game/clientonlinegame.cpp ./src/client/client-terminal-frontend/displaymanager.cpp ./src/client/client-text-graphics/textgraphic.cpp ./src/client/online-game/connecting-to-online.cpp ./src/Chess/ChessGame/text-piece-art.cpp ./src/Chess/ChessGame/StandardLocalChessGame.cpp ./src/client/online-game/StandardOnlineChessGame.cpp $(CHESS_FUNC)
 DEV_FILES = ./src/dev_mode.cpp
 CHESS_FUNC = ./src/chessfunctionality.cpp ./src/Chess/ChessGame/StandardChessGame.cpp ./src/terminal-io/terminal.cpp ./src/client-rand-string/generate.cpp
 ZERO_OPTIMIZATION = -O0
@@ -29,15 +29,18 @@ terminal:
 	clang++ ./src/server/server-terminal-communication/fifowriter.cpp ./src/terminal-io/terminal.cpp -o ./build/server-terminal.out
 
 
-client:
-	clang++ $(DEV_FILES) $(CLIENT_FILES) $(SOCKET) -o ./build/chess.out -g $(ZERO_OPTIMIZATION)
+tclient:
+	clang++ $(DEV_FILES) $(CLIENT_FILES) ./src/client/tui/tuimain.cpp  $(SOCKET) -o ./build/tchess.out -g $(ZERO_OPTIMIZATION)
+
+gclient:
+	clang++ $(DEV_FILES) $(CLIENT_FILES) ./src/client/gui/guimain.cpp  $(SOCKET) -o ./build/gchess.out -g $(ZERO_OPTIMIZATION)
 
 # same as game
 all: game
 	
 #build game (took out server for now)
-game: client tserver
-
+game: tclient gclient tserver
+	
 clean:
 	rm -rf ./build/chess.out
 	rm -rf ./build/serverchess.out

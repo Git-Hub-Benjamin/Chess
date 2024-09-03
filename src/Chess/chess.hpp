@@ -7,6 +7,7 @@
 #include <array>
 #include <atomic>
 #include <stack>
+#include "sys/socket.h"
 #include "../terminal-io/terminal.hpp"
 #include "../terminal-io/colors.hpp"
 #include "../client/option.hpp"

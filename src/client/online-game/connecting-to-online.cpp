@@ -201,3 +201,53 @@ JOIN_GAME_INFO createPrivateLobby(int fd) {
         }
     }
 }
+
+/*
+JOIN_GAME_INFO createPrivateLobby2(int fd) {
+    
+goto skip;
+    if (send(fd, (void*)CLIENT_CREATE_PRIVATE_LOBBY, sizeof(CLIENT_CREATE_PRIVATE_LOBBY), 0) < 0)
+        return JOIN_GAME_INFO(1);
+skip:
+    char buffer[ONLINE_BUFFER_SIZE] = {0};
+    int bytesRead = -1; //recv(fd, (void*)buffer, sizeof(buffer), 0);
+
+    buffer[bytesRead] = '\0';
+    std::string response(buffer);
+
+    if (bytesRead == 0)
+        return 0; // Server Error
+    if (bytesRead < 0)
+        return 1; // Client Error
+
+    int pipe_fd[2];
+    if (pipe(pipe_fd) == -1) {
+        std::cerr << "Failed to create pipe" << std::endl;
+        return 1;
+    }
+
+    {
+        bool conditionalStop = false;
+        std::wstring lobbyCode = L"12345"; //convertString(response.substr(CLIENT_INDEX_AFTER_COLON_IN_CREATE_LOBBY_CODE, bytesRead - 1));
+        DisplayManager displayCodeAndWait(pipe_fd[0], conditionalStop);
+        TerminalController terminalcontroller;
+        displayPrivateLobbyCodeMenu(lobbyCode);
+        std::thread lobbyInput_t(&DisplayManager::watchMainThreadWhileInput, &displayCodeAndWait);
+        int count = 0;
+        while (true) {
+            if (count == 30) {
+                write(pipe_fd[1], "1", 1);
+
+                if (lobbyInput_t.joinable())
+                    lobbyInput_t.join();
+
+                std::wcout << L"\033[2B\033[G" << std::flush;
+                return JOIN_GAME_INFO(PlayerOne, std::string("12345")); //info;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Ensure some delay to prevent busy waiting
+            count++;
+        }
+    }
+}
+
+*/

@@ -17,7 +17,7 @@ void StandardServerOnlineChessGame::startGame(){
     // Make sure both clients send ("match-start")
     if(!initClientConnection()){
         std::wcout << "client connection was not successful" << std::endl;
-        //! FIX --> queue_lobby_close(lobby_status);
+        closeSelfLobby();
         return; 
     }
 
@@ -57,6 +57,7 @@ void StandardServerOnlineChessGame::startGame(){
             set_terminal_color(RED);
             std::wcout << "ERROR -- SOCKET ERROR" << std::endl;
             set_terminal_color(DEFAULT);
+            return;
         }
         std::wcout << "Server sent pre turn check in" << std::endl;
 
@@ -64,12 +65,11 @@ void StandardServerOnlineChessGame::startGame(){
             break; // In case checkmate was true
 
         std::wcout << "Waiting for the non current turn client to send check in" << std::endl;
+        
         int res = nonTurnSpecificClientCheckIn();
-        if(res < 0){
-            // Tell clients there was a socket error, Server fault
-        }else if(res > 0){
-            // Client fault, DC
-        }
+        if (res <= 0)
+            return;
+
         std::wcout << "Non turn client sent their check in to the server" << std::endl;
 
         while(true){
@@ -104,7 +104,7 @@ void StandardServerOnlineChessGame::startGame(){
 
             std::wcout << "Tell the current turn client the validaty of the move" << std::endl;
 
-            if(send(currentTurnClient.Game.fd, (void*)validatyOfMoveStr.c_str(), validatyOfMoveStr.length(), 0) < 0){
+            if(send(currentTurnClient.gameFd, (void*)validatyOfMoveStr.c_str(), validatyOfMoveStr.length(), 0) < 0){
                 // Tell clients there was a socket error, Server fault
             }
 
@@ -119,9 +119,8 @@ void StandardServerOnlineChessGame::startGame(){
             // Valid move, the other player is still expecting the move the other player made,
             // Since we already did the checks on it we can just send it
 
-            if(send(nonCurruentTurnClient.Game.fd, (void*)currTurnResponse.c_str(), currTurnResponse.length(), 0) < 0){
-                // Tell clients there was a socket error, Server fault
-            }
+            if (!sendCurrTurnValidatityOfMove(currTurnResponse))
+                return;
 
             std::wcout << "Told the non current client the move" << std::endl;
 
@@ -132,7 +131,6 @@ void StandardServerOnlineChessGame::startGame(){
 
         if(!endOfTurnClientsCheckIn()){
             std::wcout << "Client connection died at end turn check." << std::endl;
-            //! queue_lobby_close(lobby_status);
             return; // So self can join with main thread
         }
 

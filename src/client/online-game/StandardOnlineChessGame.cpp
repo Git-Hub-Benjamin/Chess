@@ -1,6 +1,4 @@
 #include "../../Chess/chess.hpp"
-#include "../../server/server.hpp"
-
 
 void StandardOnlineChessGame::currTurnChessClock(bool& stop, int writePipe, const std::wstring& out) {
     int& count = *(currentTurn == PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
@@ -43,6 +41,28 @@ bool StandardOnlineChessGame::takeMovesAndSend(std::wstring move, std::wstring t
     return true;
 }
 
+// //! Weirdest bug ever, this must be defined in the same file for it to work
+// class TimerNonCannonicalControllerOnline { 
+// public:
+//     TimerNonCannonicalControllerOnline() {
+//         // Store the original terminal settings
+//         tcgetattr(STDIN_FILENO, &old_tio);
+//         memcpy(&new_tio, &old_tio, sizeof(struct termios));
+//         new_tio.c_lflag &= ~(ICANON | ECHO);
+//         new_tio.c_cc[VMIN] = 1;
+//         new_tio.c_cc[VTIME] = 0;
+//         tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+//     }
+
+//     ~TimerNonCannonicalControllerOnline() {
+//         // Restore original terminal settings
+//         tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
+//     }
+
+// private:
+//     struct termios old_tio, new_tio;
+// };
+
 //! Weirdest bug ever, this must be defined in the same file for it to work
 class TimerNonCannonicalControllerOnline { 
 public:
@@ -65,14 +85,114 @@ private:
     struct termios old_tio, new_tio;
 };
 
-// -1 Server sent data DC
-// 0 - Server sent data Surrender
-// 1 - Timer ran out of time
-// 2 - All good
+// // -1 Server sent data DC
+// // 0 - Server sent data Surrender
+// // 1 - Timer ran out of time
+// // 2 - All good
+// int StandardOnlineChessGame::getMove(int which) {
+
+//     bool stopTimerDisplay = false;
+//     TimerNonCannonicalControllerOnline terminalcontroller; // Set non-canonical mode
+
+//     struct pollfd fds[3];
+//     fds[0].fd = fileno(stdin); // File descriptor for std::cin
+//     fds[0].events = POLLIN;
+//     fds[1].fd = pipeFds[0]; // File descriptor for the read end of the pipe
+//     fds[1].events = POLLIN;
+//     fds[2].fd = gameSocketFd; // Listens for anything from the server
+//     fds[2].events = POLLIN;
+
+//     // Im not sure why I cant access currTurnChessClock
+//     std::thread clockThread(&StandardOnlineChessGame::currTurnChessClock, this, std::ref(stopTimerDisplay), pipeFds[1], std::wstring(
+//         which == 0 ? 
+//             (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ")
+//             : !currTurnInCheck ? playerToString(currentTurn) + L", To: " : playerToString(currentTurn) + L", You're in check! To: "
+//     ));
+
+//     // Listen for response from timer thread, 
+//     // Listen for events from poll for input 
+//     // Listen for data from the server
+
+//     while (true) {
+//         char ch;
+//         int ret = poll(fds, 3, -1); // Wait indefinitely until an event occurs
+//         if (ret > 0) {
+//             // if (fds[2].revents & POLLIN) {
+
+//             //     stopTimerDisplay = true;
+
+//             //     if (clockThread.joinable())
+//             //         clockThread.join();
+                
+//             //     // If any data is sent from the server we need need to check if it was DC or Surrender
+//             //     char buffer[ONLINE_BUFFER_SIZE] = {0};
+//             //     size_t bytes_read = read(gameSocketFd, buffer, sizeof(buffer));
+//             //     std::string res(buffer);
+//             //     if (res == GAMESTATUS_GAMEOVER_DC)
+//             //         return -1;
+//             //     else
+//             //         return 0;
+
+//             // }
+
+//             if (fds[1].revents & POLLIN) {
+
+//                 // If either the chess clock or the 60 second small count run out of time we send the server we ran out of time
+
+//                 if (clockThread.joinable())
+//                     clockThread.join();
+
+//                 return 1;
+
+//             }
+//             if (fds[0].revents & POLLIN) {
+
+//                 ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
+//                 if (bytes_read > 0) {
+//                     if (ch == '\n') {
+//                         std::wcout << "Enter pressed..." << std::endl;
+//                         int sant_res = sanitizeGetMove(inputBuffer);
+//                         if (sant_res == -1)
+//                             continue; // Invalid
+
+//                         stopTimerDisplay = true;
+//                         if (clockThread.joinable())
+//                             clockThread.join();
+//                         clearLine();
+//                         std::wcout << "Leaving function..." << std::endl;
+//                         return 2; // Valid input for move
+
+//                     } else if (ch == 127) { // Backspace
+//                         if (!inputBuffer.empty()) {
+//                             inputBuffer.pop_back();
+//                             std::wcout << L"\b \b" << std::flush; // Handle backspace correctly
+//                         }
+//                     } else {
+//                         inputBuffer += ch; // Append character directly to the inputBuffer
+//                     }
+//                 }
+//             }
+//         }
+//     }
+
+//     if (clockThread.joinable())
+//         clockThread.join();
+
+//     return 2; //! Ran out of time
+// }
+
+
+
 int StandardOnlineChessGame::getMove(int which) {
 
     bool stopTimerDisplay = false;
     TimerNonCannonicalControllerOnline terminalcontroller; // Set non-canonical mode
+
+    int pipe_fd[2];
+    if (pipe(pipe_fd) == -1) {
+        std::cerr << "Failed to create pipe" << std::endl;
+        return 0; // Adjust return as necessary
+    }
 
     struct pollfd fds[3];
     fds[0].fd = fileno(stdin); // File descriptor for std::cin
@@ -82,48 +202,40 @@ int StandardOnlineChessGame::getMove(int which) {
     fds[2].fd = gameSocketFd; // Listens for anything from the server
     fds[2].events = POLLIN;
 
-    // Im not sure why I cant access currTurnChessClock
-    std::thread clockThread(&StandardOnlineChessGame::currTurnChessClock, this, std::ref(stopTimerDisplay), pipeFds[1], std::wstring(
+    std::thread clockThread(&StandardOnlineChessGame::currTurnChessClock, this, std::ref(stopTimerDisplay), pipe_fd[1], std::wstring(
         which == 0 ? 
             (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ")
             : !currTurnInCheck ? playerToString(currentTurn) + L", To: " : playerToString(currentTurn) + L", You're in check! To: "
     ));
 
-    // Listen for response from timer thread, 
-    // Listen for events from poll for input 
-    // Listen for data from the server
-
     while (true) {
         char ch;
-        int ret = poll(fds, 3, -1); // Wait indefinitely until an event occurs
+        int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
         if (ret > 0) {
-            if (fds[2].revents & POLLIN) {
+            // if (fds[2].revents & POLLIN) {
 
-                stopTimerDisplay = true;
+            //     stopTimerDisplay = true;
 
-                if (clockThread.joinable())
-                    clockThread.join();
+            //     if (clockThread.joinable())
+            //         clockThread.join();
                 
-                // If any data is sent from the server we need need to check if it was DC or Surrender
-                char buffer[ONLINE_BUFFER_SIZE] = {0};
-                size_t bytes_read = read(gameSocketFd, buffer, sizeof(buffer));
-                std::string res(buffer);
-                if (res == GAMESTATUS_GAMEOVER_DC)
-                    return -1;
-                else
-                    return 0;
+            //     // If any data is sent from the server we need need to check if it was DC or Surrender
+            //     char buffer[ONLINE_BUFFER_SIZE] = {0};
+            //     size_t bytes_read = read(gameSocketFd, buffer, sizeof(buffer));
+            //     std::string res(buffer);
+            //     if (res == GAMESTATUS_GAMEOVER_DC)
+            //         return -1;
+            //     else
+            //         return 0;
 
-            }
-
+            // }
             if (fds[1].revents & POLLIN) {
-
                 // If either the chess clock or the 60 second small count run out of time we send the server we ran out of time
 
                 if (clockThread.joinable())
                     clockThread.join();
 
                 return 1;
-
             }
             if (fds[0].revents & POLLIN) {
 
@@ -137,6 +249,8 @@ int StandardOnlineChessGame::getMove(int which) {
                         stopTimerDisplay = true;
                         if (clockThread.joinable())
                             clockThread.join();
+                        clearLine();
+                        std::wcout << "Leaving function..." << std::endl;
                         return 2; // Valid input for move
 
                     } else if (ch == 127) { // Backspace
@@ -151,16 +265,15 @@ int StandardOnlineChessGame::getMove(int which) {
             }
         }
     }
-
-    if (clockThread.joinable())
-        clockThread.join();
-
-    return 2; //! Ran out of time
 }
 
 StandardOnlineChessGame::StandardOnlineChessGame(int fd, Player player, std::wstring opStr)
     : gameSocketFd(fd), StandardChessGame(ONLINE_CONNECTIVITY), playerNum(player), oppossingPlayerString(opStr)
 {
+    initGame();
+    blackPlayerKing = &GameBoard[0][3];
+    whitePlayerKing = &GameBoard[7][3];
+    gameClock.initTime(player == PlayerOne ? 300 : -1, player == PlayerOne ? -1 : 300);
     currentTurn = PlayerOne; // PlayerOne will always go first, it depends on which client is which player, that is the 50/50 chance
     GameOptions = global_player_option;
     pipeFds = new int[2];
@@ -303,16 +416,32 @@ int StandardOnlineChessGame::notTurnRecieveMove(std::wstring& move, std::wstring
 
 //! Update this so that generic functions like verifyGameServerConnection go into an interface class so that StandardOnlineChessGame inheirts from it and other online games for clients
 void StandardOnlineChessGame::startGame() {
+redo:
+    getMove(0);
 
+    std::wcout << "Input buffer: " << inputBuffer << std::endl;
+    inputBuffer.clear();
+
+    getMove(1);
+
+    std::wcout << "Input buffer: " << inputBuffer << std::endl;
+    inputBuffer.clear();
+
+goto redo;
+
+    int res;
+    std::wstring moveFrom;
+    std::wstring moveTo;
+goto skip;
     if (!verifyGameServerConnection()) 
         return; // Socket failure
 
     while (!GameOver) {
 
-        std::wstring moveFrom;
-        std::wstring moveTo;
+        // std::wstring moveFrom;
+        // std::wstring moveTo;
 
-        int res = preTurnCheckIn();
+        res = preTurnCheckIn();
         if (res == -1) {
             // Server Error
         } else if ( res < 3) {
@@ -334,7 +463,7 @@ void StandardOnlineChessGame::startGame() {
             currTurnInCheck = true; // Check
         
         // Most of the time res = 4 will be sent which means, All is good, proceed
-
+skip:
         std::wcout << "PlayerNum: " << playerNum << ", CurrentTurn: " << currentTurn << std::endl;
 
         if (playerNum == currentTurn) {
