@@ -339,22 +339,24 @@ int StandardLocalChessGame::getMove(int which) {
                     }
                 }
 
-                // Every time an event happens (keystroke) if move highlighting is enabled check for a new board print
+                // Every time an event happens (keystroke) if move highlighting is enabled check for a new board print,
+                //! Maybe dont do this becasue movehighlighting maybe should be an option for lower end computers
+                //! This does a lot of computing
 
-                if (GameOptions.moveHighlighting) {
-                    if (sanitizeGetMove(inputBuffer) == 1 && validateGameSquare(convertMove(inputBuffer, currentTurn), FROM_MOVE) == 3) {
-                        // This move is valid (on the board) and belongs to the player
-                        if (populatePossibleMoves(convertMove(inputBuffer, currentTurn))) {
+                if (sanitizeGetMove(inputBuffer) == 1 && validateGameSquare(convertMove(inputBuffer, currentTurn), FROM_MOVE) == 3) {
+                    // This move is valid (on the board) and belongs to the player
+                    if (populatePossibleMoves(convertMove(inputBuffer, currentTurn))) {
+                        if (GameOptions.moveHighlighting)
                             printBoardWithMoves(currentTurn);
-                            validMoveForMoveHighlightingPrintBoard = true;
-                        } else
-                            possibleMoves.clear(); // i dont think we need this?
-                    } else {
-                        if (validMoveForMoveHighlightingPrintBoard) {
-                            validMoveForMoveHighlightingPrintBoard = false;
-                            possibleMoves.clear();
+                        validMoveForMoveHighlightingPrintBoard = true;
+                    } else
+                        possibleMoves.clear(); // i dont think we need this?
+                } else {
+                    if (validMoveForMoveHighlightingPrintBoard) {
+                        validMoveForMoveHighlightingPrintBoard = false;
+                        possibleMoves.clear();
+                        if (GameOptions.moveHighlighting)
                             printBoard(currentTurn);
-                        }
                     }
                 }
 

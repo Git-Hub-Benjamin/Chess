@@ -4,3 +4,5 @@ because the logic in startgame is trying to use the possibleMovesVec to check va
 - implement move history (redo and undo)
 - implement changing art & color during local game
 - implement being able to cancel / change (from move) when choosing (to move)
+
+- add an option for dynamic move highlighitng vs move highlighitng vs no move highlighting (each better for performance)
