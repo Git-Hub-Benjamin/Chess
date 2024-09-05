@@ -14,7 +14,8 @@
 
 int main() {
     int a;
-    std::cout << "a\n\n\n\aaaa\n\naaaa\n\n" << std::endl;
+    std::cout << "\x001b[0;" << 96 << "mHello";    
+    
     std::cin >> a;
 
     system("clear");

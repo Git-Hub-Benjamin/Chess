@@ -171,7 +171,8 @@ bool StandardChessGame::populatePossibleMoves(GameSquare& moveFrom) {
                         if (mTemp.getMoveFrom().getPiece() == KING) 
                             if (!kingSafeAfterMove(mTemp.getMoveTo()))
                                 continue;
-                        possibleMoves.push_back(&mTemp.getMoveTo());
+                        possibleMoves.push_back(possibleMoveType(&mTemp.getMoveTo(), 
+                        mTemp.getMoveTo().getPiece() == GamePiece::OPEN ? possibleMoveTypes::POSSIBLE_MOVE_OPEN_SQAURE : possibleMoveTypes::POSSIBLE_MOVE_ENEMY_PIECE));
                     }
         } else {
             // See if making this move would make the kingSafe()
@@ -184,6 +185,7 @@ bool StandardChessGame::populatePossibleMoves(GameSquare& moveFrom) {
             mTemp.getMoveFrom().setPiece(OPEN);
             mTemp.getMoveFrom().setOwner(NONE);
 
+            // Making king move temporarily
             if (isKingMove) {
                 if (currentTurn == PlayerOne) {
                     whitePlayerKing = &mTemp.getMoveTo();
@@ -193,7 +195,9 @@ bool StandardChessGame::populatePossibleMoves(GameSquare& moveFrom) {
             }
 
             if(kingSafe())
-               possibleMoves.push_back(&mTemp.getMoveTo());
+                possibleMoves.push_back(possibleMoveType(&mTemp.getMoveTo(),
+                isKingMove ? possibleMoveTypes::POSSIBLE_MOVE_KING_IN_DANGER :
+                mTemp.getMoveTo().getPiece() == GamePiece::OPEN ? possibleMoveTypes::POSSIBLE_MOVE_PROTECT_KING_SQUARE : possibleMoveTypes::POSSIBLE_MOVE_PROTECT_KING_PIECE));
             
             // Revert
             mTemp.getMoveFrom().setPiece(saveOldFrom.getPiece());
@@ -216,12 +220,11 @@ bool StandardChessGame::populatePossibleMoves(GameSquare& moveFrom) {
 
 // True found matching move with possibleMoves
 // False not found
-bool StandardChessGame::readPossibleMoves(GameSquare& to) {
-    for(GameSquare* Square: possibleMoves) {
-        if(to == *Square)
-            return true;
-    }
-    return false;
+possibleMoveTypes StandardChessGame::readPossibleMoves(GameSquare& to) {
+    for(possibleMoveType& possibleMove: possibleMoves)
+        if(to == *possibleMove.m_boardSquare)
+            return possibleMove.possibleMoveTypeSelector;
+    return possibleMoveTypes::NOT_FOUND;
 }
 
 // -1 Puts king in harm way
@@ -387,6 +390,7 @@ void StandardChessGame::printBoardWithMoves(Player playerSideToPrint) {
 
             std::wcout << "| ";
             wchar_t piece;
+            possibleMoveTypes possibleMoveTypeSelector;
 
             if ((GameConnectivity == ONLINE_CONNECTIVITY && playerSideToPrint == PlayerTwo) || (GameConnectivity == LOCAL_CONNECTIVITY && GameOptions.flipBoardOnNewTurn && playerSideToPrint == PlayerTwo)) {
                   if(GameBoard[7 - row][7 - col].getOwner() == NONE)
@@ -398,12 +402,10 @@ void StandardChessGame::printBoardWithMoves(Player playerSideToPrint) {
                     piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
                     set_terminal_color(GameOptions.p2_color);
                 }
-                                // checking if the current square can be acctacked by piece
-                if(readPossibleMoves(GameBoard[7 - row][7 - col])){
-                    if(piece == ' ')
-                        piece = 'X';
-                    set_terminal_color(RED);
-                }
+
+                // checking if the current square can be acctacked by piece
+                possibleMoveTypeSelector = readPossibleMoves(GameBoard[7 - row][7 - col]);
+                
             } else {
                 if(GameBoard[row][col].getOwner() == NONE)
                     piece = ' ';
@@ -415,12 +417,35 @@ void StandardChessGame::printBoardWithMoves(Player playerSideToPrint) {
                     set_terminal_color(GameOptions.p2_color);
                 }
 
-                // checking if the current square can be attacked by piece
-                if(readPossibleMoves(GameBoard[row][col])){
-                    if(piece == ' ')
-                        piece = 'X';
-                    set_terminal_color(RED);
+                // checking if the current square can be acctacked by piece
+                possibleMoveTypeSelector = readPossibleMoves(GameBoard[row][col]);
+            }
+
+            if(possibleMoveTypeSelector != possibleMoveTypes::NOT_FOUND){
+                if(piece == ' ')
+                    piece = 'X';
+                WRITE_COLOR color;
+                switch(possibleMoveTypeSelector) {
+                    case possibleMoveTypes::POSSIBLE_MOVE_ENEMY_PIECE:
+                        color = GameOptions.possibleMove_color;
+                        break;
+                    case possibleMoveTypes::POSSIBLE_MOVE_OPEN_SQAURE:
+                        color = GameOptions.possibleMove_color;
+                        break;
+                    case possibleMoveTypes::POSSIBLE_MOVE_PROTECT_KING_PIECE:
+                        color = WRITE_COLOR::BRIGHT_MAGENTA;
+                        break;
+                    case possibleMoveTypes::POSSIBLE_MOVE_PROTECT_KING_SQUARE:
+                        color = WRITE_COLOR::BRIGHT_YELLOW;
+                        break;
+                    case possibleMoveTypes::POSSIBLE_MOVE_KING_IN_DANGER:
+                        color = WRITE_COLOR::YELLOW;
+                        break;
+                    default:
+                        color = WRITE_COLOR::BLACK;
+                        break;
                 }
+                set_terminal_color(color);
             }
 
             // Checking for highlighted piece, if flip board option is on then we need to look at the board the opposite way
@@ -428,14 +453,14 @@ void StandardChessGame::printBoardWithMoves(Player playerSideToPrint) {
             if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && fromHighlightedPiece == &GameBoard[row][col]) ||
                 currentTurn == PlayerTwo && fromHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
                 !GameOptions.flipBoardOnNewTurn && (fromHighlightedPiece == &GameBoard[row][col]))
-                set_terminal_color(MAGENTA);
+                set_terminal_color(GameOptions.movingPiece_color);
 
             // Exact same thing as above but excpet now checking for toHighlightedPiece
-            if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && toHighlightedPiece == &GameBoard[row][col]) ||
+            else if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && toHighlightedPiece == &GameBoard[row][col]) ||
                 currentTurn == PlayerTwo && toHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
                 !GameOptions.flipBoardOnNewTurn && (toHighlightedPiece == &GameBoard[row][col]))
-                set_terminal_color(BRIGHT_MAGENTA);
-                
+                set_terminal_color(GameOptions.movingToPiece_color);
+            
             std::wcout << piece;    
             set_terminal_color(DEFAULT);
             std::wcout << " ";

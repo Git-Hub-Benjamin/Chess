@@ -1,7 +1,8 @@
 #pragma once
+#include "../../terminal-io/colors.hpp"
 
 #define PIECE_ART_COLLECTION_AMOUNT 4
-
+#define GAME_COLORS 8
 
 enum TEXT_PIECE_ART_COLLECTION_SELECTOR{
     STD_PIECE_ART_P1 = 0,

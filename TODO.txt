@@ -5,8 +5,8 @@ TODO:
     - started implemented the above but fucks up when in noncanonical mode bc 
       reading input for the color and art query is cannonical
 - fix clearing the screen just looks dumb, it looks good but its off by a line sometimes
-- setup new possibleMoveTypes vector for possible moves to handle new colors
-
+- fix logic in dev_mode.cpp something is not working with the king logic with the colors,
+    as well as isolateonemovefromcheck, idk if we even need that
 
 COMPLETED:
 

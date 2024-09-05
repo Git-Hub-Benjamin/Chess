@@ -71,7 +71,7 @@ bool change_player_color_option() {
         std::wcout << "1. Default (Thin White) | "; color_option_active_inactive(DEFAULT, player_opt); std::wcout << std::endl;
         std::wcout << "2. Bold white 	        | "; color_option_active_inactive(BOLD, player_opt); std::wcout << std::endl;
         std::wcout << "3. Blue	                | "; color_option_active_inactive(BLUE, player_opt); std::wcout << std::endl;
-        std::wcout << "4. Aqua 	        | "; color_option_active_inactive(AQUA, player_opt); std::wcout << std::endl;
+        std::wcout << "4. Yellow 	      | "; color_option_active_inactive(YELLOW, player_opt); std::wcout << std::endl;
         std::wcout << "5. Green                | "; color_option_active_inactive(GREEN, player_opt); std::wcout << std::endl;
         std::wcout << "6. Back\n--> ";
         color_opt = get_menu_option();
@@ -94,7 +94,7 @@ bool change_player_color_option() {
                     *currPlayChangingColor = BLUE;
                     break;
                 case 4:
-                    *currPlayChangingColor = AQUA;
+                    *currPlayChangingColor = YELLOW;
                     break;
                 case 5:
                     *currPlayChangingColor = GREEN;

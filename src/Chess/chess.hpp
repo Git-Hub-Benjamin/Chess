@@ -262,12 +262,15 @@ struct StandardChessGameHistoryState {
 };
 
 enum possibleMoveTypes {
-    MOVING_PIECE, // piece moving from
+    NOT_FOUND = -1, // used as a return type in readPossibleMoves
+    MOVING_PIECE = 0, // piece moving from
     MOVING_TO_SQAURE, // piece / square moving to
     POSSIBLE_MOVE_OPEN_SQAURE, // possible move to open square
     POSSIBLE_MOVE_ENEMY_PIECE, // possible move to enemy piece
     POSSIBLE_MOVE_PROTECT_KING_SQUARE, // possible move to protect the king (in check) square
-    POSSIBLE_MOVE_PROTECT_KING_PIECE // possible to protect the king (in check) by taking a piece
+    POSSIBLE_MOVE_PROTECT_KING_PIECE, // possible to protect the king (in check) by taking a piece
+    POSSIBLE_MOVE_SPECIAL_MOVE, // castling, enpassant
+    POSSIBLE_MOVE_KING_IN_DANGER // possible move for the king to make when in danger
 };
 struct possibleMoveType {
     // Square Data
@@ -403,7 +406,7 @@ protected:
     bool populatePossibleMoves(GameSquare&);
 
     // reads the possible moves and compares to a move
-    bool readPossibleMoves(GameSquare&);
+    possibleMoveTypes readPossibleMoves(GameSquare&);
 
     // Board printing functions
     // print the standard board
@@ -420,7 +423,7 @@ protected:
     int validateGameSquare(GameSquare&, enum getMoveType);
 
     // Vector to hold possible moves
-    std::vector<GameSquare *> possibleMoves; 
+    std::vector<possibleMoveType> possibleMoves; 
     // For move highlighting
     GameSquare* fromHighlightedPiece = nullptr;
     GameSquare* toHighlightedPiece = nullptr;

@@ -6,9 +6,24 @@
 extern bool SETTING_CHANGE_AFFECTS_CONFIG_FILE;
 class Options{
 public:
+
+/*
+MOVING_PIECE = 0, // piece moving from
+MOVING_TO_SQAURE, // piece / square moving to
+POSSIBLE_MOVE_OPEN_SQAURE, // possible move to open square
+POSSIBLE_MOVE_ENEMY_PIECE, // possible move to enemy piece
+POSSIBLE_MOVE_PROTECT_KING_SQUARE, // possible move to protect the king (in check) square
+POSSIBLE_MOVE_PROTECT_KING_PIECE, // possible to protect the king (in check) by taking a piece
+POSSIBLE_MOVE_SPECIAL_MOVE, // castling, enpassant
+POSSIBLE_MOVE_KING_IN_DANGER // possible move for the king when he is check
+*/
     
     enum WRITE_COLOR p1_color = DEFAULT;
     enum WRITE_COLOR p2_color = DEFAULT;
+
+    enum WRITE_COLOR movingPiece_color = GREEN;
+    enum WRITE_COLOR possibleMove_color = BRIGHT_RED;
+    enum WRITE_COLOR movingToPiece_color = BRIGHT_GREEN;
 
     TEXT_PIECE_ART_COLLECTION_SELECTOR whitePlayerArtSelector = STD_PIECE_ART_P1;
     TEXT_PIECE_ART_COLLECTION_SELECTOR blackPlayerArtSelector = STD_PIECE_ART_P2;
