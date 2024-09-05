@@ -185,7 +185,6 @@ bool StandardChessGame::populatePossibleMoves(GameSquare& moveFrom) {
             mTemp.getMoveFrom().setOwner(NONE);
 
             if (isKingMove) {
-
                 if (currentTurn == PlayerOne) {
                     whitePlayerKing = &mTemp.getMoveTo();
                 } else {
@@ -204,18 +203,14 @@ bool StandardChessGame::populatePossibleMoves(GameSquare& moveFrom) {
 
             // Revert king pos
             if (isKingMove) {
-
                 if (currentTurn == PlayerOne) {
                     whitePlayerKing = &mTemp.getMoveFrom();
                 } else {
                     blackPlayerKing = &mTemp.getMoveFrom();
-                }
-                
+                }       
             }
         }
-
     }
-
     return !possibleMoves.empty();
 }
 
@@ -236,7 +231,7 @@ bool StandardChessGame::readPossibleMoves(GameSquare& to) {
 int StandardChessGame::makeMove(Move&& move){
     
     if(!readPossibleMoves(move.getMoveTo())) 
-        return 0;
+        return makeMove::INVALID_MOVE;
 
     // Check if making this move will put their king in check
 
@@ -244,7 +239,6 @@ int StandardChessGame::makeMove(Move&& move){
     bool isKingMove = move.getMoveFrom().getPiece() == KING ? true : false;
     GameSquare saveOldFrom(move.getMoveFrom());
     GameSquare saveOldTo(move.getMoveTo());
-
 
     if(move.getMoveTo().getPiece() != OPEN)
         pieceTake = true;
@@ -256,24 +250,21 @@ int StandardChessGame::makeMove(Move&& move){
     move.getMoveFrom().setOwner(NONE);
 
     if (isKingMove) {
-
         if (currentTurn == PlayerOne) {
             whitePlayerKing = &move.getMoveTo();
         } else {
             blackPlayerKing = &move.getMoveTo();
         }
-
     }
 
     if(kingSafe()){
-        
         // Mark this gamesquare that a move has been made on this square
         move.getMoveFrom().setFirstMoveMade();
 
         if(pieceTake)
-            return 1;
+            return makeMove::PIECE_TAKEN;
         else 
-            return 2;
+            return makeMove::PIECE_MOVED;
     }
 
     // Revert move because this made the current turns king not safe
@@ -284,41 +275,40 @@ int StandardChessGame::makeMove(Move&& move){
 
     // Revert king pos
     if (isKingMove) {
-
         if (currentTurn == PlayerOne) {
             whitePlayerKing = &move.getMoveFrom();
         } else {
             blackPlayerKing = &move.getMoveFrom();
         }
-        
     }
 
-    return 3;
+    return makeMove::KING_IN_HARM;
 }
-
 
 // No Piece Present - 0
 // This Piece Does not belong to you - 1
 // Cannot take your own piece - 2
 // Valid - 3
-int StandardChessGame::validateGameSquare(GameSquare& square, int which){
-    if (which == FROM_MOVE) {
+int StandardChessGame::validateGameSquare(GameSquare& square, enum getMoveType getMoveType){
+    if (getMoveType == getMoveType::GET_FROM) {
 
         if(square.getOwner() == NONE)
-            return 0;
+            return validateGameSquare::NO_PIECE;
 
         if(static_cast<Player>(square.getOwner()) != currentTurn)
-            return 1;
+            return validateGameSquare::PIECE_NOT_YOURS;
 
     } else {
         if(static_cast<Player>(square.getOwner()) == currentTurn)
-            return 2;
+            return validateGameSquare::CANNOT_TAKE_OWN;
     }
     
-    return 3;
+    return validateGameSquare::VALID;
 }
 
 void StandardChessGame::printBoard(Player playerSideToPrint){
+    if (GameOptions.clearScreenOnBoardPrint)
+        system("clear");
     std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
         std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - row << " ";
@@ -388,6 +378,8 @@ void StandardChessGame::printBoard(Player playerSideToPrint){
 }
 
 void StandardChessGame::printBoardWithMoves(Player playerSideToPrint) {
+    if(GameOptions.clearScreenOnBoardPrint)
+        system("clear");
     std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
         std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - row << " ";
@@ -411,13 +403,6 @@ void StandardChessGame::printBoardWithMoves(Player playerSideToPrint) {
                     if(piece == ' ')
                         piece = 'X';
                     set_terminal_color(RED);
-                    std::wcout << piece;    
-                    set_terminal_color(DEFAULT);
-                    std::wcout << " ";
-                }else{
-                    std::wcout << piece; 
-                    set_terminal_color(DEFAULT);
-                    std::wcout << " ";
                 }
             } else {
                 if(GameBoard[row][col].getOwner() == NONE)
@@ -430,22 +415,30 @@ void StandardChessGame::printBoardWithMoves(Player playerSideToPrint) {
                     set_terminal_color(GameOptions.p2_color);
                 }
 
-                // checking if the current square can be acctacked by piece
+                // checking if the current square can be attacked by piece
                 if(readPossibleMoves(GameBoard[row][col])){
                     if(piece == ' ')
                         piece = 'X';
                     set_terminal_color(RED);
-                    std::wcout << piece;    
-                    set_terminal_color(DEFAULT);
-                    std::wcout << " ";
-                }else{
-                    
-                    std::wcout << piece; 
-                    set_terminal_color(DEFAULT);
-                    std::wcout << " ";
-                }  
+                }
             }
 
+            // Checking for highlighted piece, if flip board option is on then we need to look at the board the opposite way
+            // otherwise if flip board is not active then we can always read it 0 - 7, 0 - 7
+            if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && fromHighlightedPiece == &GameBoard[row][col]) ||
+                currentTurn == PlayerTwo && fromHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
+                !GameOptions.flipBoardOnNewTurn && (fromHighlightedPiece == &GameBoard[row][col]))
+                set_terminal_color(MAGENTA);
+
+            // Exact same thing as above but excpet now checking for toHighlightedPiece
+            if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && toHighlightedPiece == &GameBoard[row][col]) ||
+                currentTurn == PlayerTwo && toHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
+                !GameOptions.flipBoardOnNewTurn && (toHighlightedPiece == &GameBoard[row][col]))
+                set_terminal_color(BRIGHT_MAGENTA);
+                
+            std::wcout << piece;    
+            set_terminal_color(DEFAULT);
+            std::wcout << " ";
               
         }
         std::wcout << "| " << CHESS_BOARD_HEIGHT - row << std::endl;
@@ -485,6 +478,7 @@ int StandardChessGame::reflectAxis(int val) {
 // 0 options
 // 1 valid input
 int StandardChessGame::sanitizeGetMove(std::wstring& input) {
+
     if(!std::iswalpha(input[0])) 
         return -1; // Ensure [0] is alphabetical character
     

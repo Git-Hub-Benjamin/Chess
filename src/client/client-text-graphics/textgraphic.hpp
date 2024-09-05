@@ -11,6 +11,7 @@ extern bool SETTING_CHANGE_AFFECTS_CONFIG_FILE;
 void title_screen();
 void option_screen();
 void local_game_screen();
+void inital_turn_screen();
 void clock_presets_screen();
 void configure_clock_screen();
 void online_menu(std::wstring);

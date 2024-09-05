@@ -14,6 +14,12 @@ void set_terminal_color(enum WRITE_COLOR color) {
         case BLUE:
             col = std::wstring(L"34"); // BLUE
             break;
+        case MAGENTA:
+            col = std::wstring(L"35"); // MAGENTA
+            break;
+        case BRIGHT_MAGENTA:
+            col = std::wstring(L"95"); // BRIGHT MAGENTA
+            break;
         case AQUA:
             col = std::wstring(L"36"); // AQUA
             break;

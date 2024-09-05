@@ -6,5 +6,7 @@ enum WRITE_COLOR{
     GREEN,       // Safe king spots? just an idea
     BLUE,
     AQUA,
-    BOLD         
+    BOLD,
+    MAGENTA,     // RESERVED FOR MOVE HIGHLIGHTING (FROM)     
+    BRIGHT_MAGENTA // RESERVER FOR MOVE HIGHLIGHTING (TO)
 };

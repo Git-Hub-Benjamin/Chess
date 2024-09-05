@@ -5,6 +5,7 @@
 #include <fstream>	
 #include <chrono>
 #include "../online-game/online-mode.hpp"
+#include "./clientoption.hpp"
 //! Always use wcout, wcout and wcout dont mix
 
 bool running = true;
@@ -13,36 +14,7 @@ extern void online_game();
 // GLOBAL
 Options global_player_option;
 bool SETTING_CHANGE_AFFECTS_CONFIG_FILE = true;
-
-// STATIC
 std::string CONFIG_PATH;
-
-int get_menu_option(){
-	while(true){
-		std::wstring str;
-		std::wcin >> str;
-		if(str[0] == L'1')
-			return 1;
-		if(str[0] == L'2')
-			return 2;
-		if(str[0] == L'3')
-			return 3;
-		if(str[0] == L'4')
-			return 4;
-		if(str[0] == L'5')
-			return 5;
-		if(str[0] == L'6')
-			return 6;
-		if(str[0] == L'7')
-			return 7;
-		if(str[0] == L'8')
-			return 8;
-		if(str[0] == L'D' || str[0] == L'd')
-			return -1;
-		break;
-	}
-	return -1;
-}
 
 enum CFG_FILE_RET{
 	FOUND,
@@ -60,13 +32,13 @@ enum CHESS_CLOCK_SETUP_RET {
 CHESS_CLOCK_SETUP_RET setup_chess_clock(ChessClock* obj) {
 	configure_clock_screen();
 	std::wcout << "--> ";
-	int opt = get_menu_option();
+	int clockOption = get_menu_option();
 
-	if (opt == 1)
+	if (clockOption == GET_MENU_OPTION::ONE)
 		return CLOCK_NONE;
-	if (opt == 4)
+	if (clockOption == GET_MENU_OPTION::BACK)
 		return CLOCK_BACK;
-	if (opt == 2) {
+	if (clockOption == GET_MENU_OPTION::TWO) {
 		clock_presets_screen();
 		std::wcout << "--> ";
 		int preset_opt = get_menu_option();
@@ -80,7 +52,7 @@ CHESS_CLOCK_SETUP_RET setup_chess_clock(ChessClock* obj) {
 		else if (preset_opt == 3)
 			obj->initTime(60 * 15, 60 * 15); // 300 seconds, 5 mins		
 	} 
-	if (opt == 3) {
+	if (clockOption == GET_MENU_OPTION::THREE) {
 		std::wcout << "Unimplemented..." << std::endl;
 		return CLOCK_BACK;
 	}
@@ -123,10 +95,14 @@ enum CFG_FILE_RET load_config_file(Options& temp){
 			superTemp.blackPlayerArtSelector = static_cast<TEXT_PIECE_ART_COLLECTION_SELECTOR>(val);
 		}else if(option.compare("move_highlighting") == 0){
 			superTemp.moveHighlighting = val == 0 ? false : true;
+		}else if (option.compare("dynamic_move_highlighting") == 0){
+			superTemp.dynamicMoveHighlighting = val == 0 ? false : true;
 		}else if(option.compare("board_history") == 0){
 			superTemp.boardHistory = val == 0 ? false : true;
 		}else if(option.compare("flip_on_turn") == 0){
 			superTemp.flipBoardOnNewTurn = val == 0 ? false : true;
+		} else if (option.compare("print_clear_screen") == 0){
+			superTemp.clearScreenOnBoardPrint = val == 0 ? false : true;
 		}else{
 			// Tampered, unknown option
 			res = TAMPERED;
@@ -134,6 +110,8 @@ enum CFG_FILE_RET load_config_file(Options& temp){
 		}
 	}
 
+	if (superTemp.moveHighlighting && superTemp.dynamicMoveHighlighting)
+		superTemp.moveHighlighting = false; // Default to dynamic if both are active
 	
 out:
 	file.close(); // Always close file
@@ -158,84 +136,30 @@ bool create_new_config_file(){
 	return true;
 }
 
-bool erase_config_file(){
-	std::ofstream file(CONFIG_PATH);
-	if(!file.is_open())
-		return false;
-	
-	file.close();
-	std::ofstream erase(CONFIG_PATH, std::fstream::out | std::fstream::trunc );
-	erase.close();
-	return true;
-
-}
-
-void overwrite_option_file(){
-	std::ofstream file(CONFIG_PATH);
-	if(!file.is_open())
-		std::wcout << "Problem locating config file, go to options for help.\nIf problem persists, change to affect local only for temporary fix..." << std::endl;
-	else{
-		erase_config_file();
-		file << "p1_color:" << global_player_option.p1_color << "\n" << 
-		"p2_color:" << global_player_option.p2_color << "\n" <<
-		"p1_art:" << global_player_option.whitePlayerArtSelector << "\n" <<
-		"p2_art:" << global_player_option.blackPlayerArtSelector << "\n" <<
-		"move_highlighting:" << global_player_option.moveHighlighting << "\n"
-		"board_history:" << global_player_option.boardHistory << "\n" << 
-		"flip_on_turn:" << global_player_option.flipBoardOnNewTurn << "\n";
-	}
+namespace MAIN_MENU_SETTINGS_OPTIONS {
+	enum MAIN_MENU_SETTINGS_OPTIONS {
+		CHANGE_COLORS = 1,
+		CHANGE_ART,
+		MOVE_HIGHLIGHTING,
+		DYNAMIC_MOVE_HIGHLIGHTING,
+		BOARD_HISTORY,
+		FLIP_ON_TURN,
+		CLEAR_SCREEN_ON_PRINT,
+		SETTINGS_AFFECT_CONFIG,
+		CONFIG_FILE,
+		BACK
+	};
 }
 
 void changing_option_from_menu(int option_opt){
 	bool back = false;
 	int player_opt, color_opt;
 	switch(option_opt){
-		case 1:
-			// ask which player to change and what color
-			std::wcout << "1. Player one color\n2. Player two color\n3. Back\n--> ";
-			player_opt = get_menu_option();
-			if(player_opt == 1 || player_opt == 2){
-				std::wcout << "1. Default (Thin White) | "; color_option_active_inactive(DEFAULT, player_opt); std::wcout << std::endl;
-				std::wcout << "2. Bold white 	        | "; color_option_active_inactive(BOLD, player_opt); std::wcout << std::endl;
-				std::wcout << "3. Blue	                | "; color_option_active_inactive(BLUE, player_opt); std::wcout << std::endl;
-				std::wcout << "4. Aqua 	        | "; color_option_active_inactive(AQUA, player_opt); std::wcout << std::endl;
-				std::wcout << "5. Green                | "; color_option_active_inactive(GREEN, player_opt); std::wcout << std::endl;
-				std::wcout << "6. Back\n--> ";
-				color_opt = get_menu_option();
-				if(color_opt == 6){
-					back = true;
-				}else{
-					std::wcout << "Player " << player_opt << ", is changing their color" << std::endl;
-					std::wcout << "Before -> " << (player_opt == 1 ? global_player_option.p1_color : global_player_option.p2_color) << std::endl;
-					std::wcout << "Address of color in global --> " << (player_opt == 1 ? &global_player_option.p1_color : &global_player_option.p2_color) << std::endl;
-					enum WRITE_COLOR* currPlayChangingColor = (player_opt == 1 ? &global_player_option.p1_color : &global_player_option.p2_color);
-					std::wcout << "Address of color in pointer --> " << currPlayChangingColor << std::endl;
-					switch(color_opt){
-						case 1:
-							*currPlayChangingColor = DEFAULT;
-							break;
-						case 2:
-							*currPlayChangingColor = BOLD;
-							break;
-						case 3:
-							*currPlayChangingColor = BLUE;
-							break;
-						case 4:
-							*currPlayChangingColor = AQUA;
-							break;
-						case 5:
-							*currPlayChangingColor = GREEN;
-							break;
-						default:
-							back = true;
-							break;
-					}
-					std::wcout << "After -> " << (player_opt == 1 ? global_player_option.p1_color : global_player_option.p2_color) << std::endl;
-				}
-			}else
+		case MAIN_MENU_SETTINGS_OPTIONS::CHANGE_COLORS:
+			if (!change_player_color_option())
 				back = true;
 			break;
-		case 2:
+		case MAIN_MENU_SETTINGS_OPTIONS::CHANGE_ART:
 			std::wcout << "1. Player one art\n2. Player two art\n3. Back\n--> ";
 			player_opt = get_menu_option();
 			if(player_opt == 1){
@@ -277,22 +201,34 @@ void changing_option_from_menu(int option_opt){
 				}
 			}
 			break;
-		case 3:
+		case MAIN_MENU_SETTINGS_OPTIONS::MOVE_HIGHLIGHTING:
 			global_player_option.moveHighlighting = !global_player_option.moveHighlighting;
+			global_player_option.dynamicMoveHighlighting = false;
 			break;
-		case 4:
+		case MAIN_MENU_SETTINGS_OPTIONS::DYNAMIC_MOVE_HIGHLIGHTING:
+			global_player_option.dynamicMoveHighlighting = !global_player_option.dynamicMoveHighlighting;
+			global_player_option.moveHighlighting = false;
+			break;
+		case MAIN_MENU_SETTINGS_OPTIONS::BOARD_HISTORY:
 			global_player_option.boardHistory = !global_player_option.boardHistory;
 			break;
-		case 5:
+		case MAIN_MENU_SETTINGS_OPTIONS::FLIP_ON_TURN:
 			global_player_option.flipBoardOnNewTurn = !global_player_option.flipBoardOnNewTurn;
 			break;
-		case 6:
+		case MAIN_MENU_SETTINGS_OPTIONS::CLEAR_SCREEN_ON_PRINT:
+			global_player_option.clearScreenOnBoardPrint = !global_player_option.clearScreenOnBoardPrint;
+			break;
+		case MAIN_MENU_SETTINGS_OPTIONS::SETTINGS_AFFECT_CONFIG:
 			SETTING_CHANGE_AFFECTS_CONFIG_FILE = !SETTING_CHANGE_AFFECTS_CONFIG_FILE;
 			break;
 		default:
 			back = true;
 			break;
 	}
+
+	if (global_player_option.moveHighlighting && global_player_option.dynamicMoveHighlighting)
+		global_player_option.moveHighlighting = false; // Default to dynamic when trying to set both
+
 	if(!back){
 		if(SETTING_CHANGE_AFFECTS_CONFIG_FILE)
 			overwrite_option_file();
@@ -307,10 +243,12 @@ void default_setting_config(){
 		file << "p1_color:" << 0 << "\n" << 
 		"p2_color:" << 0 << "\n" <<
 		"p1_art:" << 0 << "\n" <<
-		"p2_art:" << 1 << "\n" <<
-		"move_highlighting:" << 0 << "\n"
+		"p2_art:" << 1 << "\n" << // default is 1
+		"move_highlighting:" << 0 << "\n" << 
+		"dynamic_move_highlighting:" << 0 << "\n" <<
 		"board_history:" << 0 << "\n" << 
-		"flip_on_turn:" << 0 << "\n";
+		"flip_on_turn:" << 0 << "\n" <<
+		"print_clear_screen:" << 0 << "\n"; 
 	}
 }
 
@@ -377,66 +315,70 @@ void config_file_options(){
 
 extern JOIN_GAME_INFO createPrivateLobby2(int);
 
+namespace MAIN_MENU_OPTIONS {
+	enum MAIN_MENU_OPTIONS {
+		DEV = -1,
+		LOCAL_GAME = 1,
+		ONLINE_GAME,
+		OPTIONS,
+		QUIT
+	};
+}
+
 int main()
 {		
 	// Set the global locale to support UTF-8 encoding
     std::locale::global(std::locale("en_US.UTF-8"));
 	set_terminal_color(DEFAULT);
 
-																																																																																																																															// StandardOnlineChessGame Game(0, PlayerOne, L"HelloThere");
-																																																																																																																															// Game.startGame();
-
 	std::wcout << "\n\n\n\n\n" << std::endl;
-
-	// ANNOYING I HAVE TO DO THIS
-	bool firstPrint = true;
 	
 	// SETUP PATH FOR FOREVER USE
 	std::string home = getenv("HOME");
 	std::string path = home + "/wchesscfg"; 
 	CONFIG_PATH = home + CONFIG_FILE_NAME;
 
+	init_config_load();
 
 	while(running){
 		title_screen();
-		if(firstPrint){
-			init_config_load();
-			firstPrint = !firstPrint;		
-		}
-		std::wcout << "Global things --> " << global_player_option.p1_color << global_player_option.p2_color << global_player_option.whitePlayerArtSelector << global_player_option.blackPlayerArtSelector << global_player_option.moveHighlighting << global_player_option.boardHistory << global_player_option.flipBoardOnNewTurn << std::endl;
+		std::wcout << "Global things --> " << global_player_option.p1_color << global_player_option.p2_color << global_player_option.whitePlayerArtSelector << global_player_option.blackPlayerArtSelector << global_player_option.moveHighlighting << global_player_option.dynamicMoveHighlighting << global_player_option.boardHistory << global_player_option.flipBoardOnNewTurn << global_player_option.clearScreenOnBoardPrint << std::endl;
 
 		std::wcout << "--> ";
-		int opt = get_menu_option();
-		if(opt == 1 || opt == -1){ // Local Game or Dev Game
+		int mainMenuOption = get_menu_option();
+		if(mainMenuOption <= MAIN_MENU_OPTIONS::LOCAL_GAME){ // Local Game or Dev Game
 			local_game_screen();
 			std::wcout << "--> ";
 			int local_opt = get_menu_option(); // Standard Game or Quit
 			if (local_opt != 2) {
 				ChessClock chessclock;
-				CHESS_CLOCK_SETUP_RET res = setup_chess_clock(&chessclock);
-				if (res != CLOCK_BACK) {
-					if (local_opt == 1) {
-						if (res == CLOCK_NONE) {
-							StandardLocalChessGame Game(global_player_option, opt == 7 ? true : false);
+				CHESS_CLOCK_SETUP_RET clockOption = setup_chess_clock(&chessclock);
+				if (clockOption != CLOCK_BACK) {
+					inital_turn_screen();
+					std::wcout << "--> ";
+					GET_MENU_OPTION turnOption = get_menu_option();
+					if (turnOption != GET_MENU_OPTION::BACK) {
+						if (clockOption == CLOCK_NONE) {
+							StandardLocalChessGame Game(global_player_option, static_cast<Player>(turnOption == GET_MENU_OPTION::THREE ? 0 : turnOption), mainMenuOption == MAIN_MENU_OPTIONS::DEV ? true : false);
 							Game.startGame();
 						} else {
-							StandardLocalChessGame Game(global_player_option, chessclock, opt == 7 ? true : false);
+							StandardLocalChessGame Game(global_player_option, chessclock, static_cast<Player>(turnOption == GET_MENU_OPTION::THREE ? 0 : turnOption), mainMenuOption == MAIN_MENU_OPTIONS::DEV ? true : false);
 							Game.startGame();
 						}
 					}
 				}
 			} 
 			
-		}else if(opt == 2){
+		}else if(mainMenuOption == MAIN_MENU_OPTIONS::ONLINE_GAME){
 			online_game();
-		}else if(opt ==3){
+		}else if(mainMenuOption == MAIN_MENU_OPTIONS::OPTIONS){
 			option_screen();
-			int option_opt = get_menu_option();
-			if(option_opt == 7) // For config file options
+			GET_MENU_OPTION option_opt = get_menu_option();
+			if(option_opt == static_cast<GET_MENU_OPTION>(MAIN_MENU_SETTINGS_OPTIONS::CONFIG_FILE)) // For config file options
 				config_file_options();
-			if(option_opt != 8) // Handle anything else, if 7 then just go back
+			if(option_opt != static_cast<GET_MENU_OPTION>(MAIN_MENU_SETTINGS_OPTIONS::BACK)) // Handle anything else, if 7 then just go back
 				changing_option_from_menu(option_opt);	
-		}else if(opt == 4){
+		}else if(mainMenuOption == MAIN_MENU_OPTIONS::QUIT){
 			running = false;
 			std::wcout << "Have a good day..." << std::endl;
 		}

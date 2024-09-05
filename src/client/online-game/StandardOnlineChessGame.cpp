@@ -183,7 +183,7 @@ private:
 
 
 
-int StandardOnlineChessGame::getMove(int which) {
+int StandardOnlineChessGame::getMove(enum getMoveType getMoveType) {
 
     bool stopTimerDisplay = false;
     TimerNonCannonicalControllerOnline terminalcontroller; // Set non-canonical mode
@@ -203,7 +203,7 @@ int StandardOnlineChessGame::getMove(int which) {
     fds[2].events = POLLIN;
 
     std::thread clockThread(&StandardOnlineChessGame::currTurnChessClock, this, std::ref(stopTimerDisplay), pipe_fd[1], std::wstring(
-        which == 0 ? 
+        getMoveType == getMoveType::GET_FROM ? 
             (!currTurnInCheck ? playerToString(currentTurn) + L", Move: " : playerToString(currentTurn) + L", You're in check! Move: ")
             : !currTurnInCheck ? playerToString(currentTurn) + L", To: " : playerToString(currentTurn) + L", You're in check! To: "
     ));
@@ -417,12 +417,12 @@ int StandardOnlineChessGame::notTurnRecieveMove(std::wstring& move, std::wstring
 //! Update this so that generic functions like verifyGameServerConnection go into an interface class so that StandardOnlineChessGame inheirts from it and other online games for clients
 void StandardOnlineChessGame::startGame() {
 redo:
-    getMove(0);
+    getMove(getMoveType::GET_FROM);
 
     std::wcout << "Input buffer: " << inputBuffer << std::endl;
     inputBuffer.clear();
 
-    getMove(1);
+    getMove(getMoveType::GET_TO);
 
     std::wcout << "Input buffer: " << inputBuffer << std::endl;
     inputBuffer.clear();
@@ -472,7 +472,7 @@ skip:
                 
                 printBoard(playerNum);
 
-                int res = getMove(FROM_MOVE);
+                int res = getMove(getMoveType::GET_FROM);
                 if (res == -1) {
                     // DC
                 } else if (res == 0) {
@@ -483,7 +483,7 @@ skip:
                 moveFrom = inputBuffer;
                 inputBuffer.clear();
 
-                res = validateGameSquare(convertMove(moveFrom, playerNum), FROM_MOVE);
+                res = validateGameSquare(convertMove(moveFrom, playerNum), getMoveType::GET_FROM);
                 if (res == 0) {
                     toPrint = L"No piece present.";
                     continue;
@@ -502,7 +502,7 @@ skip:
                 if (GameOptions.moveHighlighting) 
                     printBoardWithMoves(playerNum);
 
-                res = getMove(TO_MOVE);
+                res = getMove(getMoveType::GET_TO);
                 if (res == -1) {
                     // DC
                 } else if (res == 0) {
@@ -513,7 +513,7 @@ skip:
                 moveTo = inputBuffer;
                 inputBuffer.clear();
 
-                res = validateGameSquare(convertMove(moveTo, playerNum), TO_MOVE);
+                res = validateGameSquare(convertMove(moveTo, playerNum), getMoveType::GET_TO);
                 if (res == 2) {
                     toPrint = L"Cannot take your own piece.";
                     continue;

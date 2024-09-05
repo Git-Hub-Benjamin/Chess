@@ -3,6 +3,7 @@
 #include "../terminal-io/colors.hpp"
 #include "../Chess/ChessGame/text-piece-art.hpp"
 
+extern bool SETTING_CHANGE_AFFECTS_CONFIG_FILE;
 class Options{
 public:
     
@@ -12,13 +13,15 @@ public:
     TEXT_PIECE_ART_COLLECTION_SELECTOR whitePlayerArtSelector = STD_PIECE_ART_P1;
     TEXT_PIECE_ART_COLLECTION_SELECTOR blackPlayerArtSelector = STD_PIECE_ART_P2;
 
+    bool dynamicMoveHighlighting = false;
     bool moveHighlighting = false;
-    bool boardHistory = false; // UNDO basically
+    bool boardHistory = false; // UNDO / REDO basically
     bool flipBoardOnNewTurn = false;
+    bool clearScreenOnBoardPrint = false;
     
     Options(){}
     Options(const Options& copy): p1_color(copy.p1_color), p2_color(copy.p2_color),
-    moveHighlighting(copy.moveHighlighting), boardHistory(copy.boardHistory), flipBoardOnNewTurn(copy.flipBoardOnNewTurn),
+    moveHighlighting(copy.moveHighlighting), clearScreenOnBoardPrint(copy.clearScreenOnBoardPrint), dynamicMoveHighlighting(copy.dynamicMoveHighlighting), boardHistory(copy.boardHistory), flipBoardOnNewTurn(copy.flipBoardOnNewTurn),
     whitePlayerArtSelector(copy.whitePlayerArtSelector), blackPlayerArtSelector(copy.blackPlayerArtSelector) {};
 
     void print() const {

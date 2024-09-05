@@ -4,6 +4,7 @@
 #include "../../socket/socketutil.h"
 #include "../client-text-graphics/textgraphic.hpp"
 #include "../client-terminal-frontend/displaymanager.hpp"
+#include "../tui/clientoption.hpp"
 #include <unistd.h>
 #include <thread>
 #include <sstream>
@@ -12,7 +13,6 @@
 #include <poll.h> 
 
 extern Options global_player_option;
-extern int get_menu_option();
 extern std::string ONLINE_PLAYER_ID;
 
 struct JOIN_GAME_INFO {

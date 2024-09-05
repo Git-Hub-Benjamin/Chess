@@ -20,8 +20,6 @@
 #define CHESS_BOARD_HEIGHT 8
 #define CHESS_BOARD_WIDTH 8
 
-#define FROM_MOVE 0
-#define TO_MOVE 1
 #define STANDARD_CHESSGAME_PLAYER_COUNT 2
 #define STANDARD_CHESSGAME_TEAM_PIECE_COUNT 16
 #define STANDARD_CHESSGAME_TEAM_PIECE_ART_COUNT 7
@@ -108,6 +106,11 @@ enum Player{ // Just so we can index into things with this instead of like Owner
 enum GAME_CONNECTIVITY {
     LOCAL_CONNECTIVITY,
     ONLINE_CONNECTIVITY
+};
+
+enum getMoveType {
+    GET_FROM,
+    GET_TO
 };
 
 extern std::wstring enumPiece_toString(GamePiece);
@@ -258,7 +261,22 @@ struct StandardChessGameHistoryState {
     }
 };
 
-
+enum possibleMoveTypes {
+    MOVING_PIECE, // piece moving from
+    MOVING_TO_SQAURE, // piece / square moving to
+    POSSIBLE_MOVE_OPEN_SQAURE, // possible move to open square
+    POSSIBLE_MOVE_ENEMY_PIECE, // possible move to enemy piece
+    POSSIBLE_MOVE_PROTECT_KING_SQUARE, // possible move to protect the king (in check) square
+    POSSIBLE_MOVE_PROTECT_KING_PIECE // possible to protect the king (in check) by taking a piece
+};
+struct possibleMoveType {
+    // Square Data
+    GameSquare* m_boardSquare;
+    // Color Data
+    possibleMoveTypes possibleMoveTypeSelector;
+    possibleMoveType(GameSquare* sqr, possibleMoveTypes sel)
+    : m_boardSquare(sqr), possibleMoveTypeSelector(sel) {}
+};
 
 class Move{
 
@@ -293,7 +311,8 @@ struct TakenPiece{
 class StandardChessGame {
 protected:
     // owner enum is used to track player turn, None will not be used, just 1 & 2
-    Player currentTurn;
+    Player currentTurn = PlayerOne;
+    // 0 is default value, if not changed then the constructor will randomly choose someone to go first,
 
     // Used to track the game board and kings' positions
     GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
@@ -398,10 +417,13 @@ protected:
     // This Piece Does not belong to you - 1
     // Cannot take your own piece - 2
     // Valid - 3
-    int validateGameSquare(GameSquare&, int);
+    int validateGameSquare(GameSquare&, enum getMoveType);
 
     // Vector to hold possible moves
     std::vector<GameSquare *> possibleMoves; 
+    // For move highlighting
+    GameSquare* fromHighlightedPiece = nullptr;
+    GameSquare* toHighlightedPiece = nullptr;
 
     // Not pure, bc Server Chess Std game does not need this
     int sanitizeGetMove(std::wstring&);
@@ -428,7 +450,7 @@ protected:
 // Things that do not need to be exposed for the server side of chess game logic
 class ClientChessGame {
 protected:
-    virtual int getMove(int) = 0;
+    virtual int getMove(enum getMoveType) = 0;
     // Function to handle current turn chess clock
     virtual void currTurnChessClock(bool& stop, int pipe, const std::wstring& msgToOutput) = 0;
 };
@@ -440,7 +462,7 @@ class StandardLocalChessGame : public StandardChessGame, public ClientChessGame{
 protected:
 
     // Get move
-    int getMove(int) override;
+    int getMove(enum getMoveType) override;
     void currTurnChessClock(bool&, int, const std::wstring&) override;
     int optionMenu(char);
 
@@ -452,7 +474,6 @@ protected:
 
     // Tracks the pieces that were taken during the game
     TakenPiece playerTakenPieces[STANDARD_CHESSGAME_PLAYER_COUNT][STANDARD_CHESSGAME_TEAM_PIECE_COUNT];
-    
     
     // For game clock, Local only tho
     bool isClock = false;
@@ -466,8 +487,8 @@ public:
 
     bool DEV_MODE_ENABLE = false;;
     void DEV_MODE_PRESET();
-    StandardLocalChessGame(Options, ChessClock, bool);
-    StandardLocalChessGame(Options, bool);
+    StandardLocalChessGame(Options, ChessClock, Player, bool);
+    StandardLocalChessGame(Options, Player, bool);
     StandardLocalChessGame() {}
 
     // Start a standard game
@@ -482,7 +503,7 @@ class StandardOnlineChessGame : public StandardChessGame, public ClientChessGame
     std::wstring oppossingPlayerString;
 
     int makeMove(Move&&) override;
-    int getMove(int) override;
+    int getMove(enum getMoveType) override;
     
     int preTurnCheckIn();
     bool readyForNextTurn();
@@ -507,5 +528,51 @@ public:
 int char_single_digit_to_int(const char c);
 std::wstring convertString(const std::string& passed);
 std::string convertWString(std::wstring& passed);
+
+namespace validateGameSquare {
+    enum validateGameSquare {
+        NO_PIECE,
+        PIECE_NOT_YOURS,
+        CANNOT_TAKE_OWN,
+        VALID
+    };
+}
+namespace getMove {
+    enum getMove {
+        ERROR = -1,
+        QUIT,
+        VALID,
+        TIMER_RAN_OUT,
+        UNDO,
+        REDO,
+        CHOOSE_MOVE_AGAIN
+    };
+}
+
+namespace sanitizeGetMove {
+    enum sanitizeGetMove {
+        INVALID = -1,
+        OPTIONS,
+        VALID
+    };
+}
+
+namespace optionMenu {
+    enum optionMenu {
+        INVALID = -1,
+        QUIT,
+        CONTINUE,
+        UNDO,
+        REDO
+    };
+}
+namespace makeMove {
+    enum makeMove {
+        KING_IN_HARM = -1,
+        INVALID_MOVE,
+        PIECE_TAKEN,
+        PIECE_MOVED
+    };
+}
 
 
