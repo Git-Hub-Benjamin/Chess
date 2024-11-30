@@ -1,0 +1,20 @@
+# Shows the amount of code lines for a certain file type
+git ls-files | grep '\.cpp' | xargs wc -l 
+
+# Clone address
+git clone git@github.com:Git-Hub-Benjamin/Chess.git
+
+# Clone from specific branch
+git clone --branch <branch-name> git@github.com:Git-Hub-Benjamin/Chess.git
+
+# Push to specific branch
+git push -u origin <branch-name>
+
+# List branches
+git branch
+
+# Create new branch
+git branch <branch-name>
+
+# Switch to branch
+git checkout <branch-name>
