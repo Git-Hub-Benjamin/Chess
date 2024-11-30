@@ -1,5 +1,5 @@
 #pragma once
-#include "../../chess.hpp"
+#include "../../Chess/chess.hpp"
 #include <atomic>
 #include <poll.h>
 #include <thread>
@@ -24,22 +24,16 @@ private:
 
 class DisplayManager {
 public:
-    DisplayManager(const int pipe_fd) : pipe_fd(pipe_fd) { stop_display.store(false); }
+    DisplayManager(const int pipe_fd, bool& conditionStop) : pipe_fd(pipe_fd), tellMainWeStopped(conditionStop) {}
 
-    void start_timer_turn_input(); // For in game when you need to have an input by 60 seconds
-    void start_input(); // For queue random when you need to wait for the user to do !back
-    std::atomic_bool stop_display; 
-    // Instance may need to tell main thread we are stopping
-    // Main thread can cause stop by writing to the end of the pipe
+    void watchMainThreadWhileInput();
 
 private:
-    void timer();
-    void displayCodeAndWait();
     
     // Members
-    bool timerRequired = false;
-    std::mutex output;
+    bool& tellMainWeStopped; 
     std::wstring inputBuffer; // Current input
     int pipe_fd; // For communication from main thread
     struct pollfd fds[2] = {};
 };
+

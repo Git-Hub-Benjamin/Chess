@@ -1,4 +1,4 @@
-#include "./chess.hpp"
+#include "./Chess/chess.hpp"
 
 int dev_menu_option(){
 	while(true){
@@ -12,56 +12,35 @@ int dev_menu_option(){
 	return -1;
 }
 
-void ChessGame::DEV_MODE_PRESET(){
-    // std::wcout << "1. Rook Preset\n2. Bishop Preset" << std::endl;
-    // switch(dev_menu_option()){
-    //     case 1: // Rook, King // GameBoard[row][col].pos = {col, row};
-            
-    //         break;
-    //     case 2:
-    //         break;
-    // }
+void StandardLocalChessGame::DEV_MODE_PRESET(){
 
-    // PLAYER ONE
-
-    this->GameBoard[7][0].ownership = PONE;
-    this->GameBoard[7][0].piece = ROOK;
-    
-    this->GameBoard[7][7].ownership = PONE;
-    this->GameBoard[7][7].piece = ROOK;
-    
-    this->GameBoard[7][4].ownership = PONE;
-    this->GameBoard[7][4].piece = KING;
-    this->KingPositions[0] = &this->GameBoard[7][4];
-
-    this->GameBoard[7][3].ownership = PONE;
-    this->GameBoard[7][3].piece = QUEEN;
-
-    this->GameBoard[7][5].ownership = PONE;
-    this->GameBoard[7][5].piece = BISHOP;
-
-    // PLAYER TWO
-
-    this->GameBoard[0][0].ownership = PTWO;
-    this->GameBoard[0][0].piece = ROOK;
-    
-    this->GameBoard[0][7].ownership = PTWO;
-    this->GameBoard[0][7].piece = ROOK;
-    
-    this->GameBoard[0][4].ownership = PTWO;
-    this->GameBoard[0][4].piece = KING;
-    this->KingPositions[1] = &this->GameBoard[0][4];
-
-    this->GameBoard[0][3].ownership = PTWO;
-    this->GameBoard[0][3].piece = QUEEN;
-
-    //! Important, we need to set the positions of all the remaining squares
-
-    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
-        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
-            GameBoard[row][col].pos = {col, row};
-            //GameBoard[row][col].print();
+    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
+        for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {
+            GameBoard[row][col] = GameSquare(NONE, OPEN, Point(col, row));
+            GameBoard[row][col].setFirstMoveMade();
         }
     }
 
+    //        Y  X                                 X, Y
+    GameBoard[2][0] = GameSquare(PTWO, ROOK, Point(0, 2));
+    GameBoard[0][2] = GameSquare(PTWO, PAWN, Point(2, 0));
+    GameBoard[0][4] = GameSquare(PTWO, PAWN, Point(4, 0));
+    GameBoard[1][4] = GameSquare(PTWO, PAWN, Point(4, 1));
+    GameBoard[0][7] = GameSquare(PTWO, ROOK, Point(7, 0));
+    GameBoard[1][3] = GameSquare(PTWO, KING, Point(3, 1));
+
+    GameBoard[1][0] = GameSquare(PONE, ROOK, Point(0, 1));
+    GameBoard[6][3] = GameSquare(PONE, ROOK, Point(3, 6));
+    GameBoard[7][7] = GameSquare(PONE, ROOK, Point(7, 7));
+    GameBoard[7][3] = GameSquare(PONE, KING, Point(3, 7));
+
+    currentTurn = PlayerTwo;
+    blackPlayerKing = &GameBoard[7][3];
+
+    // for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
+    //     for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {
+    //         GameBoard[row][col].print();
+    //         std::wcout << std::endl;
+    //     }
+    // }
 }

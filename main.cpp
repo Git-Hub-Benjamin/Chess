@@ -5,225 +5,23 @@
 #include <poll.h>
 #include <termios.h>
 #include <cstring>
-#include <memory>
-#include <atomic>
 #include <mutex>
 #include <fcntl.h>
+#include <cwctype>
+#include <atomic>
+#include <cstdlib>
 
-#include <iostream>
-#include <string>
-
-enum WRITE_COLOR {
-    RED,
-    GREEN,
-    BLUE,
-    AQUA,
-    THIN,
-    DEFAULT // Add a DEFAULT enum value to handle resetting to the default color
-};
-
-void set_terminal_color(WRITE_COLOR color) {
-    std::wstring col = L"0"; // Default to THIN WHITE
-
-    switch (color) {
-        case RED:
-            col = L"31"; // RED
-            break;
-        case GREEN:
-            col = L"32"; // GREEN
-            break;
-        case BLUE:
-            col = L"34"; // BLUE
-            break;
-        case AQUA:
-            col = L"36"; // AQUA
-            break;
-        case DEFAULT:
-            col = L"0"; // Reset to terminal's default color
-            break;
-        case THIN:
-        default:
-            col = L"0"; // THIN WHITE
-            break;
-    }
-
-    std::wstring output = L"\x1b[" + col + L"m";
-    std::wcout << output;
-}
 
 int main() {
-    set_terminal_color(DEFAULT);
-    std::wcout << L"This is default text\n";
-    // Example usage
-    set_terminal_color(RED);
-    std::wcout << L"This is red text\n";
+    int a;
+    std::cout << "\x001b[0;" << 96 << "mHello";    
     
-    set_terminal_color(GREEN);
-    std::wcout << L"This is green text\n";
-    
+    std::cin >> a;
 
+    system("clear");
+    //std::cout << "\033[2J\033[1;1H";
     return 0;
 }
-
-// std::atomic_bool global_stop;
-// std::mutex mtx;
-
-// class TerminalController {
-// public:
-//     TerminalController() {
-//         // Store the original terminal settings
-//         tcgetattr(STDIN_FILENO, &old_tio);
-//         memcpy(&new_tio, &old_tio, sizeof(struct termios));
-//         new_tio.c_lflag &= ~(ICANON | ECHO);
-//         new_tio.c_cc[VMIN] = 1;
-//         new_tio.c_cc[VTIME] = 0;
-//         tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
-//     }
-
-//     ~TerminalController() {
-//         // Restore original terminal settings
-//         tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
-//     }
-
-// private:
-//     struct termios old_tio, new_tio;
-// };
-
-// class DisplayManager {
-// public:
-//     DisplayManager(const std::wstring& str, int pipe_fd) : lobbyCode(str), pipe_fd(pipe_fd) {}
-//     DisplayManager(int pipe_fd) : pipe_fd(pipe_fd) {}
-
-//     void start() {
-//         std::thread timer_t(&DisplayManager::timer, this);
-//         displayCodeAndWait();
-//         if (timer_t.joinable())
-//             timer_t.join(); // block until the timer meets
-//     }
-
-// private:
-//     void timer() {
-//         int count = 60;
-//         while (count != 0 && !stop_display) {
-//             // Beggining of the line + Time + current string
-//             mtx.lock();
-//             std::wcout << "\033[G" << "Time: " << std::to_wstring(count) << " - " << inputBuffer << std::flush;
-//             mtx.unlock();
-//             count--;
-//             std::this_thread::sleep_for(std::chrono::seconds(1));
-//         }
-//     }
-
-//     void displayCodeAndWait() {
-
-//         struct pollfd fds[2];
-//         fds[0].fd = fileno(stdin); // File descriptor for std::cin
-//         fds[0].events = POLLIN;
-//         fds[1].fd = pipe_fd;       // File descriptor for the read end of the pipe
-//         fds[1].events = POLLIN;
-
-//         while (!stop_display) {
-//             int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
-//             if (ret > 0) {
-//                 if (fds[1].revents & POLLIN) {
-//                     // Pipe has data to read
-//                     char buffer[32];
-//                     int byte_read = read(fds[1].fd, (void *)buffer, sizeof(buffer));
-//                     if (buffer[0] == '1')
-//                         break;
-
-//                     // Checking if main thread wants this one to stop
-//                 }
-//                 if (fds[0].revents & POLLIN) {
-//                     char ch;
-//                     ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
-//                     if (bytes_read > 0) {
-//                         mtx.lock();
-//                         if (ch == '\n') {
-//                             if(inputBuffer == L"!back")
-//                                 break; // Handle out
-//                         } else if (ch == 127) { // Backspace
-//                             if (!inputBuffer.empty()) {
-//                                 inputBuffer.pop_back();
-//                                 std::wcout << "\033[D \033[D" << std::flush;
-//                             }
-//                         } else {
-//                             std::wcout << ch << std::flush;
-//                             inputBuffer += ch;
-//                         }
-//                         mtx.unlock();
-//                     }
-//                 }
-//             }
-//         }
-
-//         stop_display.store(true);
-        
-//         std::wcout << "\033[GStopping display_code_and_wait...\n" << std::flush;
-//     }
-
-//     // Members
-//     std::atomic_bool stop_display; // Only internal, Main thread can cause stop by writing to the end of the pipe
-//     std::wstring lobbyCode; // Only if needed
-//     std::wstring inputBuffer; // Current input
-//     int pipe_fd; // For communication from main thread
-//     struct pollfd fds[2] = {};
-// };
-
-
-// int main() {
-//     std::wstring lobby_code = L"LobbyCode";
-
-//     // Create a pipe for signaling
-//     int pipe_fd[2];
-//     if (pipe(pipe_fd) == -1) {
-//         std::cerr << "Failed to create pipe" << std::endl;
-//         return 1;
-//     }
-
-    
-//     {
-//         DisplayManager display_timer(pipe_fd[0]);
-//         TerminalController terminalController; // Manage terminal settings
-//         std::thread display_t(&DisplayManager::start, &display_timer);
-        
-//         // Simulate some work
-//         std::this_thread::sleep_for(std::chrono::seconds(5));
-
-//         // Signal the thread to stop
-//         write(pipe_fd[1], "1", 2); // Send termination signal to the pipe
-
-//         // Wait for the thread to complete execution
-//         if (display_t.joinable()) {
-//             display_t.join();
-//         }
-//     }
-
-
-//     return 0;
-// }
-
-
-// int main(int argc, char **argv)
-// {
-//     struct termios attr;
-//     tcgetattr(STDIN_FILENO, &attr);
-//     attr.c_lflag &= ~(ICANON | ECHO);
-//     tcsetattr(STDIN_FILENO, TCSANOW, &attr);
-//     uint8_t buf[20];
-//     ssize_t bytes;
-//     while ((bytes = read(STDIN_FILENO, buf, 20)) > 0) {
-//         for (size_t i = 0; i < bytes; i++) {
-//             printf("%zd: %hhu\n", i, buf[i]);
-//         }
-//     }
-//     return 0;
-// }
-
-
-
-
-
 
 
 

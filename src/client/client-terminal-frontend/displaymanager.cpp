@@ -1,31 +1,8 @@
 #include "./displaymanager.hpp"
 
-void DisplayManager::start_input(){
-    displayCodeAndWait();
-}
 
 
-
-void DisplayManager::start_timer_turn_input() {
-    timerRequired = true;
-    std::thread timer_t(&DisplayManager::timer, this);
-    displayCodeAndWait();
-    if (timer_t.joinable())
-        timer_t.join(); // block until the timer meets
-}
-
-void DisplayManager::timer() {
-    int count = 60;
-    while (count != 0 && !stop_display) {
-        // Beggining of the line + Time + current string
-        std::lock_guard<std::mutex> lock(output);
-        std::wcout << "\033[G" << "Time: " << std::to_wstring(count) << " - " << inputBuffer << std::flush;
-        count--;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-}
-
-void DisplayManager::displayCodeAndWait() {
+void DisplayManager::watchMainThreadWhileInput() {
 
     struct pollfd fds[2];
     fds[0].fd = fileno(stdin); // File descriptor for std::cin
@@ -33,34 +10,22 @@ void DisplayManager::displayCodeAndWait() {
     fds[1].fd = pipe_fd;       // File descriptor for the read end of the pipe
     fds[1].events = POLLIN;
 
-    while (!stop_display) {
+    while (true) {
         int ret = poll(fds, 2, -1); // Wait indefinitely until an event occurs
         if (ret > 0) {
-            if (fds[1].revents & POLLIN) {
-                // Pipe has data to read
-                char buffer[32];
-                int byte_read = read(fds[1].fd, (void *)buffer, sizeof(buffer));
-                
-                std::wcout << "Data to be read from the pipe" << std::endl;
-                if (buffer[0] == '1')
-                    break;
-            }
+            if (fds[1].revents & POLLIN) 
+                break; // Main thread wants us to stop
             if (fds[0].revents & POLLIN) {
                 char ch;
                 ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
                 if (bytes_read > 0) {
-                    std::lock_guard<std::mutex> lock(output); 
                     if (ch == '\n') {
-
-                        if(!timerRequired){
-                            if (inputBuffer == L"!back")
-                                break;
+                        if (inputBuffer == L"!back") {
+                            tellMainWeStopped = true;
                             std::wcout << "\033[1A\033[G--> " << std::flush;
                             inputBuffer.clear();
-                        }else {
-                            // For timer
+                            break;
                         }
-
                     } else if (ch == 127) { // Backspace
                         if (!inputBuffer.empty()) {
                             inputBuffer.pop_back();
@@ -74,6 +39,4 @@ void DisplayManager::displayCodeAndWait() {
             }
         }
     }
-
-    stop_display.store(true);
 }

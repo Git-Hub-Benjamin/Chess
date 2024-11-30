@@ -1,0 +1,17 @@
+TODO:
+
+- implement move history (redo and undo)
+- implement changing art & color during local game
+    - started implemented the above but fucks up when in noncanonical mode bc 
+      reading input for the color and art query is cannonical
+- fix clearing the screen just looks dumb, it looks good but its off by a line sometimes
+- fix logic in dev_mode.cpp something is not working with the king logic with the colors,
+    as well as isolateonemovefromcheck, idk if we even need that
+
+COMPLETED:
+
+-fix local game not working when move highlighitng is not activated, i think this is 
+because the logic in startgame is trying to use the possibleMovesVec to check valid move but it is not filled 
+- add screen to choose who goes first / or random
+- add an option for dynamic move highlighitng vs move highlighitng vs no move highlighting (each better for performance)
+- implement being able to cancel / change (from move) when choosing (to move)
