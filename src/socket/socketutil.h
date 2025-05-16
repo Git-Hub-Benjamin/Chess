@@ -2,9 +2,17 @@
 #define SOCKETUTIL_H
 
 #include <string>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+
+#ifdef _WIN32
+    #include <WinSock2.h>
+    #include <ws2tcpip.h>
+#elif __linux__
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+#elif _MACOS
+#endif
+
 #include <stdlib.h>
 
 int createTCPIPv4Socket();

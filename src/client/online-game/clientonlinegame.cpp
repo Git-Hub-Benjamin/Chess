@@ -1,4 +1,20 @@
 #include "./online-mode.hpp"
+
+int sendData(socket_t socket, send_type data, size_t length) {
+    return send(socket, data, length, 0);
+}
+
+int receiveData(socket_t socket, send_type buf, size_t length, int flags) {
+    return recv(socket, (char*)buf, length, flags);
+}
+
+int closeSocket(socket_t socket) {
+#ifdef __linux__
+    return close(socket);
+#elif _WIN32
+    return closesocket(socket);
+#endif
+}
  
 std::string ONLINE_PLAYER_ID;
 static std::atomic_bool ONLINE_QUIT(false);
@@ -6,8 +22,13 @@ static std::atomic_bool ONLINE_QUIT(false);
 void poll_to_server(int poll_fd) {
     while (!ONLINE_QUIT) {
         char buffer[sizeof(SERVER_POLL_MSG)] = {0};
+        int bytes_read = 0;
 
-        int bytes_read = recv(poll_fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
+#ifdef __linux__
+        bytes_read = receiveData(poll_fd, buffer, sizeof(buffer), MSG_DONTWAIT);
+#elif _WIN32
+
+#endif
 
         if (bytes_read == 0) {
             break; // Server closed connection
@@ -15,9 +36,9 @@ void poll_to_server(int poll_fd) {
             buffer[bytes_read] = '\0';
             std::string msg(buffer);
             std::wcout << "From server: " << convertString(msg) << std::endl;
-            send(poll_fd, (void*)CLIENT_POLL_MSG, sizeof(CLIENT_POLL_MSG), 0);
+            sendData(poll_fd, CLIENT_POLL_MSG, sizeof(CLIENT_POLL_MSG));
         } else if (errno != EWOULDBLOCK && errno != EAGAIN) {
-            std::cerr << "Error occurred in socket" << std::endl;
+            std::cerr << "ERROR_CONNECTING occurred in socket" << std::endl;
             exit(EXIT_FAILURE);
         }
 
@@ -28,7 +49,7 @@ void poll_to_server(int poll_fd) {
 
 enum CONNECT_TO_SERVER {
     CONNECTING,
-    ERROR,
+    ERROR_CONNECTING,
     CONNECTED
 };
 
@@ -41,7 +62,7 @@ void loading_connecting_to_server(){
 
     while (count < 3) {
         
-        if (status == ERROR || (status == CONNECTED && count > 3)) {
+        if (status == ERROR_CONNECTING || (status == CONNECTED && count > 3)) {
             break;
         }
 
@@ -59,7 +80,7 @@ void error_connecting(std::wstring&& msg, std::thread& animation_t) {
     set_terminal_color(RED);
     std::wcout << msg << std::endl;
     set_terminal_color(DEFAULT);
-    status = ERROR;
+    status = ERROR_CONNECTING;
     if (animation_t.joinable())
         animation_t.join();
 }
@@ -77,7 +98,7 @@ int connect_to_server(int poll_fd, struct sockaddr_in* poll_addr, int game_fd, s
     }
 
 
-    // Send bind string
+    // sendData bind string
     int bytesRead = recv(poll_fd, buffer, sizeof(buffer), 0);
     if (bytesRead <= 0) {
         error_connecting(std::wstring(L"Failed to receive from server_poll socket..."), init_connection_animation_t); 
@@ -92,8 +113,8 @@ int connect_to_server(int poll_fd, struct sockaddr_in* poll_addr, int game_fd, s
         return 1;
     }
 
-    // Send bind string
-    send(game_fd, bind_str.c_str(), bind_str.length(), 0);
+    // sendData bind string
+    sendData(game_fd, (char*)bind_str.c_str(), bind_str.length());
 
     // Receive msg from server
     if(recv(game_fd, buffer, sizeof(buffer) - 1, 0) <= 0){
@@ -149,8 +170,8 @@ int online_game() {
             // Wait for poll thread to join main thread
             if(poll_thread.joinable())
                 poll_thread.join();
-            close(client_game_socket_fd);
-            close(client_poll_socket_fd);
+            closeSocket(client_game_socket_fd);
+            closeSocket(client_poll_socket_fd);
             return 0;
         }
 

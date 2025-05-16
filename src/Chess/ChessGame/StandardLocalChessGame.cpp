@@ -1,6 +1,36 @@
 #include "../chess.hpp"
 #include "../../client/tui/clientoption.hpp"
 
+// Helper functions for bitboard
+
+int rank_file_to_bit_index(int, int);
+void set_bit(uint64_t&, int);
+
+SquareInfo StandardLocalChessGame::getSquareInfo(int row, int col) {
+    int bit_index = row * 8 + col;
+    SquareInfo info = {NONE, OPEN}; // Default to empty
+
+    if ((white_occupancy >> bit_index) & 1) {
+        info.owner = PONE;
+        if ((white_pawns >> bit_index) & 1) info.piece = PAWN;
+        else if ((white_knights >> bit_index) & 1) info.piece = KNIGHT;
+        else if ((white_bishops >> bit_index) & 1) info.piece = BISHOP;
+        else if ((white_rooks >> bit_index) & 1) info.piece = ROOK;
+        else if ((white_queens >> bit_index) & 1) info.piece = QUEEN;
+        else if ((white_king >> bit_index) & 1) info.piece = KING;
+    } else if ((black_occupancy >> bit_index) & 1) {
+        info.owner = PTWO;
+        if ((black_pawns >> bit_index) & 1) info.piece = PAWN;
+        else if ((black_knights >> bit_index) & 1) info.piece = KNIGHT;
+        else if ((black_bishops >> bit_index) & 1) info.piece = BISHOP;
+        else if ((black_rooks >> bit_index) & 1) info.piece = ROOK;
+        else if ((black_queens >> bit_index) & 1) info.piece = QUEEN;
+        else if ((black_king >> bit_index) & 1) info.piece = KING;
+    }
+
+    return info;
+}
+
 StandardLocalChessGame::StandardLocalChessGame(Options gOptions, ChessClock clock, Player firstTurn, bool dev_mode)
     : DEV_MODE_ENABLE(dev_mode),
       isClock(true),
@@ -33,6 +63,166 @@ StandardLocalChessGame::StandardLocalChessGame(Options gOptions, Player firstTur
         DEV_MODE_PRESET();
     else
         initGame();
+}
+
+void StandardLocalChessGame::printBoard(Player playerSideToPrint){
+    if (GameOptions.clearScreenOnBoardPrint)
+        system("clear");
+    std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
+        std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - row << " ";
+        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
+            std::wcout << "| ";
+            wchar_t piece;
+
+#ifndef LEGACY_ARRAY_GAMEBOARD
+            SquareInfo currPosition = getSquareInfo(row * 8, col); 
+#endif
+
+            if ((GameConnectivity == ONLINE_CONNECTIVITY && playerSideToPrint == PlayerTwo) || (GameConnectivity == LOCAL_CONNECTIVITY && GameOptions.flipBoardOnNewTurn && playerSideToPrint == PlayerTwo)) {
+#ifdef LEGACY_ARRAY_GAMEBOARD
+                if(GameBoard[7 - row][7 - col].getOwner() == NONE)
+                    piece = ' ';
+                else if(GameBoard[7 - row][7 - col].getOwner() == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+            } else {
+                if(GameBoard[row][col].getOwner() == NONE)
+                    piece = ' ';
+                else if(GameBoard[row][col].getOwner() == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+#else
+                if(currPosition.owner == NONE)
+                    piece = ' ';
+                else if(currPosition.owner == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][currPosition.piece];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][currPosition.piece];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+            } else {
+                if(currPosition.owner == NONE)
+                    piece = ' ';
+                else if(currPosition.owner == NONE == PONE){
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][currPosition.piece];
+                    set_terminal_color(GameOptions.p1_color);
+                }else{
+                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][currPosition.piece];
+                    set_terminal_color(GameOptions.p2_color);
+                }
+#endif            
+            }
+            
+            // if (GameOptions.flipBoardOnNewTurn && currentTurn == PlayerTwo) {
+            //     if(GameBoard[7 - row][7 - col].getOwner() == NONE)
+            //         piece = ' ';
+            //     else if(GameBoard[7 - row][7 - col].getOwner() == PONE){
+            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+            //         set_terminal_color(GameOptions.p1_color);
+            //     }else{
+            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
+            //         set_terminal_color(GameOptions.p2_color);
+            //     }
+            // } else {
+            //     if(GameBoard[row][col].getOwner() == NONE)
+            //         piece = ' ';
+            //     else if(GameBoard[row][col].getOwner() == PONE){
+            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
+            //         set_terminal_color(GameOptions.p1_color);
+            //     }else{
+            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
+            //         set_terminal_color(GameOptions.p2_color);
+            //     }
+            // }
+            
+            std::wcout << piece;
+            set_terminal_color(DEFAULT);
+            std::wcout << " ";
+            
+        }
+        std::wcout << "| " << CHESS_BOARD_HEIGHT - row << std::endl;
+        std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
+    }
+    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n";
+
+    if (!toPrint.empty()) {
+        std::wcout << toPrint << std::endl;
+        toPrint.clear();
+    }
+}
+
+void StandardLocalChessGame::initGame() {
+// 1. Clear all bitboards initially to ensure a clean state
+    white_pawns = 0; white_knights = 0; white_bishops = 0;
+    white_rooks = 0; white_queens = 0; white_king = 0;
+    black_pawns = 0; black_knights = 0; black_bishops = 0;
+    black_rooks = 0; black_queens = 0; black_king = 0;
+    white_occupancy = 0; black_occupancy = 0; all_occupancy = 0;
+
+    // 2. Set bits for White pieces
+
+    // White Pawns: Rank 2 (row 1)
+    for (int file = 0; file < 8; ++file) {
+        set_bit(white_pawns, rank_file_to_bit_index(2, file));
+    }
+
+    // White Rooks: a1 and h1 (Rank 1, files 0 and 7)
+    set_bit(white_rooks, rank_file_to_bit_index(1, 0));
+    set_bit(white_rooks, rank_file_to_bit_index(1, 7));
+
+    // White Knights: b1 and g1 (Rank 1, files 1 and 6)
+    set_bit(white_knights, rank_file_to_bit_index(1, 1));
+    set_bit(white_knights, rank_file_to_bit_index(1, 6));
+
+    // White Bishops: c1 and f1 (Rank 1, files 2 and 5)
+    set_bit(white_bishops, rank_file_to_bit_index(1, 2));
+    set_bit(white_bishops, rank_file_to_bit_index(1, 5));
+
+    // White Queen: d1 (Rank 1, file 3)
+    set_bit(white_queens, rank_file_to_bit_index(1, 3));
+
+    // White King: e1 (Rank 1, file 4)
+    set_bit(white_king, rank_file_to_bit_index(1, 4));
+
+    // 3. Set bits for Black pieces
+
+    // Black Pawns: Rank 7 (row 6)
+    for (int file = 0; file < 8; ++file) {
+        set_bit(black_pawns, rank_file_to_bit_index(7, file));
+    }
+
+    // Black Rooks: a8 and h8 (Rank 8, files 0 and 7)
+    set_bit(black_rooks, rank_file_to_bit_index(8, 0));
+    set_bit(black_rooks, rank_file_to_bit_index(8, 7));
+
+    // Black Knights: b8 and g8 (Rank 8, files 1 and 6)
+    set_bit(black_knights, rank_file_to_bit_index(8, 1));
+    set_bit(black_knights, rank_file_to_bit_index(8, 6));
+
+    // Black Bishops: c8 and f8 (Rank 8, files 2 and 5)
+    set_bit(black_bishops, rank_file_to_bit_index(8, 2));
+    set_bit(black_bishops, rank_file_to_bit_index(8, 5));
+
+    // Black Queen: d8 (Rank 8, file 3)
+    set_bit(black_queens, rank_file_to_bit_index(8, 3));
+
+    // Black King: e8 (Rank 8, file 4)
+    set_bit(black_king, rank_file_to_bit_index(8, 4));
+
+    // 4. Calculate occupancy bitboards
+    white_occupancy = white_pawns | white_knights | white_bishops | white_rooks | white_queens | white_king;
+    black_occupancy = black_pawns | black_knights | black_bishops | black_rooks | black_queens | black_king;
+    all_occupancy = white_occupancy | black_occupancy;
 }
 
 void StandardLocalChessGame::loadGameState(StandardChessGameHistoryState &state)
@@ -157,6 +347,7 @@ int StandardLocalChessGame::optionMenu(char ch)
     return res;
 }
 
+#ifdef __linux__
 //! Weirdest bug ever, this must be defined in the same file for it to work
 class TimerNonCannonicalController
 {
@@ -181,6 +372,7 @@ public:
 private:
     struct termios old_tio, new_tio;
 };
+#endif
 
 // -1 Invalid
 // 0 QUIT
@@ -192,6 +384,7 @@ int StandardLocalChessGame::getMove(enum getMoveType getMoveType) {
 
     // Needs non canonical mode
     if (isClock || GameOptions.dynamicMoveHighlighting) {
+#ifdef __linux__
         TimerNonCannonicalController terminalcontroller; // Set non-canonical mode
         
         int pipe_fd[2];
@@ -374,6 +567,10 @@ int StandardLocalChessGame::getMove(enum getMoveType getMoveType) {
                 }
             }
         }
+#elif _WIN32
+    std::wcout << "Clock and move highlighting not yet supported for windows...\n";
+    exit(EXIT_SUCCESS);
+#endif 
     } else {
         while (true) {
             if (getMoveType == getMoveType::GET_FROM) {
@@ -511,8 +708,11 @@ void StandardLocalChessGame::currTurnChessClock(bool &stop_display, int writePip
         }
         count--;
     }
+
+    #ifdef __linux__
     if (count <= 0)
         write(writePipeFd, "1", 1); // telling main thread that the timer ran out of time
+    #endif
 }
 
 void StandardLocalChessGame::startGame(){

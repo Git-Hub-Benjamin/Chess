@@ -7,13 +7,20 @@
 #include <array>
 #include <atomic>
 #include <stack>
-#include "sys/socket.h"
+
+#ifdef __linux__
+    #include "sys/socket.h"
+#elif _WIN32
+    #include <WinSock2.h>
+    #include <WS2tcpip.h>
+#endif
+
 #include "../terminal-io/terminal.hpp"
 #include "../terminal-io/colors.hpp"
 #include "../client/option.hpp"
 #include "../client-rand-string/random-string.hpp"
 #include "../client-server-communication.hpp"
-#include "../client/client-terminal-frontend/displaymanager.hpp"
+#include "../client/client-terminal-frontend/displaymanager.hpp"             
 
 #define CONFIG_FILE_NAME "/wchesscfg"
 
@@ -302,6 +309,11 @@ public:
     }
 };
 
+struct SquareInfo {
+    Owner owner;
+    GamePiece piece;
+};
+
 struct TakenPiece{
     std::wstring mMove;
     std::wstring mTo;
@@ -317,12 +329,23 @@ protected:
     Player currentTurn = PlayerOne;
     // 0 is default value, if not changed then the constructor will randomly choose someone to go first,
 
-    // Used to track the game board and kings' positions
-    GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
-    GameSquare* whitePlayerKing; // These pointers need to be set
-    GameSquare* blackPlayerKing;
-    GameSquare* pieceCausingKingCheck = nullptr; 
-    bool currTurnInCheck;
+    SquareInfo getSquareInfo(int, int);
+    uint64_t white_pawns;
+    uint64_t white_knights;
+    uint64_t white_bishops;
+    uint64_t white_rooks;
+    uint64_t white_queens;
+    uint64_t white_king;
+    uint64_t black_pawns;
+    uint64_t black_knights;
+    uint64_t black_bishops;
+    uint64_t black_rooks;
+    uint64_t black_queens;
+    uint64_t black_king;
+    uint64_t white_occupancy;
+    uint64_t black_occupancy;
+    uint64_t all_occupancy;
+
 
     // Moveset validation functions
     // True - Valid move
@@ -385,7 +408,7 @@ protected:
     void reset();
 
     // 2 players, each with 16 pieces
-    void initGame();
+    virtual void initGame();
 
     // init random turn 
     void initTurn();
@@ -410,10 +433,10 @@ protected:
 
     // Board printing functions
     // print the standard board
-    void printBoard(Player);
+    virtual void printBoard(Player);
 
     // print the standard board but with moves from the movefrom
-    void printBoardWithMoves(Player);
+    virtual void printBoardWithMoves(Player) = 0;
 
     // Game square validation
     // No Piece Present - 0
@@ -458,11 +481,19 @@ protected:
     virtual void currTurnChessClock(bool& stop, int pipe, const std::wstring& msgToOutput) = 0;
 };
 
+class StandardLocalChessGame : private StandardChessGame, public ClientChessGame{
 
-//! Move this to a client only header since the server online chess game is in its own
-class StandardLocalChessGame : public StandardChessGame, public ClientChessGame{
+#ifdef LEGACY_ARRAY_GAMEBOARD
+    //* LEGACY
+    // Used to track the game board and kings' positions
+    GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
+    GameSquare* whitePlayerKing; // These pointers need to be set
+    GameSquare* blackPlayerKing;
+    GameSquare* pieceCausingKingCheck = nullptr; 
+    bool currTurnInCheck;
+#else
 
-protected:
+#endif
 
     // Get move
     int getMove(enum getMoveType) override;
@@ -486,9 +517,10 @@ protected:
     std::stack<StandardChessGameHistoryState> redoTurn;
 
 
+
 public:
 
-    bool DEV_MODE_ENABLE = false;;
+    bool DEV_MODE_ENABLE = false;
     void DEV_MODE_PRESET();
     StandardLocalChessGame(Options, ChessClock, Player, bool);
     StandardLocalChessGame(Options, Player, bool);
@@ -542,7 +574,11 @@ namespace validateGameSquare {
 }
 namespace getMove {
     enum getMove {
+#ifdef __linux__
         ERROR = -1,
+#elif _WIN32
+        ERROR_GETTING_MOVE = -1,
+#endif
         QUIT,
         VALID,
         TIMER_RAN_OUT,

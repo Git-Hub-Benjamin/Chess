@@ -3,7 +3,7 @@
 
 
 void DisplayManager::watchMainThreadWhileInput() {
-
+#ifdef __linux__
     struct pollfd fds[2];
     fds[0].fd = fileno(stdin); // File descriptor for std::cin
     fds[0].events = POLLIN;
@@ -39,4 +39,5 @@ void DisplayManager::watchMainThreadWhileInput() {
             }
         }
     }
+#endif
 }

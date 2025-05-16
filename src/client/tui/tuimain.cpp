@@ -4,13 +4,16 @@
 #include <cstdlib>
 #include <fstream>	
 #include <chrono>
+#ifdef COMPILE_ONLINE
 #include "../online-game/online-mode.hpp"
+#endif
 #include "./clientoption.hpp"
-//! Always use wcout, wcout and wcout dont mix
+//! Always use wcout, wcout and cout dont mix
 
 bool running = true;
-extern void online_game();
-
+#ifdef COMPILE_ONLINE
+extern int online_game();
+#endif
 // GLOBAL
 Options global_player_option;
 bool SETTING_CHANGE_AFFECTS_CONFIG_FILE = true;
@@ -46,11 +49,11 @@ CHESS_CLOCK_SETUP_RET setup_chess_clock(ChessClock* obj) {
 			return CLOCK_BACK;
 		
 		if (preset_opt == 1) 
-			obj->initTime(60 * 3, 60 * 3); // 180 seconds, 3 mins
+			obj->initTime(THR_MIN, THR_MIN); // 180 seconds, 3 mins
 		else if (preset_opt == 2)
-			obj->initTime(60 * 5, 60 * 5); // 300 seconds, 5 mins
+			obj->initTime(FIVE_MIN, FIVE_MIN); // 300 seconds, 5 mins
 		else if (preset_opt == 3)
-			obj->initTime(60 * 15, 60 * 15); // 300 seconds, 5 mins		
+			obj->initTime(FIF_TEEN_MIN, FIF_TEEN_MIN); // 300 seconds, 5 mins		
 	} 
 	if (clockOption == GET_MENU_OPTION::THREE) {
 		std::wcout << "Unimplemented..." << std::endl;
@@ -313,8 +316,9 @@ void config_file_options(){
 	}
 }
 
+#ifdef COMPILE_ONLINE
 extern JOIN_GAME_INFO createPrivateLobby2(int);
-
+#endif
 namespace MAIN_MENU_OPTIONS {
 	enum MAIN_MENU_OPTIONS {
 		DEV = -1,
@@ -326,17 +330,39 @@ namespace MAIN_MENU_OPTIONS {
 }
 
 int main()
-{		
+{	
+	std::wcout << "IN PROGRAM" << std::endl;	
 	// Set the global locale to support UTF-8 encoding
+
+#ifdef __linux__
     std::locale::global(std::locale("en_US.UTF-8"));
+#elif _WIN32
+	std::locale::global(std::locale(""));
+#endif
 	set_terminal_color(DEFAULT);
 
 	std::wcout << "\n\n\n\n\n" << std::endl;
 	
 	// SETUP PATH FOR FOREVER USE
-	std::string home = getenv("HOME");
+#ifdef __linux__
+    std::string home = getenv("HOME");
+#elif _WIN32
+    std::string home = "";
+    char* pValue = getenv("USERPROFILE"); // Use standard getenv
+    if (pValue != nullptr) {
+        home = std::string(pValue);
+        // No need to free() for getenv, its memory is managed by the system
+    }
+    // Note: getenv is not thread-safe and doesn't provide size info like _dupenv_s.
+    // For a more robust solution, you might need to handle thread-safety or
+    // use a different Windows API function if you need the size or a thread-safe version.
+    // For simply getting the home directory, getenv is often sufficient.
+#endif
+
+
 	std::string path = home + "/wchesscfg"; 
 	CONFIG_PATH = home + CONFIG_FILE_NAME;
+	std::cout << CONFIG_PATH << std::endl;
 
 	init_config_load();
 
@@ -370,7 +396,11 @@ int main()
 			} 
 			
 		}else if(mainMenuOption == MAIN_MENU_OPTIONS::ONLINE_GAME){
+#ifdef COMPILE_ONLINE
 			online_game();
+#else
+			continue;
+#endif
 		}else if(mainMenuOption == MAIN_MENU_OPTIONS::OPTIONS){
 			option_screen();
 			GET_MENU_OPTION option_opt = get_menu_option();

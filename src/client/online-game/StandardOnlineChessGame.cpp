@@ -1,4 +1,5 @@
 #include "../../Chess/chess.hpp"
+#include "online-mode.hpp"
 
 void StandardOnlineChessGame::currTurnChessClock(bool& stop, int writePipe, const std::wstring& out) {
     int& count = *(currentTurn == PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
@@ -21,8 +22,11 @@ void StandardOnlineChessGame::currTurnChessClock(bool& stop, int writePipe, cons
         count--;
     }
 
+#ifdef __linux__
     if (smallCount >= 0)
         write(writePipe, "1", 1);
+#elif _WIN32
+#endif
 }
 
 // True  --> No error
@@ -36,7 +40,7 @@ bool StandardOnlineChessGame::takeMovesAndSend(std::wstring move, std::wstring t
     // Example:
     // move:b2to:b4
 
-    if(send(gameSocketFd, (void*)send_to_server.c_str(), send_to_server.length(), 0) < 0)
+    if(sendData(gameSocketFd, (char*)send_to_server.c_str(), send_to_server.length()) < 0)
         return false;
     return true;
 }
@@ -65,6 +69,8 @@ bool StandardOnlineChessGame::takeMovesAndSend(std::wstring move, std::wstring t
 
 //! Weirdest bug ever, this must be defined in the same file for it to work
 class TimerNonCannonicalControllerOnline { 
+#ifdef __linux__
+
 public:
     TimerNonCannonicalControllerOnline() {
         // Store the original terminal settings
@@ -83,6 +89,9 @@ public:
 
 private:
     struct termios old_tio, new_tio;
+#elif _WIN32
+
+#endif
 };
 
 // // -1 Server sent data DC
@@ -137,7 +146,7 @@ private:
 
 //             if (fds[1].revents & POLLIN) {
 
-//                 // If either the chess clock or the 60 second small count run out of time we send the server we ran out of time
+//                 // If either the chess clock or the 60 second small count run out of time we sendData the server we ran out of time
 
 //                 if (clockThread.joinable())
 //                     clockThread.join();
@@ -185,6 +194,7 @@ private:
 
 int StandardOnlineChessGame::getMove(enum getMoveType getMoveType) {
 
+#ifdef __linux__
     bool stopTimerDisplay = false;
     TimerNonCannonicalControllerOnline terminalcontroller; // Set non-canonical mode
 
@@ -230,7 +240,7 @@ int StandardOnlineChessGame::getMove(enum getMoveType getMoveType) {
 
             // }
             if (fds[1].revents & POLLIN) {
-                // If either the chess clock or the 60 second small count run out of time we send the server we ran out of time
+                // If either the chess clock or the 60 second small count run out of time we sendData the server we ran out of time
 
                 if (clockThread.joinable())
                     clockThread.join();
@@ -265,6 +275,9 @@ int StandardOnlineChessGame::getMove(enum getMoveType getMoveType) {
             }
         }
     }
+#elif _WIN32
+    return -1;
+#endif
 }
 
 StandardOnlineChessGame::StandardOnlineChessGame(int fd, Player player, std::wstring opStr)
@@ -277,15 +290,17 @@ StandardOnlineChessGame::StandardOnlineChessGame(int fd, Player player, std::wst
     currentTurn = PlayerOne; // PlayerOne will always go first, it depends on which client is which player, that is the 50/50 chance
     GameOptions = global_player_option;
     pipeFds = new int[2];
+#ifdef __linux__
     if (pipe(pipeFds) == -1)
         exit(EXIT_FAILURE); // IDK HOW ELSE TO HANDLE ERROR IN CONSTRUCTOR
+#endif
 }
 
 
 // False -- Error
 // True  -- Good
 bool StandardOnlineChessGame::verifyGameServerConnection(){
-    if(send(gameSocketFd, SERVER_CLIENT_ACK_MATCH_RDY, sizeof(SERVER_CLIENT_ACK_MATCH_RDY), 0) < 0)
+    if(sendData(gameSocketFd, SERVER_CLIENT_ACK_MATCH_RDY, sizeof(SERVER_CLIENT_ACK_MATCH_RDY)) < 0)
         return false;
     return true;
 }
@@ -293,7 +308,7 @@ bool StandardOnlineChessGame::verifyGameServerConnection(){
 // False -- Error
 // True  -- Good
 bool StandardOnlineChessGame::nonTurnSpecificCheckIn(){
-    if(send(gameSocketFd, CLIENT_NON_TURN_CHECK_IN, sizeof(CLIENT_NON_TURN_CHECK_IN), 0) < 0)
+    if(sendData(gameSocketFd, CLIENT_NON_TURN_CHECK_IN, sizeof(CLIENT_NON_TURN_CHECK_IN)) < 0)
         return false;
     return true;
 }
@@ -307,7 +322,7 @@ bool StandardOnlineChessGame::nonTurnSpecificCheckIn(){
 int StandardOnlineChessGame::preTurnCheckIn(){
     
     char buffer[ONLINE_BUFFER_SIZE] = {0};
-    int byte_read = recv(gameSocketFd, (void*)buffer, sizeof(buffer), 0);
+    int byte_read = receiveData(gameSocketFd, buffer, sizeof(buffer), 0);
     
     if(byte_read <= 0)
         return -1;
@@ -336,7 +351,7 @@ int StandardOnlineChessGame::preTurnCheckIn(){
 // 1  Valid move
 int StandardOnlineChessGame::serverSaidValidMove(){
     char buffer[ONLINE_BUFFER_SIZE] = {0};
-    int bytes_read = recv(gameSocketFd, (void*)buffer, sizeof(buffer), 0);
+    int bytes_read = receiveData(gameSocketFd, buffer, sizeof(buffer), 0);
 
     if(bytes_read <= 0)
         return -2;
@@ -373,7 +388,7 @@ int StandardOnlineChessGame::makeMove(Move&& move) {
 }
 
 bool StandardOnlineChessGame::readyForNextTurn() {
-    return send(gameSocketFd, (void*)CLIENT_RDY_FOR_NEXT_TURN, sizeof(CLIENT_RDY_FOR_NEXT_TURN), 0) < 0;
+    return sendData(gameSocketFd, CLIENT_RDY_FOR_NEXT_TURN, sizeof(CLIENT_RDY_FOR_NEXT_TURN)) < 0;
 }
 
 // -1 - Server Error
@@ -385,10 +400,10 @@ int StandardOnlineChessGame::notTurnRecieveMove(std::wstring& move, std::wstring
 
     // This will block until the other player completes their turn
 
-    std::wcout << "Blocking on the recv for the waiting non turn player" << std::endl;
+    std::wcout << "Blocking on the receiveData for the waiting non turn player" << std::endl;
 
     // Formatted: "move:()to:()"
-    int bytesRead = recv(gameSocketFd, (void*)buffer, sizeof(buffer), 0);
+    int bytesRead = receiveData(gameSocketFd, buffer, sizeof(buffer), 0);
 
     if (bytesRead <= 0)
         return -1;

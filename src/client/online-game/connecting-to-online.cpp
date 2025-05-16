@@ -34,13 +34,13 @@ JOIN_GAME_INFO joinPrivateLobby(int fd){
         if(lobby_code.length() != 5)
             continue;    
     
-        // Send to server to see if valid code
+        // sendData to server to see if valid code
         std::string build_msg = CLIENT_LOBBY_JOIN_CODE + convertWString(lobby_code);
-        send(fd, (void*)build_msg.c_str(), build_msg.length(), 0);
+        sendData(fd, (char*)build_msg.c_str(), build_msg.length());
 
         // Recieve response from server
         char buffer[ONLINE_BUFFER_SIZE] = {0};
-        int bytesRead = recv(fd, (void*)buffer, sizeof(buffer), 0);
+        int bytesRead = receiveData(fd, buffer, sizeof(buffer), 0);
 
         if (bytesRead == 0)
             return 0; // Server Error
@@ -63,12 +63,12 @@ JOIN_GAME_INFO joinPrivateLobby(int fd){
 
 JOIN_GAME_INFO randomQueue(int fd){
     // Tell server to join the random queue
-    if (send(fd, (void*)CLIENT_JOIN_RANDOM_QUEUE, sizeof(CLIENT_JOIN_RANDOM_QUEUE), 0) < 0)
+    if (sendData(fd, CLIENT_JOIN_RANDOM_QUEUE, sizeof(CLIENT_JOIN_RANDOM_QUEUE)) < 0)
         return JOIN_GAME_INFO(1);
 
     // Receive response from the server
     char buffer[ONLINE_BUFFER_SIZE] = {0};
-    int bytesRead = recv(fd, (void*)buffer, sizeof(buffer), 0);
+    int bytesRead = receiveData(fd, buffer, sizeof(buffer), 0);
     
     if (bytesRead == 0)
         return 0; // Server Error
@@ -89,6 +89,7 @@ JOIN_GAME_INFO randomQueue(int fd){
     }
 
     int pipe_fd[2];
+#ifdef __linux__
     if (pipe(pipe_fd) == -1)
         return JOIN_GAME_INFO(1);
 
@@ -101,7 +102,7 @@ JOIN_GAME_INFO randomQueue(int fd){
 
         while (true) {
 
-            bytesRead = recv(fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
+            bytesRead = receiveData(fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
             if (bytesRead > 0) {
                 buffer[bytesRead] = '\0';
                 response = buffer;
@@ -125,7 +126,7 @@ JOIN_GAME_INFO randomQueue(int fd){
                 if (lobbyInput_t.joinable())
                     lobbyInput_t.join();
 
-                if (send(fd, (void*)CLIENT_LEAVE_RANDOM_QUEUE, sizeof(CLIENT_LEAVE_RANDOM_QUEUE), 0) < 0)
+                if (sendData(fd, (void*)CLIENT_LEAVE_RANDOM_QUEUE, sizeof(CLIENT_LEAVE_RANDOM_QUEUE), 0) < 0)
                     return JOIN_GAME_INFO(1);
                 return JOIN_GAME_INFO(-1);
             }
@@ -133,15 +134,18 @@ JOIN_GAME_INFO randomQueue(int fd){
             std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Ensure some delay to prevent busy waiting
         }
     }
+#elif _WIN32
+    return JOIN_GAME_INFO(-1);
+#endif
 }
 
 JOIN_GAME_INFO createPrivateLobby(int fd) {
     
-    if (send(fd, (void*)CLIENT_CREATE_PRIVATE_LOBBY, sizeof(CLIENT_CREATE_PRIVATE_LOBBY), 0) < 0)
+    if (sendData(fd, CLIENT_CREATE_PRIVATE_LOBBY, sizeof(CLIENT_CREATE_PRIVATE_LOBBY)) < 0)
         return JOIN_GAME_INFO(1);
 
     char buffer[ONLINE_BUFFER_SIZE] = {0};
-    int bytesRead = recv(fd, (void*)buffer, sizeof(buffer), 0);
+    int bytesRead = receiveData(fd, buffer, sizeof(buffer), 0);
 
     buffer[bytesRead] = '\0';
     std::string response(buffer);
@@ -152,10 +156,14 @@ JOIN_GAME_INFO createPrivateLobby(int fd) {
         return 1; // Client Error
 
     int pipe_fd[2];
+#ifdef __linux__
     if (pipe(pipe_fd) == -1) {
         std::cerr << "Failed to create pipe" << std::endl;
         return 1;
     }
+#elif _WIN32
+
+#endif
 
     {
         bool conditionalStop = false;
@@ -167,14 +175,21 @@ JOIN_GAME_INFO createPrivateLobby(int fd) {
 
         while (true) {
 
-            bytesRead = recv(fd, (void*)buffer, sizeof(buffer), MSG_DONTWAIT);
+#ifdef __linux__
+            bytesRead = receiveData(fd, buffer, sizeof(buffer), MSG_DONTWAIT);
+#elif _WIN32
+
+#endif
             if (bytesRead > 0) {
                 buffer[bytesRead] = '\0';
                 response = buffer;
                 JOIN_GAME_INFO info;
 
                 if (checkMatchFoundInResponse(response, info)) {
+#ifdef __linux__
                     write(pipe_fd[1], "1", 1);
+#elif _WIN32
+#endif
                     if (lobbyInput_t.joinable())
                         lobbyInput_t.join();
 
@@ -192,7 +207,7 @@ JOIN_GAME_INFO createPrivateLobby(int fd) {
                 if (lobbyInput_t.joinable())
                     lobbyInput_t.join();
 
-                if (send(fd, (void*)CLIENT_LEAVE_RANDOM_QUEUE, sizeof(CLIENT_LEAVE_RANDOM_QUEUE), 0) < 0)
+                if (sendData(fd, CLIENT_LEAVE_RANDOM_QUEUE, sizeof(CLIENT_LEAVE_RANDOM_QUEUE)) < 0)
                     return JOIN_GAME_INFO(1);
                 return JOIN_GAME_INFO(-1);
             }
@@ -206,11 +221,11 @@ JOIN_GAME_INFO createPrivateLobby(int fd) {
 JOIN_GAME_INFO createPrivateLobby2(int fd) {
     
 goto skip;
-    if (send(fd, (void*)CLIENT_CREATE_PRIVATE_LOBBY, sizeof(CLIENT_CREATE_PRIVATE_LOBBY), 0) < 0)
+    if (sendData(fd, (void*)CLIENT_CREATE_PRIVATE_LOBBY, sizeof(CLIENT_CREATE_PRIVATE_LOBBY), 0) < 0)
         return JOIN_GAME_INFO(1);
 skip:
     char buffer[ONLINE_BUFFER_SIZE] = {0};
-    int bytesRead = -1; //recv(fd, (void*)buffer, sizeof(buffer), 0);
+    int bytesRead = -1; //receiveData(fd, (void*)buffer, sizeof(buffer), 0);
 
     buffer[bytesRead] = '\0';
     std::string response(buffer);

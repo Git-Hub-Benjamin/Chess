@@ -1,16 +1,10 @@
 #pragma once
 
-#include "../../Chess/chess.hpp"
 #include "../../socket/socketutil.h"
 #include "../client-text-graphics/textgraphic.hpp"
 #include "../client-terminal-frontend/displaymanager.hpp"
 #include "../tui/clientoption.hpp"
-#include <unistd.h>
-#include <thread>
-#include <sstream>
-#include <csignal>
-#include <atomic>
-#include <poll.h> 
+
 
 extern Options global_player_option;
 extern std::string ONLINE_PLAYER_ID;
@@ -32,3 +26,28 @@ struct JOIN_GAME_INFO {
 extern JOIN_GAME_INFO randomQueue(int fd);
 extern JOIN_GAME_INFO joinPrivateLobby(int fd);
 extern JOIN_GAME_INFO createPrivateLobby(int fd);
+
+
+#ifdef _WIN32
+    typedef SOCKET socket_t;  // Windows uses SOCKET type
+#else
+    typedef int socket_t;     // Unix-like systems use int
+#endif
+
+#ifdef _WIN32
+    typedef const char* send_type;
+#else
+    typedef const void* send_type;
+#endif
+
+#ifdef _WIN32
+    typedef char* buf;
+#else
+    typedef const void* buf;
+#endif
+
+extern int closeSocket(socket_t);
+extern int receiveData(socket_t, send_type, size_t, int);
+extern int sendData(socket_t, send_type, size_t);
+
+

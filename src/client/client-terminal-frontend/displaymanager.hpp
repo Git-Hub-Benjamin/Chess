@@ -1,13 +1,17 @@
 #pragma once
-#include "../../Chess/chess.hpp"
+#include "Chess/chess.hpp"
 #include <atomic>
-#include <poll.h>
 #include <thread>
 #include <mutex>
 #include <iostream>
-#include <unistd.h>
-#include <termios.h> // For terminal I/O functions and termios structure
-#include <unistd.h>  // For STDIN_FILENO
+
+#ifdef __linux__
+    #include <poll.h>
+    #include <unistd.h>  // For STDIN_FILENO
+    #include <unistd.h>
+    #include <termios.h> // For terminal I/O functions and termios structure
+#endif
+
 #include <cstring>   // For memcpy
 
 
@@ -19,7 +23,9 @@ public:
     TerminalController() {}
     ~TerminalController() {}
 private:
+#ifdef __linux__
     struct termios old_tio, new_tio;
+#endif
 };
 
 class DisplayManager {
@@ -29,11 +35,12 @@ public:
     void watchMainThreadWhileInput();
 
 private:
-    
     // Members
     bool& tellMainWeStopped; 
     std::wstring inputBuffer; // Current input
     int pipe_fd; // For communication from main thread
+#ifdef __linux__
     struct pollfd fds[2] = {};
+#endif
 };
 

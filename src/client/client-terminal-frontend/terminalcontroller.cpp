@@ -1,6 +1,7 @@
 #include "displaymanager.hpp"
 
 class TerminalController {
+#ifdef __linux__
 public:
     TerminalController() {
         // Store the original terminal settings
@@ -19,4 +20,5 @@ public:
 
 private:
     struct termios old_tio, new_tio;
+#endif
 };

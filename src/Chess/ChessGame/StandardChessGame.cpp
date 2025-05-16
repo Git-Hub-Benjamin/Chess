@@ -1,6 +1,7 @@
 #include "../chess.hpp"
 #include "text-piece-art.hpp"
 #include <random>
+#include <cwctype>
 
 void copyStandardBoard(GameSquare from[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], GameSquare to[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]) {
     memcpy(to, from, sizeof(GameSquare[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH]));
@@ -62,7 +63,13 @@ void StandardChessGame::initTurn() {
     currentTurn = (static_cast<Player>(distribution(gen) + 1));
 }
 
+// Helper functions for bitboard
+
+int rank_file_to_bit_index(int, int);
+void set_bit(uint64_t&, int);
+
 void StandardChessGame::initGame(){
+#ifdef LEGACY_ARRAY_GAMEBOARD
     for (int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
         for (int col = 0; col < CHESS_BOARD_WIDTH; col++) {
             GamePiece pieceToPut = OPEN;
@@ -110,6 +117,69 @@ void StandardChessGame::initGame(){
                 GameBoard[row][col].setFirstMoveMade();
         }
     }
+#else
+    // 1. Clear all bitboards initially to ensure a clean state
+    white_pawns = 0; white_knights = 0; white_bishops = 0;
+    white_rooks = 0; white_queens = 0; white_king = 0;
+    black_pawns = 0; black_knights = 0; black_bishops = 0;
+    black_rooks = 0; black_queens = 0; black_king = 0;
+    white_occupancy = 0; black_occupancy = 0; all_occupancy = 0;
+
+    // 2. Set bits for White pieces
+
+    // White Pawns: Rank 2 (row 1)
+    for (int file = 0; file < 8; ++file) {
+        set_bit(white_pawns, rank_file_to_bit_index(2, file));
+    }
+
+    // White Rooks: a1 and h1 (Rank 1, files 0 and 7)
+    set_bit(white_rooks, rank_file_to_bit_index(1, 0));
+    set_bit(white_rooks, rank_file_to_bit_index(1, 7));
+
+    // White Knights: b1 and g1 (Rank 1, files 1 and 6)
+    set_bit(white_knights, rank_file_to_bit_index(1, 1));
+    set_bit(white_knights, rank_file_to_bit_index(1, 6));
+
+    // White Bishops: c1 and f1 (Rank 1, files 2 and 5)
+    set_bit(white_bishops, rank_file_to_bit_index(1, 2));
+    set_bit(white_bishops, rank_file_to_bit_index(1, 5));
+
+    // White Queen: d1 (Rank 1, file 3)
+    set_bit(white_queens, rank_file_to_bit_index(1, 3));
+
+    // White King: e1 (Rank 1, file 4)
+    set_bit(white_king, rank_file_to_bit_index(1, 4));
+
+    // 3. Set bits for Black pieces
+
+    // Black Pawns: Rank 7 (row 6)
+    for (int file = 0; file < 8; ++file) {
+        set_bit(black_pawns, rank_file_to_bit_index(7, file));
+    }
+
+    // Black Rooks: a8 and h8 (Rank 8, files 0 and 7)
+    set_bit(black_rooks, rank_file_to_bit_index(8, 0));
+    set_bit(black_rooks, rank_file_to_bit_index(8, 7));
+
+    // Black Knights: b8 and g8 (Rank 8, files 1 and 6)
+    set_bit(black_knights, rank_file_to_bit_index(8, 1));
+    set_bit(black_knights, rank_file_to_bit_index(8, 6));
+
+    // Black Bishops: c8 and f8 (Rank 8, files 2 and 5)
+    set_bit(black_bishops, rank_file_to_bit_index(8, 2));
+    set_bit(black_bishops, rank_file_to_bit_index(8, 5));
+
+    // Black Queen: d8 (Rank 8, file 3)
+    set_bit(black_queens, rank_file_to_bit_index(8, 3));
+
+    // Black King: e8 (Rank 8, file 4)
+    set_bit(black_king, rank_file_to_bit_index(8, 4));
+
+    // 4. Calculate occupancy bitboards
+    white_occupancy = white_pawns | white_knights | white_bishops | white_rooks | white_queens | white_king;
+    black_occupancy = black_pawns | black_knights | black_bishops | black_rooks | black_queens | black_king;
+    all_occupancy = white_occupancy | black_occupancy;
+#endif
 }
 
 bool StandardChessGame::onBoard(Point& p) {

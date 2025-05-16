@@ -1,25 +1,128 @@
 #include <iostream>
-#include <thread>
-#include <string>
-#include <unistd.h>
-#include <poll.h>
-#include <termios.h>
-#include <cstring>
-#include <mutex>
-#include <fcntl.h>
+#include <cstdint>
+#include <string.h>
 #include <cwctype>
-#include <atomic>
-#include <cstdlib>
+
+uint64_t white_pawns;
+uint64_t white_knights;
+uint64_t white_bishops;
+uint64_t white_rooks;
+uint64_t white_queens;
+uint64_t white_king;
+uint64_t black_pawns;
+uint64_t black_knights;
+uint64_t black_bishops;
+uint64_t black_rooks;
+uint64_t black_queens;
+uint64_t black_king;
+uint64_t white_occupancy;
+uint64_t black_occupancy;
+uint64_t all_occupancy;
+
+int sanitizeGetMove(std::wstring& input) {
+
+    if(!std::iswalpha(input[0])) 
+        return -1; // Ensure [0] is alphabetical character
+    
+    // Force to lower case
+    input[0] = std::towlower(input[0]); // Force [0] to lower case
+    switch(input[0]) {
+        case L'a': case L'b': case L'c': case L'd':
+        case L'e': case L'f': case L'g': case L'h':
+            break;
+        case L'q': // Valid too but for option
+        case L'x': case L'o':
+            return 0;
+        default: // Ensure one of the characters above
+            return -1; // Ensure [0] is alphabetical character
+    }
+
+    // Make sure length is 2
+    if(input.length() != 2)
+        return -1; // Move must be length of 2
+
+    // Ensure 2nd char is a number
+    if(!std::iswdigit(input[1]) || input[1] == L'0' || input[1] == L'9') // Using std::iswdigit
+        return -1; // Ensure [1] must be a digit and not '0' or '9'
+
+    // Now we know it must be [0] == a-h, [1] == 1 - 8
+    return 1;
+} 
+
+uint64_t convertMove(std::wstring move){
+    // Convert letter to number (a = 0, b = 1 etc)
+    int col = move[0] - L'a';
+
+    // Convert char number to number ('1' = 1, '8' = 8 etc)
+    // Subtract 1 because rank 1 corresponds to row 0
+    int rank = move[1] - L'0';
+    int row = rank - 1;
+
+    return static_cast<uint64_t>(row * 8 + col);
+}
+
+enum GamePiece{
+    OPEN = 0,
+    PAWN,
+    KNIGHT,
+    BISHOP,
+    ROOK,
+    KING,
+    QUEEN
+};
+
+enum Owner{
+    NONE = 0,
+    PONE,
+    PTWO,
+};
+
+struct SquareInfo {
+    Owner owner;
+    GamePiece piece;
+};
+
+SquareInfo getSquareInfo(int row, int col) {
+    int bit_index = row * 8 + col;
+    SquareInfo info = {NONE, OPEN}; // Default to empty
+
+    if ((white_occupancy >> bit_index) & 1) {
+        info.owner = PONE;
+        if ((white_pawns >> bit_index) & 1) info.piece = PAWN;
+        else if ((white_knights >> bit_index) & 1) info.piece = KNIGHT;
+        else if ((white_bishops >> bit_index) & 1) info.piece = BISHOP;
+        else if ((white_rooks >> bit_index) & 1) info.piece = ROOK;
+        else if ((white_queens >> bit_index) & 1) info.piece = QUEEN;
+        else if ((white_king >> bit_index) & 1) info.piece = KING;
+    } else if ((black_occupancy >> bit_index) & 1) {
+        info.owner = PTWO;
+        if ((black_pawns >> bit_index) & 1) info.piece = PAWN;
+        else if ((black_knights >> bit_index) & 1) info.piece = KNIGHT;
+        else if ((black_bishops >> bit_index) & 1) info.piece = BISHOP;
+        else if ((black_rooks >> bit_index) & 1) info.piece = ROOK;
+        else if ((black_queens >> bit_index) & 1) info.piece = QUEEN;
+        else if ((black_king >> bit_index) & 1) info.piece = KING;
+    }
+
+    return info;
+}
+
 
 
 int main() {
-    int a;
-    std::cout << "\x001b[0;" << 96 << "mHello";    
-    
-    std::cin >> a;
-
-    system("clear");
-    //std::cout << "\033[2J\033[1;1H";
+    std::wstring input;
+    while(true) {
+        std::wcout << "Input position to move to: ";
+        std::wcin >> input;
+        if (sanitizeGetMove(input) < 1)
+            continue;
+        uint64_t bit_index = convertMove(input);
+        std::wcout << "Bit index: " << bit_index << std::endl;
+        if((all_occupancy >> bit_index) & 1)
+            std::wcout << "Position taken." << std::endl;
+        else
+            std::wcout << "Position free." << std::endl;
+        }    
     return 0;
 }
 
