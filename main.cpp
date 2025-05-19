@@ -107,12 +107,12 @@ SquareInfo getSquareInfo(int row, int col) {
     return info;
 }
 
-
+using namespace std;
 
 int main() {
     std::wstring input;
     while(true) {
-        std::wcout << "Input position to move to: ";
+        wcout << "Input position to move to: ";
         std::wcin >> input;
         if (sanitizeGetMove(input) < 1)
             continue;

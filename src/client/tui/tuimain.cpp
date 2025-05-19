@@ -385,10 +385,10 @@ int main()
 					GET_MENU_OPTION turnOption = get_menu_option();
 					if (turnOption != GET_MENU_OPTION::BACK) {
 						if (clockOption == CLOCK_NONE) {
-							StandardLocalChessGame Game(global_player_option, static_cast<Player>(turnOption == GET_MENU_OPTION::THREE ? 0 : turnOption), mainMenuOption == MAIN_MENU_OPTIONS::DEV ? true : false);
+							StandardLocalChessGame Game(global_player_option, static_cast<ChessTypes::Player>(turnOption == GET_MENU_OPTION::THREE ? 0 : turnOption), mainMenuOption == MAIN_MENU_OPTIONS::DEV ? true : false);
 							Game.startGame();
 						} else {
-							StandardLocalChessGame Game(global_player_option, chessclock, static_cast<Player>(turnOption == GET_MENU_OPTION::THREE ? 0 : turnOption), mainMenuOption == MAIN_MENU_OPTIONS::DEV ? true : false);
+							StandardLocalChessGame Game(global_player_option, chessclock, static_cast<ChessTypes::Player>(turnOption == GET_MENU_OPTION::THREE ? 0 : turnOption), mainMenuOption == MAIN_MENU_OPTIONS::DEV ? true : false);
 							Game.startGame();
 						}
 					}

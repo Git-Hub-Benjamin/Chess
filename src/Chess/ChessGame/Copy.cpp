@@ -1,6 +1,8 @@
 #include "../chess.hpp"
 #include "../../client/tui/clientoption.hpp"
 
+using namespace ChessTypes;
+
 #ifdef LEGACY_ARRAY_GAMEBOARD
 
 // True - There is at least one move

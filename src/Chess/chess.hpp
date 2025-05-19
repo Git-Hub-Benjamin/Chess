@@ -167,7 +167,6 @@ namespace ChessTypes {
         From, 
         To
     };
-
 }
 
 extern std::wstring enumPiece_toString(ChessTypes::GamePiece);
@@ -542,7 +541,7 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     GameSquare* pieceCausingKingCheck = nullptr; 
 
     bool LpopulatePossibleMoves(GameSquare& moveFrom);
-    ChessTypes::Owner LpiecePresent(Point p);
+    bool LpiecePresent(Point);
     bool LverifyMove(Move& move);
     bool LverifyMove(Move&& move);
     bool LrookClearPath(Move& move);
@@ -554,23 +553,21 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     bool LkingSafeAfterMove(GameSquare& to);
     bool LcheckMate();
     GameSquare& LconvertMove(std::wstring move, ChessTypes::Player sideToConvert);
-    validateGameSquare::validateGameSquare LvalidateGameSquare(GameSquare& square, enum getMoveType getMoveType);
+    ChessEnums::ValidateGameSquareResult LvalidateGameSquare(GameSquare& square, ChessTypes::GetMoveType getMoveType);
     possibleMoveTypes LreadPossibleMoves(GameSquare& to);
     void LstartGame();
     void LprintBoard(ChessTypes::Player playerSideToPrint);
     void LprintBoardWithMoves(ChessTypes::Player);
     GameSquare *LisolateFromInCheckMoves();
-    makeMove::makeMove LmakeMove(Move&& move);
+    ChessEnums::MakeMoveResult LmakeMove(Move&& move);
     void LinitGame();
     int LreflectAxis(int);
     
 #else
 
-public:
-    // Start a standard game
-    void startGame();
 
 #endif
+
 
     // Regardless of whether or not legacy
     // Get move
@@ -601,6 +598,8 @@ public:
     StandardLocalChessGame(Options, ChessTypes::Player, bool);
     StandardLocalChessGame() {}
 
+    // Start a standard game
+    void startGame();
 
 };
 
