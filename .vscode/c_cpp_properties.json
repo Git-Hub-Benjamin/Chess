@@ -18,7 +18,6 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/src/**"
             ],
-            "defines": [],
             "compilerPath": "C:/Program Files/LLVM/bin/clang++.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",

@@ -67,60 +67,110 @@ struct Point{
     void print() { std::wcout << "(X: " << m_x << ", Y: " << m_y << ")"; }
 };
 
-enum XWIDTH{
-    X0 = 0,
-    X1,
-    X2,
-    X3,
-    X4,
-    X5,
-    X6,
-    X7
-};
+namespace ChessEnums {
 
-enum YHEIGHT{
-    Y0,
-    Y1,
-    Y2,
-    Y3,
-    Y4,
-    Y5,
-    Y6,
-    Y7
-};
+    enum class ValidateGameSquareResult {
+        NO_PIECE,
+        PIECE_NOT_YOURS,
+        CANNOT_TAKE_OWN,
+        VALID
+    };
 
-enum GamePiece{
-    OPEN = 0,
-    PAWN,
-    KNIGHT,
-    BISHOP,
-    ROOK,
-    KING,
-    QUEEN
-};
+    enum class GetMoveResult {
+#ifdef __linux__
+        ERROR = -1,
+#elif _WIN32
+        ERROR_GETTING_MOVE = -1,
+#endif
+        QUIT,
+        VALID,
+        TIMER_RAN_OUT,
+        UNDO,
+        REDO,
+        CHOOSE_MOVE_AGAIN
+    };
 
-enum Owner{
-    NONE = 0,
-    PONE,
-    PTWO,
-};
+    enum class SanitizeGetMoveResult {
+        INVALID = -1,
+        OPTIONS,
+        VALID
+    };
 
-enum Player{ // Just so we can index into things with this instead of like Owner - 1
-    PlayerOne = 1,
-    PlayerTwo
-};
+    enum class GameOptionResult {
+        INVALID = -1,
+        QUIT,
+        CONTINUE,
+        UNDO,
+        REDO
+    };
 
-enum GAME_CONNECTIVITY {
-    LOCAL_CONNECTIVITY,
-    ONLINE_CONNECTIVITY
-};
+    enum class MakeMoveResult {
+        KING_IN_HARM = -1,
+        INVALID_MOVE,
+        PIECE_TAKEN,
+        PIECE_MOVED
+    };
+}
 
-enum getMoveType {
-    GET_FROM,
-    GET_TO
-};
 
-extern std::wstring enumPiece_toString(GamePiece);
+namespace ChessTypes {
+
+    enum class XCoordinate { 
+        A = 0, 
+        B,
+        C,
+        D,
+        E,
+        F,
+        G,
+        H
+    };
+
+    enum class YCoordinate { 
+        One = 0, 
+        Two,
+        Three,
+        Four,
+        Five,
+        Six,
+        Seven,
+        Eight
+    };
+
+    enum class GamePiece { 
+        None = 0, 
+        Pawn,
+        Knight,
+        Bishop,
+        Rook,
+        King,
+        Queen
+    };
+
+    enum class Owner { 
+        None = 0, 
+        PlayerOne, 
+        PlayerTwo
+    };
+
+    enum class Player { 
+        PlayerOne = 1, 
+        PlayerTwo
+    };
+
+    enum class GameConnectivity { 
+        Local, 
+        Online
+    };
+
+    enum class GetMoveType { 
+        From, 
+        To
+    };
+
+}
+
+extern std::wstring enumPiece_toString(ChessTypes::GamePiece);
 
 class ChessClock {
     int mWhitePlayerTime = -1;
@@ -150,14 +200,14 @@ class GameSquare {
 private:
     bool mfirstMoveOccurred = false; // Applies for castling, pawns, etc.
     Point mPosition;
-    Owner mOwner;
-    GamePiece mPiece;
+    ChessTypes::Owner mOwner;
+    ChessTypes::GamePiece mPiece;
 
 public:
     // Default constructor should initialize mPosition
-    GameSquare() : mPosition({-1, -1}), mOwner(NONE), mPiece(OPEN) {}
+    GameSquare() : mPosition({-1, -1}), mOwner(ChessTypes::Owner::None), mPiece(ChessTypes::GamePiece::None) {}
 
-    GameSquare(Owner owner, GamePiece piece, Point pos)
+    GameSquare(ChessTypes::Owner owner, ChessTypes::GamePiece piece, Point pos)
         : mPosition(pos), mOwner(owner), mPiece(piece) {}
 
     GameSquare(const GameSquare& other)
@@ -187,14 +237,14 @@ public:
     void print() const {
         std::wcout << "Pos: {" << mPosition.m_x << ", " << mPosition.m_y << "}, Piece: " 
                    << enumPiece_toString(mPiece) << ", Owner: " 
-                   << (mOwner == NONE ? "None" : mOwner == PONE ? "Player one" : "Player two");
+                   << (mOwner == ChessTypes::Owner::None ? "None" : mOwner == ChessTypes::Owner::PlayerOne ? "Player one" : "Player two");
     }
 
-    void setOwner(Owner o) { mOwner = o; }
-    Owner getOwner() const { return mOwner; }
+    void setOwner(ChessTypes::Owner o) { mOwner = o; }
+    ChessTypes::Owner getOwner() const { return mOwner; }
 
-    void setPiece(GamePiece p) { mPiece = p; }
-    GamePiece getPiece() const { return mPiece; }
+    void setPiece(ChessTypes::GamePiece p) { mPiece = p; }
+    ChessTypes::GamePiece getPiece() const { return mPiece; }
 
     Point getPosition() const { return mPosition; }
     void setPosition(Point p) { mPosition = p; }
@@ -209,7 +259,7 @@ struct StandardChessGameHistoryState {
     GameSquare mGameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
     bool usingClock = false;
     ChessClock mClock;
-    Player mCurrentTurn;
+    ChessTypes::Player mCurrentTurn;
     Point mWhitePlayerKingPos; 
     Point mBlackPlayerKingPos;
     Point mPieceCausingKingCheckPos; 
@@ -217,7 +267,7 @@ struct StandardChessGameHistoryState {
     StandardChessGameHistoryState() {}
 
     // Constructor without clock
-    StandardChessGameHistoryState(GameSquare board[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], Player turn, GameSquare* whiteKing, GameSquare* blackKing, GameSquare* checkCausingPiece) :
+    StandardChessGameHistoryState(GameSquare board[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], ChessTypes::Player turn, GameSquare* whiteKing, GameSquare* blackKing, GameSquare* checkCausingPiece) :
         mCurrentTurn(turn), mWhitePlayerKingPos(whiteKing->getPosition()), mBlackPlayerKingPos(blackKing->getPosition()) {
         if (checkCausingPiece != nullptr) 
             mPieceCausingKingCheckPos = checkCausingPiece->getPosition();
@@ -225,7 +275,7 @@ struct StandardChessGameHistoryState {
     }
 
     // Constructor with clock
-    StandardChessGameHistoryState(GameSquare board[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], Player turn, GameSquare* whiteKing, GameSquare* blackKing, GameSquare* checkCausingPiece, ChessClock clock) :
+    StandardChessGameHistoryState(GameSquare board[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH], ChessTypes::Player turn, GameSquare* whiteKing, GameSquare* blackKing, GameSquare* checkCausingPiece, ChessClock clock) :
         mCurrentTurn(turn), mWhitePlayerKingPos(whiteKing->getPosition()), mBlackPlayerKingPos(blackKing->getPosition()), mClock(clock) {
         if (checkCausingPiece != nullptr) 
             mPieceCausingKingCheckPos = checkCausingPiece->getPosition();
@@ -255,7 +305,7 @@ struct StandardChessGameHistoryState {
             }
         }
 
-        std::wcout << "Current turn: " << mCurrentTurn << ", White time: " << std::to_wstring(mClock.getWhiteSeconds()) << ", Black time: " << std::to_wstring(mClock.getBlackSeconds()) << std::endl; 
+        std::wcout << "Current turn: " << "-- FIX ME -- " << ", White time: " << std::to_wstring(mClock.getWhiteSeconds()) << ", Black time: " << std::to_wstring(mClock.getBlackSeconds()) << std::endl; 
 
         mGameBoard[mWhitePlayerKingPos.m_y][mWhitePlayerKingPos.m_x].print(); std::wcout << std::endl;
         mGameBoard[mBlackPlayerKingPos.m_y][mBlackPlayerKingPos.m_x].print(); std::wcout << std::endl;
@@ -310,23 +360,24 @@ public:
 };
 
 struct SquareInfo {
-    Owner owner;
-    GamePiece piece;
+    ChessTypes::Owner owner;
+    ChessTypes::GamePiece piece;
 };
 
 struct TakenPiece{
     std::wstring mMove;
     std::wstring mTo;
-    GamePiece mPiece;
+    ChessTypes::GamePiece mPiece;
     TakenPiece(){}
-    TakenPiece(GamePiece piece, std::wstring move, std::wstring to) : mPiece(piece), mMove(move), mTo(to) {}
+    TakenPiece(ChessTypes::GamePiece piece, std::wstring move, std::wstring to) : mPiece(piece), mMove(move), mTo(to) {}
 };
 
 // To be inherited by Local Game and Online Game
 class StandardChessGame {
 protected:
     // owner enum is used to track player turn, None will not be used, just 1 & 2
-    Player currentTurn = PlayerOne;
+    ChessTypes::Player currentTurn = ChessTypes::Player::PlayerOne;
+    bool currTurnInCheck;
     // 0 is default value, if not changed then the constructor will randomly choose someone to go first,
 
     SquareInfo getSquareInfo(int, int);
@@ -354,24 +405,23 @@ protected:
 
     // True valid move
     // False invalid move
-    bool verifyMove(Move&);
-    bool verifyMove(Move&&);
+    bool verifyMove();
 
     // Path clearance check functions
     // True - All good
     // False - Piece in way
-    bool unobstructedPathCheck(Move&);
-    bool rookClearPath(Move&);
-    bool bishopClearPath(Move&);
+    bool unobstructedPathCheck();
+    bool rookClearPath();
+    bool bishopClearPath();
 
     // Pawn movement check
     // True - All good
     // False - Not good
-    bool pawnMoveCheck(Move&);
+    bool pawnMoveCheck();
 
     // Piece presence check
     // returns owner at point
-    Owner piecePresent(Point);
+    ChessTypes::Owner piecePresent(Point);
 
     // Checkmate functions
     // True, Gameover
@@ -390,12 +440,12 @@ protected:
 
     // True king is safe after this move is made
     // False king is not safe
-    bool kingSafeAfterMove(GameSquare&);
+    bool kingSafeAfterMove();
 
     // Defense functions
     // True can defend so not checkmate
     // False cannot defend king, so checkmate
-    GameSquare* canDefendKing(std::vector<GameSquare*>&);
+    bool canDefendKing();
 
     // used in only local chess game, but it is used in canDefend king so it's needed here
     bool kingCanMakeMove;
@@ -415,35 +465,35 @@ protected:
 
     // Move conversion functions
     // generic convert
-    GameSquare& convertMove(std::wstring, Player);
-    int reflectAxis(int);
+    uint64_t convertMove(std::wstring, ChessTypes::Player);
 
     // calls generic
-    virtual int makeMove(Move&& move); // basic implementation, can override tho
+    virtual int makeMove(); // basic implementation, can override tho
 
     // Options regarding game
     Options GameOptions;
 
+    //! Potentially remove
     // Possible move functions
     // populates the possible move vec
-    bool populatePossibleMoves(GameSquare&);
+    virtual bool populatePossibleMoves();
 
     // reads the possible moves and compares to a move
-    possibleMoveTypes readPossibleMoves(GameSquare&);
+    possibleMoveTypes readPossibleMoves();
 
     // Board printing functions
     // print the standard board
-    virtual void printBoard(Player);
+    virtual void printBoard(ChessTypes::Player);
 
     // print the standard board but with moves from the movefrom
-    virtual void printBoardWithMoves(Player) = 0;
+    virtual void printBoardWithMoves(ChessTypes::Player);
 
     // Game square validation
     // No Piece Present - 0
     // This Piece Does not belong to you - 1
     // Cannot take your own piece - 2
     // Valid - 3
-    int validateGameSquare(GameSquare&, enum getMoveType);
+    ChessEnums::ValidateGameSquareResult validateGameSquare(SquareInfo, ChessTypes::GetMoveType);
 
     // Vector to hold possible moves
     std::vector<possibleMoveType> possibleMoves; 
@@ -452,31 +502,31 @@ protected:
     GameSquare* toHighlightedPiece = nullptr;
 
     // Not pure, bc Server Chess Std game does not need this
-    int sanitizeGetMove(std::wstring&);
+    ChessEnums::SanitizeGetMoveResult sanitizeGetMove(std::wstring&);
 
     // String to print next while loop iteration after the board is printed
     std::wstring toPrint;
 
     // Game connectivity
-    GAME_CONNECTIVITY GameConnectivity;
+    ChessTypes::GameConnectivity GameConnectivity;
 
     // Game clock and input buffer
     ChessClock gameClock;
     std::wstring inputBuffer; 
 
     // Utility function to convert player to string
-    std::wstring playerToString(Player);
+    std::wstring playerToString(ChessTypes::Player);
 
     // Only to be called from subclasses
     StandardChessGame(){}
-    StandardChessGame(GAME_CONNECTIVITY CONNECTIVITY) : GameConnectivity(CONNECTIVITY) {}
-    StandardChessGame(GAME_CONNECTIVITY CONNECTIVITY, ChessClock clock) : GameConnectivity(CONNECTIVITY), gameClock(clock) {}
+    StandardChessGame(ChessTypes::GameConnectivity Connectivity) : GameConnectivity(Connectivity) {}
+    StandardChessGame(ChessTypes::GameConnectivity Connectivity, ChessClock clock) : GameConnectivity(Connectivity), gameClock(clock) {}
 };
 
 // Things that do not need to be exposed for the server side of chess game logic
 class ClientChessGame {
 protected:
-    virtual int getMove(enum getMoveType) = 0;
+    virtual ChessEnums::GetMoveResult getMove(ChessTypes::GetMoveType) = 0;
     // Function to handle current turn chess clock
     virtual void currTurnChessClock(bool& stop, int pipe, const std::wstring& msgToOutput) = 0;
 };
@@ -490,18 +540,43 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     GameSquare* whitePlayerKing; // These pointers need to be set
     GameSquare* blackPlayerKing;
     GameSquare* pieceCausingKingCheck = nullptr; 
-    bool currTurnInCheck;
+
+    bool LpopulatePossibleMoves(GameSquare& moveFrom);
+    ChessTypes::Owner LpiecePresent(Point p);
+    bool LverifyMove(Move& move);
+    bool LverifyMove(Move&& move);
+    bool LrookClearPath(Move& move);
+    bool LbishopClearPath(Move& move);
+    bool LpawnMoveCheck(Move& move);
+    bool LunobstructedPathCheck(Move& move);
+    GameSquare* LcanDefendKing(std::vector<GameSquare*>& teamPieces);
+    bool LkingSafe();
+    bool LkingSafeAfterMove(GameSquare& to);
+    bool LcheckMate();
+    GameSquare& LconvertMove(std::wstring move, ChessTypes::Player sideToConvert);
+    validateGameSquare::validateGameSquare LvalidateGameSquare(GameSquare& square, enum getMoveType getMoveType);
+    possibleMoveTypes LreadPossibleMoves(GameSquare& to);
+    void LstartGame();
+    void LprintBoard(ChessTypes::Player playerSideToPrint);
+    void LprintBoardWithMoves(ChessTypes::Player);
+    GameSquare *LisolateFromInCheckMoves();
+    makeMove::makeMove LmakeMove(Move&& move);
+    void LinitGame();
+    int LreflectAxis(int);
+    
 #else
+
+public:
+    // Start a standard game
+    void startGame();
 
 #endif
 
+    // Regardless of whether or not legacy
     // Get move
-    int getMove(enum getMoveType) override;
+    ChessEnums::GetMoveResult getMove(ChessTypes::GetMoveType) override;
     void currTurnChessClock(bool&, int, const std::wstring&) override;
-    int optionMenu(char);
-
-    // Will return a pointer to the one piece that you can move in check, if there is more than one then it will just return a nullptr
-    GameSquare* isolateFromInCheckMoves();
+    ChessEnums::GameOptionResult optionMenu(char);
 
     bool isLoadingState = false;
     void loadGameState(StandardChessGameHistoryState&);
@@ -522,23 +597,22 @@ public:
 
     bool DEV_MODE_ENABLE = false;
     void DEV_MODE_PRESET();
-    StandardLocalChessGame(Options, ChessClock, Player, bool);
-    StandardLocalChessGame(Options, Player, bool);
+    StandardLocalChessGame(Options, ChessClock, ChessTypes::Player, bool);
+    StandardLocalChessGame(Options, ChessTypes::Player, bool);
     StandardLocalChessGame() {}
 
-    // Start a standard game
-    void startGame();
+
 };
 
 class StandardOnlineChessGame : public StandardChessGame, public ClientChessGame {
     
     int* pipeFds; // For use by pipe and poll for timer and getting input in non cannonical mode
     int gameSocketFd;
-    Player playerNum;
+    ChessTypes::Player playerNum;
     std::wstring oppossingPlayerString;
 
-    int makeMove(Move&&) override;
-    int getMove(enum getMoveType) override;
+    //int makeMove(Move&&) override;
+    //ChessEnums::GetMoveResult getMove(ChessTypes::getMoveType) override;
     
     int preTurnCheckIn();
     bool readyForNextTurn();
@@ -552,7 +626,7 @@ class StandardOnlineChessGame : public StandardChessGame, public ClientChessGame
 
 public:
 
-    StandardOnlineChessGame(int, Player, std::wstring);
+    StandardOnlineChessGame(int, ChessTypes::Player, std::wstring);
     StandardOnlineChessGame(){}
     void startGame();
 
@@ -563,55 +637,4 @@ public:
 int char_single_digit_to_int(const char c);
 std::wstring convertString(const std::string& passed);
 std::string convertWString(std::wstring& passed);
-
-namespace validateGameSquare {
-    enum validateGameSquare {
-        NO_PIECE,
-        PIECE_NOT_YOURS,
-        CANNOT_TAKE_OWN,
-        VALID
-    };
-}
-namespace getMove {
-    enum getMove {
-#ifdef __linux__
-        ERROR = -1,
-#elif _WIN32
-        ERROR_GETTING_MOVE = -1,
-#endif
-        QUIT,
-        VALID,
-        TIMER_RAN_OUT,
-        UNDO,
-        REDO,
-        CHOOSE_MOVE_AGAIN
-    };
-}
-
-namespace sanitizeGetMove {
-    enum sanitizeGetMove {
-        INVALID = -1,
-        OPTIONS,
-        VALID
-    };
-}
-
-namespace optionMenu {
-    enum optionMenu {
-        INVALID = -1,
-        QUIT,
-        CONTINUE,
-        UNDO,
-        REDO
-    };
-}
-namespace makeMove {
-    enum makeMove {
-        KING_IN_HARM = -1,
-        INVALID_MOVE,
-        PIECE_TAKEN,
-        PIECE_MOVED
-    };
-}
-
 

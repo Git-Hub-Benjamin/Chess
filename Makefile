@@ -17,8 +17,12 @@ COMMON_FILES = ./src/chessfunctionality.cpp \
                ./src/client-rand-string/generate.cpp
 DEV_FILES = ./src/dev_mode.cpp
 CHESS_FUNC = ./src/chessfunctionality.cpp ./src/Chess/ChessGame/StandardChessGame.cpp ./src/terminal-io/terminal.cpp ./src/client-rand-string/generate.cpp
+
+# flags
 ZERO_OPTIMIZATION = -O0
 
+#  macros
+LEGACY_GAMEBOARD = -D LEGACY_ARRAY_GAMEBOARD
 WINDOWS_DEF = -D _WIN32
 LINUX_DEF = -D ___linux____
 MAC_DEF = -D __APPLE__
@@ -57,7 +61,7 @@ endif
 
 
 wintclient:
-	clang++ -I./src $(DEV_FILES) $(CLIENT_FILES) $(CHESS_FILES) $(COMMON_FILES) $(SOCKET) -o ./build/tchess.exe -g $(ZERO_OPTIMIZATION) $(WINDOWS_DEF) -lws2_32 -lmingw32
+	g++ -I./src $(DEV_FILES) $(CLIENT_FILES) $(CHESS_FILES) $(COMMON_FILES) $(SOCKET) -o ./build/tchess.exe -g $(ZERO_OPTIMIZATION) $(WINDOWS_DEF) $(LEGACY_GAMEBOARD)
 
 wintcliento:
 	clang++ -I./src $(DEV_FILES) $(CLIENT_FILES) $(CHESS_FILES) $(COMMON_FILES) $(SOCKET) -o ./build/tchess.out -g $(ZERO_OPTIMIZATION) -D _WIN32 -lws2_32 -lmingw32
