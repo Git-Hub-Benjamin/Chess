@@ -1,9 +1,0 @@
-
-
-class Connection {
-
-public:
-    Connection();
-
-    
-};

@@ -1,23 +1,32 @@
 SOCKET = ./src/socket/sockethelper.cpp
-SERVER_FILES = ./src/server/ServerMain.cpp ./src/server/OnlineChessGame.cpp ./src/server/StandardServerOnlineChessGame.cpp ./src/Chess/ChessGame/text-piece-art.cpp ./src/server/WChessServer.cpp $(CHESS_FUNC)
-CLIENT_FILES = ./src/client/online-game/clientonlinegame.cpp \
-               ./src/client/client-terminal-frontend/displaymanager.cpp \
-               ./src/client/online-game/connecting-to-online.cpp \
-               ./src/client/online-game/StandardOnlineChessGame.cpp \
-               
-LOCAL_FILES = ./src/client/tui/tuimain.cpp \
-              ./src/client/tui/clientoption.cpp \
-              ./src/client/client-text-graphics/textgraphic.cpp \
 
-CHESS_FILES = ./ src/Chess/ChessGame/text-piece-art.cpp \
-              ./src/Chess/ChessGame/StandardLocalChessGame.cpp \
-              ./src/Chess/ChessGame/StandardChessGame.cpp
+SERVER_FILES = ./src/server/ServerMain.cpp \
+               ./src/server/OnlineChessGame.cpp \
+               ./src/server/StandardServerOnlineChessGame.cpp \
+               ./src/Util/Terminal/TextPieceArt.cpp \
+               ./src/server/WChessServer.cpp \
 
-COMMON_FILES = ./src/chess-helper-functionality.cpp \
-               ./src/terminal-io/terminal.cpp \
-               ./src/client-rand-string/generate.cpp
-DEV_FILES = ./src/dev_mode.cpp
-CHESS_FUNC = ./src/chess-helper-functionality.cpp ./src/Chess/ChessGame/StandardChessGame.cpp ./src/terminal-io/terminal.cpp ./src/client-rand-string/generate.cpp
+CLIENT_FILES = ./src/Client/online-game/clientonlinegame.cpp \
+               ./src/Client/client-terminal-frontend/displaymanager.cpp \
+               ./src/Client/online-game/connecting-to-online.cpp \
+               ./src/Client/online-game/StandardOnlineChessGame.cpp \
+               ./src/Client/Options/Options.cpp 
+
+LOCAL_FILES = ./src/Client/Tui/WChessTerminalMain.cpp \
+			  ./src/Client/ConfigFile/ConfigFile.cpp \
+              ./src/Client/Options/Options.cpp \
+              ./src/Util/Terminal/TextGraphics.cpp \
+              ./src/Util/Terminal/Terminal.cpp 
+
+# Updated paths for Chess-related source files
+CHESS_FILES = ./src/Util/Terminal/TextPieceArt.cpp \
+              ./src/Chess/GameLogic/StandardLocalChessGame.cpp \
+              ./src/Chess/GameLogic/StandardChessGame.cpp \
+              ./src/Chess/Utils/ChessHelperFunctions.cpp 
+
+COMMON_FILES = ./src/Util/client-rand-string/RandomString.cpp 
+
+DEV_FILES = ./src/Chess/Dev/dev_mode.cpp # Path seems unchanged
 
 # flags
 ZERO_OPTIMIZATION = -O0
@@ -62,14 +71,14 @@ endif
 
 
 wintclient:
-	g++ -I./src $(DEV_FILES) $(LOCAL_FILES) $(CHESS_FILES) $(COMMON_FILES) $(SOCKET) -o ./build/tchess.exe -g $(ZERO_OPTIMIZATION) $(WINDOWS_DEF) $(LEGACY_GAMEBOARD)
+	g++ -I./src $(DEV_FILES) $(LOCAL_FILES) $(CHESS_FILES) $(COMMON_FILES) -o ./build/tchess.exe -g $(ZERO_OPTIMIZATION) $(WINDOWS_DEF) $(LEGACY_GAMEBOARD)
 
 wintcliento:
 	clang++ -I./src $(DEV_FILES) $(CLIENT_FILES) $(CHESS_FILES) $(COMMON_FILES) $(SOCKET) -o ./build/tchess.out -g $(ZERO_OPTIMIZATION) -D _WIN32 -lws2_32 -lmingw32
 
 
 lintclient:
-	clang++ $(DEV_FILES) $(CLIENT_FILES) ./src/client/tui/tuimain.cpp  $(SOCKET) -o ./build/tchess.out -g $(ZERO_OPTIMIZATION) -D __linux__
+	clang++ $(DEV_FILES) $(CLIENT_FILES) ./src/client/Tui/WChessTerminalMain.cpp  $(SOCKET) -o ./build/tchess.out -g $(ZERO_OPTIMIZATION) -D __linux__
 
 gclient:
 	clang++ $(DEV_FILES) $(CLIENT_FILES) ./src/client/gui/guimain.cpp  $(SOCKET) -o ./build/gchess.out -g $(ZERO_OPTIMIZATION)
@@ -81,7 +90,7 @@ all: game
 game: wintclient gclient tserver
 
 windowsclient:
-	g++ -I./src ./src/client/tui/tuimain.cpp ./src/Chess/ChessGame/text-piece-art.cpp ./src/client/client-text-graphics/textgraphic.cpp ./src/Chess/ChessGame/StandardChessGame.cpp ./src/dev_mode.cpp ./src/Chess/ChessGame/StandardLocalChessGame.cpp ./src/terminal-io/terminal.cpp ./src/client/tui/clientoption.cpp ./src/chess-helper-functionality.cpp -o ./build/tchess.exe $(WINDOWS_DEF) -g
+	g++ -I./src ./src/client/Tui/WChessTerminalMain.cpp ./src/Chess/ChessGame/text-piece-art.cpp ./src/client/client-text-graphics/textgraphic.cpp ./src/Chess/ChessGame/StandardChessGame.cpp ./src/dev_mode.cpp ./src/Chess/ChessGame/StandardLocalChessGame.cpp ./src/terminal-io/terminal.cpp ./src/client/Tui/clientoption.cpp ./src/chess-helper-functionality.cpp -o ./build/tchess.exe $(WINDOWS_DEF) -g
 	
 clean:
 	rm -rf ./build/chess.out

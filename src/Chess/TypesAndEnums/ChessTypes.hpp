@@ -1,0 +1,58 @@
+#pragma once
+
+namespace ChessTypes {
+
+    enum class XCoordinate {
+        A = 0,
+        B,
+        C,
+        D,
+        E,
+        F,
+        G,
+        H
+    };
+
+    enum class YCoordinate {
+        One = 0,
+        Two,
+        Three,
+        Four,
+        Five,
+        Six,
+        Seven,
+        Eight
+    };
+
+    enum class GamePiece {
+        None = 0,
+        Pawn,
+        Knight,
+        Bishop,
+        Rook,
+        King,
+        Queen
+    };
+
+    enum class Owner {
+        None = 0,
+        PlayerOne,
+        PlayerTwo
+    };
+
+    enum class Player {
+        PlayerOne = 1,
+        PlayerTwo
+    };
+
+    enum class GameConnectivity {
+        Local,
+        Online
+    };
+
+    enum class GetMoveType {
+        From,
+        To
+    };
+
+} // namespace ChessTypes
