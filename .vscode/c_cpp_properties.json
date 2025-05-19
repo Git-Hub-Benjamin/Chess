@@ -23,8 +23,7 @@
             "cppStandard": "c++17",
             "intelliSenseMode": "windows-clang-x64",
             "defines": [
-                "LEGACY_ARRAY_GAMEBOARD = 1",
-                "__linux__ = 1"
+                "LEGACY_ARRAY_GAMEBOARD = 1"
             ]
         }
     ],

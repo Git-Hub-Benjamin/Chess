@@ -2,21 +2,22 @@ SOCKET = ./src/socket/sockethelper.cpp
 SERVER_FILES = ./src/server/ServerMain.cpp ./src/server/OnlineChessGame.cpp ./src/server/StandardServerOnlineChessGame.cpp ./src/Chess/ChessGame/text-piece-art.cpp ./src/server/WChessServer.cpp $(CHESS_FUNC)
 CLIENT_FILES = ./src/client/online-game/clientonlinegame.cpp \
                ./src/client/client-terminal-frontend/displaymanager.cpp \
-               ./src/client/client-text-graphics/textgraphic.cpp \
                ./src/client/online-game/connecting-to-online.cpp \
                ./src/client/online-game/StandardOnlineChessGame.cpp \
-               ./src/client/tui/clientoption.cpp \
-               ./src/client/tui/tuimain.cpp
+               
+LOCAL_FILES = ./src/client/tui/tuimain.cpp \
+              ./src/client/tui/clientoption.cpp \
+              ./src/client/client-text-graphics/textgraphic.cpp \
 
 CHESS_FILES = ./ src/Chess/ChessGame/text-piece-art.cpp \
               ./src/Chess/ChessGame/StandardLocalChessGame.cpp \
               ./src/Chess/ChessGame/StandardChessGame.cpp
 
-COMMON_FILES = ./src/chessfunctionality.cpp \
+COMMON_FILES = ./src/chess-helper-functionality.cpp \
                ./src/terminal-io/terminal.cpp \
                ./src/client-rand-string/generate.cpp
 DEV_FILES = ./src/dev_mode.cpp
-CHESS_FUNC = ./src/chessfunctionality.cpp ./src/Chess/ChessGame/StandardChessGame.cpp ./src/terminal-io/terminal.cpp ./src/client-rand-string/generate.cpp
+CHESS_FUNC = ./src/chess-helper-functionality.cpp ./src/Chess/ChessGame/StandardChessGame.cpp ./src/terminal-io/terminal.cpp ./src/client-rand-string/generate.cpp
 
 # flags
 ZERO_OPTIMIZATION = -O0
@@ -61,7 +62,7 @@ endif
 
 
 wintclient:
-	g++ -I./src $(DEV_FILES) $(CLIENT_FILES) $(CHESS_FILES) $(COMMON_FILES) $(SOCKET) -o ./build/tchess.exe -g $(ZERO_OPTIMIZATION) $(WINDOWS_DEF) $(LEGACY_GAMEBOARD)
+	g++ -I./src $(DEV_FILES) $(LOCAL_FILES) $(CHESS_FILES) $(COMMON_FILES) $(SOCKET) -o ./build/tchess.exe -g $(ZERO_OPTIMIZATION) $(WINDOWS_DEF) $(LEGACY_GAMEBOARD)
 
 wintcliento:
 	clang++ -I./src $(DEV_FILES) $(CLIENT_FILES) $(CHESS_FILES) $(COMMON_FILES) $(SOCKET) -o ./build/tchess.out -g $(ZERO_OPTIMIZATION) -D _WIN32 -lws2_32 -lmingw32

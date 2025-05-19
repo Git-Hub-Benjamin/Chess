@@ -1691,10 +1691,9 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
         return ChessEnums::GetMoveResult::VALID;
     }
 }
-```
 
-    void
-    StandardLocalChessGame::currTurnChessClock(bool &stop_display, int writePipeFd, const std::wstring &out)
+    
+void StandardLocalChessGame::currTurnChessClock(bool &stop_display, int writePipeFd, const std::wstring &out)
 {
     int &count = *(currentTurn == ChessTypes::Player::PlayerOne ? gameClock.getWhiteTimeAddr() : gameClock.getBlackTimeAddr());
     while (count >= 0 && !stop_display)

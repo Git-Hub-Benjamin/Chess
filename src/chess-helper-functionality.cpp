@@ -10,21 +10,21 @@ std::string convertWString(std::wstring& passed){
     return std::string(passed.begin(), passed.end());
 }
 
-std::wstring enumPiece_toString(GamePiece piece) {
+std::wstring enumPiece_toString(ChessTypes::GamePiece piece) {
     switch (piece) {
-        case OPEN:
-            return L"OPEN";
-        case PAWN:
-            return L"PAWN";
-        case KNIGHT:
+        case ChessTypes::GamePiece::None:
+            return L"None";
+        case ChessTypes::GamePiece::Pawn:
+            return L"Pawn";
+        case ChessTypes::GamePiece::Knight:
             return L"KNIGHT";
-        case BISHOP:
+        case ChessTypes::GamePiece::Bishop:
             return L"BISHOP";
-        case ROOK:
+        case ChessTypes::GamePiece::Rook:
             return L"ROOK";
-        case KING:
+        case ChessTypes::GamePiece::King:
             return L"KING";
-        case QUEEN:
+        case ChessTypes::GamePiece::Queen:
             return L"QUEEN";
         default:
             return L"UNKNOWN";
