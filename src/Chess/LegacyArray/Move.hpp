@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GameSpaure.hpp"
+#include "GameSquare.hpp"
 
 class Move{
 

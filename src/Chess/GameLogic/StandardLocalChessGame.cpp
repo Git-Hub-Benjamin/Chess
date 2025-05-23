@@ -260,8 +260,7 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
                                                            : playerToString(currentTurn) +
                                                                  L", You're in check! Move: ")
                                                 : !currTurnInCheck
-                                                    ? playerToString(currentTurn) +
-                                                          L", To: "
+                                                    ? playerToString(currentTurn) + L", To: "
                                                     : playerToString(currentTurn) +
                                                           L", You're in check! To: "));
                                     }
@@ -444,17 +443,18 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
             if (getMoveType == ChessTypes::GetMoveType::From)
             {
                 if (!currTurnInCheck) {
-                    WChessPrint(convertWString(playerToString(currentTurn)).c_str()); WChessPrint(", Move: ");
+                    WChessPrint(playerToString(currentTurn).c_str()); WChessPrint(", Move: ");
                 } else {
-                    WChessPrint(convertWString(playerToString(currentTurn)).c_str()); WChessPrint(", You're in check! Move: ");
+                    WChessPrint(playerToString(currentTurn).c_str()); WChessPrint(", You're in check! Move: ");
                 }
             }
             else
             {
                 if (!currTurnInCheck) {
-                    WChessPrint(convertWString(playerToString(currentTurn)).c_str()); WChessPrint(", To: ");
+                    WChessPrint(playerToString(currentTurn).c_str()); 
+                    WChessPrint(", To: ");
                 } else {
-                    WChessPrint(convertWString(playerToString(currentTurn)).c_str()); WChessPrint(", You're in check! To: ");
+                    WChessPrint(playerToString(currentTurn).c_str()); WChessPrint(", You're in check! To: ");
                 }
             }
 
@@ -538,3 +538,4 @@ void StandardLocalChessGame::startGame()
     exit(EXIT_SUCCESS);
 #endif
 }
+

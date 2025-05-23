@@ -7,7 +7,7 @@
 #include "Utils/ChessConstants.hpp"
 
 #include "Utils/ChessConstants.hpp"
-#include "LegacyArray/GameSpaure.hpp"
+#include "LegacyArray/GameSquare.hpp"
 #include "LegacyArray/possibleMoveType.hpp"
 #include "LegacyArray/Move.hpp"
 #include <vector>
@@ -49,6 +49,7 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     ChessEnums::MakeMoveResult LmakeMove(Move&& move);
     void LinitGame();
     int LreflectAxis(int);
+    //! Why is intellisense saying this is not working...
     bool LvalidateMoveset(Move&);
     bool LonBoard(Point&);
 
@@ -56,7 +57,7 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     // Regardless of whether or not legacy
     // Get move
     ChessEnums::GetMoveResult getMove(ChessTypes::GetMoveType) override;
-    void currTurnChessClock(bool&, int, const std::string&);
+    void currTurnChessClock(bool&, int, const std::string&) override;
     ChessEnums::GameOptionResult optionMenu(char);
 
     bool isLoadingState = false;
@@ -71,8 +72,6 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     // For undo / redo turns -- Only going to implement for bitboard
     //std::stack<StandardChessGameHistoryState> undoTurn;
     //std::stack<StandardChessGameHistoryState> redoTurn;
-
-
 
 public:
 

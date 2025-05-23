@@ -7,7 +7,7 @@
 #include "src/Chess/Utils/ChessConstants.hpp"
 #include "src/Chess/TypesAndEnums/ChessEnums.hpp"
 #include "src/Util/Terminal/Terminal.hpp"
-#include "src/Chess/LegacyArray/GameSpaure.hpp"
+#include "src/Chess/LegacyArray/GameSquare.hpp"
 #include "src/Util/Terminal/TextPieceArt.hpp"
 
 static int playerOneConversion;

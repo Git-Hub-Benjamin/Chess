@@ -10,7 +10,7 @@ class ClientChessGame {
 protected:
     virtual ChessEnums::GetMoveResult getMove(ChessTypes::GetMoveType) = 0;
     // Function to handle current turn chess clock
-    virtual void currTurnChessClock(bool& stop, int pipe, const std::wstring& msgToOutput) = 0;
+    virtual void currTurnChessClock(bool& stop, int pipe, const std::string& msgToOutput) = 0;
 };
 
 class StandardOnlineChessGame : public StandardChessGame, public ClientChessGame {
@@ -30,7 +30,7 @@ class StandardOnlineChessGame : public StandardChessGame, public ClientChessGame
     bool verifyGameServerConnection();
     bool takeMovesAndSend(std::wstring, std::wstring);
     int notTurnRecieveMove(std::wstring& move, std::wstring& moveTo);
-    void currTurnChessClock(bool&, int, const std::wstring&) override;
+    void currTurnChessClock(bool&, int, const std::string&) override;
 
 
 public:

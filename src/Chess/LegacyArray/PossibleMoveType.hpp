@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../TypesAndEnums/ChessEnums.hpp"
-#include "GameSpaure.hpp"
+#include "GameSquare.hpp"
 
 struct possibleMoveType {
     // Square Data

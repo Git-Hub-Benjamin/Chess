@@ -146,7 +146,7 @@ protected:
     std::string inputBuffer;
 
     // Utility function to convert player to string
-    std::wstring playerToString(ChessTypes::Player);
+    std::string playerToString(ChessTypes::Player);
 
     // Only to be called from subclasses
     StandardChessGame() {}

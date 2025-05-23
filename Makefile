@@ -20,6 +20,7 @@ LOCAL_FILES = ./src/Client/Tui/WChessTerminalMain.cpp \
 
 # Updated paths for Chess-related source files
 CHESS_FILES = ./src/Util/Terminal/TextPieceArt.cpp \
+			  ./src/Chess/LegacyArray/LStandardLocalChessGame.cpp \
               ./src/Chess/GameLogic/StandardLocalChessGame.cpp \
               ./src/Chess/GameLogic/StandardChessGame.cpp \
               ./src/Chess/Utils/ChessHelperFunctions.cpp 

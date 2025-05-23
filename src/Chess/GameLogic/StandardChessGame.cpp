@@ -146,7 +146,7 @@ ChessEnums::ValidateGameSquareResult StandardChessGame::validateGameSquare(Squar
 }
 
 void StandardChessGame::printBoard(ChessTypes::Player playerSideToPrint){
-#ifndef _WIN32
+#ifdef _WIN32
     if (GameOptions.clearScreenOnBoardPrint) 
         system("cls");
 
@@ -263,8 +263,8 @@ ChessEnums::SanitizeGetMoveResult StandardChessGame::sanitizeGetMove(std::string
     return ChessEnums::SanitizeGetMoveResult::VALID;
 } 
 
-std::wstring StandardChessGame::playerToString(ChessTypes::Player p){
-    return (p == ChessTypes::Player::PlayerOne ? L"Player One" : L"Player Two");
+std::string StandardChessGame::playerToString(ChessTypes::Player p){
+    return (p == ChessTypes::Player::PlayerOne ? "Player One" : "Player Two");
 }
 
 // 0 FREE

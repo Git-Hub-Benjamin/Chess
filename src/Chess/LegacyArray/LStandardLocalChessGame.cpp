@@ -5,10 +5,10 @@
 #include "../Utils/ChessClock.hpp"
 #include "../../Util/Terminal/TextPieceArt.hpp"
 
-#include "LegacyArray/GameSpaure.hpp"
-#include "LegacyArray/Move.hpp"
-#include "LegacyArray/PossibleMoveType.hpp"
-#include "LegacyArray/Movesets.hpp"
+#include "GameSquare.hpp"
+#include "Move.hpp"
+#include "PossibleMoveType.hpp"
+#include "Movesets.hpp"
 #include "../Utils/ChessConstants.hpp"
 
 bool StandardLocalChessGame::LonBoard(Point& p) {
@@ -120,20 +120,20 @@ bool StandardLocalChessGame::LverifyMove(Move &move) { return LvalidateMoveset(m
 
 bool StandardLocalChessGame::LverifyMove(Move &&move) { return LverifyMove(move); }
 
-// // True - valid moveset
-// // False - invalid moveset
-// bool StandardLocalChessGame::LvalidateMoveset(Move& move) {
-//     ChessTypes::GamePiece fromPiece = move.getMoveFrom().getPiece();
-//     short possibleMoveCounter = PIECE_MOVE_COUNTS[static_cast<int>(fromPiece) - 1];
+// True - valid moveset
+// False - invalid moveset
+bool StandardLocalChessGame::LvalidateMoveset(Move& move) {
+    ChessTypes::GamePiece fromPiece = move.getMoveFrom().getPiece();
+    short possibleMoveCounter = PIECE_MOVE_COUNTS[static_cast<int>(fromPiece) - 1];
 
-//     if (fromPiece == ChessTypes::GamePiece::Pawn && currentTurn == ChessTypes::Player::PlayerTwo)
-//         fromPiece = ChessTypes::GamePiece::None; 
+    if (fromPiece == ChessTypes::GamePiece::Pawn && currentTurn == ChessTypes::Player::PlayerTwo)
+        fromPiece = ChessTypes::GamePiece::None; 
 
-//     for(int move_set_count = 0; move_set_count < possibleMoveCounter; move_set_count++)
-//         if (move.getMoveFrom().getPosition() + Point(pieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][0], pieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][1]) == move.getMoveTo().getPosition()) {
-//             return true;
-//     return false;
-// }
+    for(int move_set_count = 0; move_set_count < possibleMoveCounter; move_set_count++)
+        if (move.getMoveFrom().getPosition() + Point(pieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][0], pieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][1]) == move.getMoveTo().getPosition())
+            return true;
+    return false;
+}
 
 
 // True - Good, clear path

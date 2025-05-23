@@ -220,7 +220,11 @@ int main() {
 
 	while(running){
 		title_screen();
-		WChessPrint("Global things --> "); WChessPrint(std::to_string(global_player_option.p1_color).c_str()); WChessPrint(std::to_string(global_player_option.p2_color).c_str()); WChessPrint(std::to_string(global_player_option.whitePlayerArtSelector).c_str()); WChessPrint(std::to_string(global_player_option.blackPlayerArtSelector).c_str()); WChessPrint(std::to_string(global_player_option.moveHighlighting).c_str()); WChessPrint(std::to_string(global_player_option.dynamicMoveHighlighting).c_str()); WChessPrint(std::to_string(global_player_option.boardHistory).c_str()); WChessPrint(std::to_string(global_player_option.flipBoardOnNewTurn).c_str()); WChessPrint(std::to_string(global_player_option.clearScreenOnBoardPrint).c_str()); WChessPrint("\n");
+		WChessPrint("Global things --> "); 
+
+		std::string globals = std::to_string(global_player_option.p1_color) + std::to_string(global_player_option.p2_color) + std::to_string(global_player_option.whitePlayerArtSelector) + std::to_string(global_player_option.blackPlayerArtSelector) + std::to_string(global_player_option.moveHighlighting) + std::to_string(global_player_option.dynamicMoveHighlighting) + std::to_string(global_player_option.boardHistory) + std::to_string(global_player_option.flipBoardOnNewTurn) + std::to_string(global_player_option.clearScreenOnBoardPrint);
+		WChessPrint(globals.c_str());
+		WChessPrint("\n");
 
 		WChessPrint("--> ");
 		int mainMenuOption = get_menu_option();
