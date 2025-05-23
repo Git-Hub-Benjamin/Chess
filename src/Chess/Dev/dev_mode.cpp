@@ -14,7 +14,6 @@ int dev_menu_option(){
 }
 
 void StandardLocalChessGame::DEV_MODE_PRESET(){
-
 #ifdef LEGACY_ARRAY_GAMEBOARD
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
         for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {
@@ -38,7 +37,6 @@ void StandardLocalChessGame::DEV_MODE_PRESET(){
 
     currentTurn = ChessTypes::Player::PlayerTwo;
     blackPlayerKing = &GameBoard[7][3];
-#endif
 
     // for(int row = 0; row < CHESS_BOARD_HEIGHT; row++) {
     //     for(int col = 0; col < CHESS_BOARD_WIDTH; col++) {
@@ -46,4 +44,5 @@ void StandardLocalChessGame::DEV_MODE_PRESET(){
     //         std::wcout << std::endl;
     //     }
     // }
+#endif
 }

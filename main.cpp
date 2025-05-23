@@ -2,326 +2,141 @@
 #include <cstdint>
 #include <string.h>
 #include <cwctype>
+#include <windows.h>
+#include "src/Chess/TypesAndEnums/ChessTypes.hpp"
+#include "src/Chess/Utils/ChessConstants.hpp"
+#include "src/Chess/TypesAndEnums/ChessEnums.hpp"
+#include "src/Util/Terminal/Terminal.hpp"
+#include "src/Chess/LegacyArray/GameSpaure.hpp"
+#include "src/Util/Terminal/TextPieceArt.hpp"
 
-uint64_t white_pawns;
-uint64_t white_knights;
-uint64_t white_bishops;
-uint64_t white_rooks;
-uint64_t white_queens;
-uint64_t white_king;
-uint64_t black_pawns;
-uint64_t black_knights;
-uint64_t black_bishops;
-uint64_t black_rooks;
-uint64_t black_queens;
-uint64_t black_king;
-uint64_t white_occupancy;
-uint64_t black_occupancy;
-uint64_t all_occupancy;
+static int playerOneConversion;
+static int playerTwoConversion;
 
-int sanitizeGetMove(std::wstring& input) {
+ChessTypes::GameConnectivity GameConnectivity = ChessTypes::GameConnectivity::Local;
+GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
 
-    if(!std::iswalpha(input[0])) 
-        return -1; // Ensure [0] is alphabetical character
-    
-    // Force to lower case
-    input[0] = std::towlower(input[0]); // Force [0] to lower case
-    switch(input[0]) {
-        case L'a': case L'b': case L'c': case L'd':
-        case L'e': case L'f': case L'g': case L'h':
-            break;
-        case L'q': // Valid too but for option
-        case L'x': case L'o':
-            return 0;
-        default: // Ensure one of the characters above
-            return -1; // Ensure [0] is alphabetical character
+void LinitGame()
+{
+    for (int row = 0; row < CHESS_BOARD_HEIGHT; row++)
+    {
+        for (int col = 0; col < CHESS_BOARD_WIDTH; col++)
+        {
+            ChessTypes::GamePiece pieceToPut = ChessTypes::GamePiece::None;
+            ChessTypes::Owner playerOwnerToPut = ChessTypes::Owner::None;
+
+            if (row < (int)ChessTypes::YCoordinate::Six)
+                playerOwnerToPut = ChessTypes::Owner::PlayerTwo;
+            if (row > (int)ChessTypes::YCoordinate::Three)
+                playerOwnerToPut = ChessTypes::Owner::PlayerOne;
+
+            if (row == (int)ChessTypes::YCoordinate::One ||
+                row == (int)ChessTypes::YCoordinate::Eight)
+            {
+                switch (col)
+                {
+                case (int)ChessTypes::XCoordinate::A:
+                case (int)ChessTypes::XCoordinate::H:
+                    pieceToPut = ChessTypes::GamePiece::Rook;
+                    break;
+                case (int)ChessTypes::XCoordinate::B:
+                case (int)ChessTypes::XCoordinate::G:
+                    pieceToPut = ChessTypes::GamePiece::Knight;
+                    break;
+                case (int)ChessTypes::XCoordinate::C:
+                case (int)ChessTypes::XCoordinate::F:
+                    pieceToPut = ChessTypes::GamePiece::Bishop;
+                    break;
+                case (int)ChessTypes::XCoordinate::D:
+                    pieceToPut = ChessTypes::GamePiece::King;
+                    break;
+                case (int)ChessTypes::XCoordinate::E:
+                    pieceToPut = ChessTypes::GamePiece::Queen;
+                    break;
+                }
+            }
+
+            if (row == (int)ChessTypes::YCoordinate::Two ||
+                row == (int)ChessTypes::YCoordinate::Seven)
+                pieceToPut = ChessTypes::GamePiece::Pawn;
+
+            GameBoard[row][col] = GameSquare(playerOwnerToPut, pieceToPut, Point(col, row));
+
+            if (pieceToPut ==ChessTypes::GamePiece::None) // This first move made only applies to pieces with actual pieces there
+                GameBoard[row][col].setFirstMoveMade();
+        }
     }
-
-    // Make sure length is 2
-    if(input.length() != 2)
-        return -1; // Move must be length of 2
-
-    // Ensure 2nd char is a number
-    if(!std::iswdigit(input[1]) || input[1] == L'0' || input[1] == L'9') // Using std::iswdigit
-        return -1; // Ensure [1] must be a digit and not '0' or '9'
-
-    // Now we know it must be [0] == a-h, [1] == 1 - 8
-    return 1;
-} 
-
-uint64_t convertMove(std::wstring move){
-    // Convert letter to number (a = 0, b = 1 etc)
-    int col = move[0] - L'a';
-
-    // Convert char number to number ('1' = 1, '8' = 8 etc)
-    // Subtract 1 because rank 1 corresponds to row 0
-    int rank = move[1] - L'0';
-    int row = rank - 1;
-
-    return static_cast<uint64_t>(row * 8 + col);
 }
 
-enum GamePiece{
-    OPEN = 0,
-    PAWN,
-    KNIGHT,
-    BISHOP,
-    ROOK,
-    KING,
-    QUEEN
-};
 
-enum Owner{
-    NONE = 0,
-    PONE,
-    PTWO,
-};
+void LprintBoard()
+{
+    std::string board;
+    board += "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n";
+    board += "\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    for (int row = 0; row < CHESS_BOARD_HEIGHT; row++)
+    {
+        board += "\t\t\t";
+        std::cout.flush();
+        board += std::to_string(CHESS_BOARD_HEIGHT - row);
+        board += " ";
+        for (int col = 0; col < CHESS_BOARD_WIDTH; col++)
+        {
+            board += "| ";
 
-struct SquareInfo {
-    Owner owner;
-    GamePiece piece;
-};
+            board += TEXT_PIECE_ART_COLLECTION[GameBoard[row][col].getOwner() == ChessTypes::Owner::PlayerOne ? STD_PIECE_ART_P1 : STD_PIECE_ART_P2][static_cast<int>(GameBoard[row][col].getPiece())];
+            if (GameBoard[row][col].getOwner() == ChessTypes::Owner::PlayerOne)
+                set_terminal_color(BRIGHT_GREEN);
+            else if(GameBoard[row][col].getOwner() == ChessTypes::Owner::PlayerTwo)
+                set_terminal_color(BRIGHT_AQUA);
 
-SquareInfo getSquareInfo(int row, int col) {
-    int bit_index = row * 8 + col;
-    SquareInfo info = {NONE, OPEN}; // Default to empty
-
-    if ((white_occupancy >> bit_index) & 1) {
-        info.owner = PONE;
-        if ((white_pawns >> bit_index) & 1) info.piece = PAWN;
-        else if ((white_knights >> bit_index) & 1) info.piece = KNIGHT;
-        else if ((white_bishops >> bit_index) & 1) info.piece = BISHOP;
-        else if ((white_rooks >> bit_index) & 1) info.piece = ROOK;
-        else if ((white_queens >> bit_index) & 1) info.piece = QUEEN;
-        else if ((white_king >> bit_index) & 1) info.piece = KING;
-    } else if ((black_occupancy >> bit_index) & 1) {
-        info.owner = PTWO;
-        if ((black_pawns >> bit_index) & 1) info.piece = PAWN;
-        else if ((black_knights >> bit_index) & 1) info.piece = KNIGHT;
-        else if ((black_bishops >> bit_index) & 1) info.piece = BISHOP;
-        else if ((black_rooks >> bit_index) & 1) info.piece = ROOK;
-        else if ((black_queens >> bit_index) & 1) info.piece = QUEEN;
-        else if ((black_king >> bit_index) & 1) info.piece = KING;
+            set_terminal_color(DEFAULT);
+            board += " ";
+        }
+        board += "| " + std::to_string(CHESS_BOARD_HEIGHT - row) + "\n";
+        board += "\t\t\t  +---+---+---+---+---+---+---+---+\n";
     }
-
-    return info;
+    board += "\t\t\t    a   b   c   d   e   f   g   h\n";
+    WChessPrint(board.c_str());
 }
 
-using namespace std;
+
+
 
 int main() {
-    std::wstring input;
+    SetConsoleOutputCP(CP_UTF8);
+    WChessPrint("Code page set to UTF-8.\n");
+
+
+
+
+    LinitGame();
+    LprintBoard();
+/*
     while(true) {
-        wcout << "Input position to move to: ";
-        std::wcin >> input;
-        if (sanitizeGetMove(input) < 1)
-            continue;
-        uint64_t bit_index = convertMove(input);
-        std::wcout << "Bit index: " << bit_index << std::endl;
-        if((all_occupancy >> bit_index) & 1)
-            std::wcout << "Position taken." << std::endl;
-        else
-            std::wcout << "Position free." << std::endl;
-        }    
+        WChessPrint("Row --> ");
+        std::wstring row; 
+        std::wcin >> row;
+        WChessPrint("Col --> ");
+        std::wstring col;
+        std::wcin >> col;
+
+        if (row[0] == L'q' || col[0] == L'q')
+            break;
+
+        wchar_t piece;
+        if (GameBoard[std::stoi(row)][std::stoi(col)].getOwner() == ChessTypes::Owner::None)
+            piece = L' ';
+        else if (GameBoard[std::stoi(row)][std::stoi(col)].getOwner() == ChessTypes::Owner::PlayerOne) {
+            piece = TEXT_PIECE_ART_COLLECTION[playerOneConversion][static_cast<int>(GameBoard[std::stoi(row)][std::stoi(col)].getPiece())];
+            set_terminal_color(DEFAULT);
+        } else {
+            piece = TEXT_PIECE_ART_COLLECTION[playerTwoConversion][static_cast<int>(GameBoard[std::stoi(row)][std::stoi(col)].getPiece())];
+            set_terminal_color(DEFAULT);
+        }
+
+        WChessPrint("Printing piece: "); WChessPrint(&piece); WChessPrint("\n");
+    }
+*/
     return 0;
 }
-
-
-
-// #include <iostream>
-// #include <SDL2/SDL.h>
-// #include <SDL2/SDL_ttf.h>
-// #include <string>
-// #include <chrono>
-// #include <thread>
-// #include <atomic>
-
-// // Function to render text
-// SDL_Texture* renderText(const std::string& text, TTF_Font* font, SDL_Color color, SDL_Renderer* renderer) {
-//     SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
-//     if (surface == nullptr) {
-//         std::cerr << "TTF_RenderText_Solid Error: " << TTF_GetError() << std::endl;
-//         return nullptr;
-//     }
-//     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-//     SDL_FreeSurface(surface);
-//     return texture;
-// }
-
-// // Timer function
-// void timerThread(std::atomic<bool>& stopTimer, int& duration) {
-//     auto startTime = std::chrono::steady_clock::now();
-//     while (duration > 0 && !stopTimer) {
-//         auto currentTime = std::chrono::steady_clock::now();
-//         auto elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime).count();
-//         duration = 60 - static_cast<int>(elapsedTime);
-//         std::this_thread::sleep_for(std::chrono::seconds(1));
-//     }
-// }
-
-// int main(int argc, char* argv[]) {
-//     // Initialize SDL
-//     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-//         std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
-//         return 1;
-//     }
-
-//     // Initialize SDL_ttf
-//     if (TTF_Init() == -1) {
-//         std::cerr << "TTF_Init Error: " << TTF_GetError() << std::endl;
-//         SDL_Quit();
-//         return 1;
-//     }
-
-//     // Create a window
-//     SDL_Window* window = SDL_CreateWindow("SDL Timer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_SHOWN);
-//     if (window == nullptr) {
-//         std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
-//         TTF_Quit();
-//         SDL_Quit();
-//         return 1;
-//     }
-
-//     // Create a renderer
-//     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-//     if (renderer == nullptr) {
-//         std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
-//         SDL_DestroyWindow(window);
-//         TTF_Quit();
-//         SDL_Quit();
-//         return 1;
-//     }
-
-//     // Load font
-//     TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/msttcorefonts/arial.ttf", 24);
-//     if (font == nullptr) {
-//         std::cerr << "TTF_OpenFont Error: " << TTF_GetError() << std::endl;
-//         SDL_DestroyRenderer(renderer);
-//         SDL_DestroyWindow(window);
-//         TTF_Quit();
-//         SDL_Quit();
-//         return 1;
-//     }
-
-//     // Set render color to black
-//     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-
-//     // Create a flag to control the timer
-//     std::atomic<bool> stopTimer(false);
-//     int duration = 60;
-
-//     // Start the timer thread
-//     std::thread timer(timerThread, std::ref(stopTimer), std::ref(duration));
-
-//     // Input box parameters
-//     std::string userInput = "";
-//     SDL_Color textColor = {0, 0, 0, 255}; // Black color
-//     int inputBoxWidth = 300;
-//     int inputBoxHeight = 50;
-//     int inputBoxX = (640 - inputBoxWidth) / 2;
-//     int inputBoxY = (480 - inputBoxHeight) / 2;
-
-//     // Main loop
-//     bool quit = false;
-//     SDL_Event event;
-//     while (!quit) {
-//         // Handle events
-//         while (SDL_PollEvent(&event)) {
-//             if (event.type == SDL_QUIT) {
-//                 quit = true;
-//             } else if (event.type == SDL_TEXTINPUT) {
-//                 // Handle text input
-//                 userInput += event.text.text;
-//             } else if (event.type == SDL_KEYDOWN) {
-//                 // Handle backspace
-//                 if (event.key.keysym.sym == SDLK_BACKSPACE && !userInput.empty()) {
-//                     userInput.pop_back();
-//                 }
-//             }
-//         }
-
-//         // Clear the screen
-//         SDL_RenderClear(renderer);
-
-//         // Render input box outline
-//         SDL_Rect inputBoxRect = {inputBoxX, inputBoxY, inputBoxWidth, inputBoxHeight};
-//         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // White color
-//         SDL_RenderDrawRect(renderer, &inputBoxRect);
-
-//         // Render user input text
-//         // Render user input text
-//         if (!userInput.empty()) {
-//             SDL_Texture* userInputTexture = renderText(userInput, font, textColor, renderer);
-//             if (userInputTexture != nullptr) {
-//                 int textWidth, textHeight;
-//                 SDL_QueryTexture(userInputTexture, nullptr, nullptr, &textWidth, &textHeight);
-//                 SDL_Rect textRect = {inputBoxX + 5, inputBoxY + (inputBoxHeight - textHeight) / 2, textWidth, textHeight};
-//                 SDL_RenderCopy(renderer, userInputTexture, nullptr, &textRect);
-//                 SDL_DestroyTexture(userInputTexture);
-//             }
-//         }
-
-//         // Render timer if duration is positive
-//         if (duration > 0) {
-//             std::string timerText = "Time left: " + std::to_string(duration) + "s";
-//             SDL_Texture* timerTexture = renderText(timerText, font, textColor, renderer);
-//             if (timerTexture != nullptr) {
-//                 int textWidth, textHeight;
-//                 SDL_QueryTexture(timerTexture, nullptr, nullptr, &textWidth, &textHeight);
-//                 SDL_Rect timerRect = {10, 10, textWidth, textHeight}; // Top left corner
-//                 SDL_RenderCopy(renderer, timerTexture, nullptr, &timerRect);
-//                 SDL_DestroyTexture(timerTexture);
-//             }
-//         }
-
-//         // render button
-//         // Render button
-//         SDL_Rect buttonRect = {640 - 110, 480 - 60, 100, 50};
-//         SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255); // Blue color
-//         SDL_RenderFillRect(renderer, &buttonRect);
-
-//         // Render button text
-//         SDL_Color buttonTextColor = {255, 255, 255, 255}; // White color
-//         SDL_Texture* buttonTextTexture = renderText("Click", font, buttonTextColor, renderer);
-//         if (buttonTextTexture != nullptr) {
-//             int textWidth, textHeight;
-//             SDL_QueryTexture(buttonTextTexture, nullptr, nullptr, &textWidth, &textHeight);
-//             SDL_Rect textRect = {640 - 110 + (100 - textWidth) / 2, 480 - 60 + (50 - textHeight) / 2, textWidth, textHeight};
-//             SDL_RenderCopy(renderer, buttonTextTexture, nullptr, &textRect);
-//             SDL_DestroyTexture(buttonTextTexture);
-//         }
-
-//         // Check if the button is clicked
-//         int mouseX, mouseY;
-//         Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
-//         bool isButtonClicked = (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) && mouseX >= buttonRect.x && mouseX < buttonRect.x + buttonRect.w && mouseY >= buttonRect.y && mouseY < buttonRect.y + buttonRect.h;
-
-//         // Perform action when the button is clicked
-//         if (isButtonClicked) {
-//             // Action to perform when the button is clicked (e.g., display a message)
-//             std::wcout << "Button clicked!" << std::endl;
-//         }
-
-
-
-//         // Present the renderer
-//         SDL_RenderPresent(renderer);
-
-//         // Delay to reduce CPU usage
-//         SDL_Delay(10);
-//     }
-
-//     // Stop the timer thread
-//     stopTimer = true;
-//     if (timer.joinable()) {
-//         timer.join();
-//     }
-
-//     // Clean up
-//     SDL_DestroyRenderer(renderer);
-//     SDL_DestroyWindow(window);
-//     TTF_CloseFont(font);
-//     TTF_Quit();
-//     SDL_Quit();
-//     return 0;
-// }

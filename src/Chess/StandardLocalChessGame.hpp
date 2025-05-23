@@ -4,18 +4,16 @@
 #include "ClientChessGame.hpp"
 #include "Utils/TakenPiece.hpp"
 #include "Utils/ChessClock.hpp"
+#include "Utils/ChessConstants.hpp"
 
-//#ifdef LEGACY_ARRAY_GAMEBOARD
 #include "Utils/ChessConstants.hpp"
 #include "LegacyArray/GameSpaure.hpp"
 #include "LegacyArray/possibleMoveType.hpp"
 #include "LegacyArray/Move.hpp"
 #include <vector>
-//#endif
 
 class StandardLocalChessGame : private StandardChessGame, public ClientChessGame{
 
-#ifdef LEGACY_ARRAY_GAMEBOARD
     //* LEGACY
     // Used to track the game board and kings' positions
     GameSquare GameBoard[CHESS_BOARD_HEIGHT][CHESS_BOARD_WIDTH];
@@ -41,7 +39,7 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     bool LkingSafe();
     bool LkingSafeAfterMove(GameSquare& to);
     bool LcheckMate();
-    GameSquare& LconvertMove(std::wstring move, ChessTypes::Player sideToConvert);
+    GameSquare& LconvertMove(std::string move, ChessTypes::Player sideToConvert);
     ChessEnums::ValidateGameSquareResult LvalidateGameSquare(GameSquare& square, ChessTypes::GetMoveType getMoveType);
     ChessEnums::PossibleMovesResult LreadPossibleMoves(GameSquare& to);
     void LstartGame();
@@ -54,17 +52,11 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     bool LvalidateMoveset(Move&);
     bool LonBoard(Point&);
 
-    
-//#else
-
-
-#endif
-
 
     // Regardless of whether or not legacy
     // Get move
     ChessEnums::GetMoveResult getMove(ChessTypes::GetMoveType) override;
-    void currTurnChessClock(bool&, int, const std::wstring&) override;
+    void currTurnChessClock(bool&, int, const std::string&);
     ChessEnums::GameOptionResult optionMenu(char);
 
     bool isLoadingState = false;

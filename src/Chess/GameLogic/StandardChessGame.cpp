@@ -6,6 +6,8 @@
 #include "../TypesAndEnums/ChessEnums.hpp"
 #include "../StandardChessGame.hpp"
 #include "../Utils/ChessConstants.hpp"
+#include "../../Util/Terminal/TextPieceArt.hpp"
+#include "../Utils/ChessHelperFunctions.hpp"
 
 SquareInfo StandardChessGame::getSquareInfo(int row, int col) {
     int bit_index = row * 8 + col;
@@ -144,82 +146,94 @@ ChessEnums::ValidateGameSquareResult StandardChessGame::validateGameSquare(Squar
 }
 
 void StandardChessGame::printBoard(ChessTypes::Player playerSideToPrint){
-    if (GameOptions.clearScreenOnBoardPrint)
-        system("clear");
-    std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
-    for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
-        std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - row << " ";
-        for(int col = 0; col < CHESS_BOARD_WIDTH; col++){
-            std::wcout << "| ";
+#ifndef _WIN32
+    if (GameOptions.clearScreenOnBoardPrint) 
+        system("cls");
+
+    std::string board;
+    board += "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n";
+    board += "\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    for (int row = 0; row < CHESS_BOARD_HEIGHT; row++)
+    {
+        board += "\t\t\t" + std::to_string(CHESS_BOARD_HEIGHT - row) + " ";
+        for (int col = 0; col < CHESS_BOARD_WIDTH; col++)
+        {
+            board += "| ";
             wchar_t piece;
+            SquareInfo currPosition; 
 
-            SquareInfo currPosition = getSquareInfo(row * 8, col); 
+            if ((GameConnectivity == ChessTypes::GameConnectivity::Online && playerSideToPrint == ChessTypes::Player::PlayerTwo) || (GameConnectivity == ChessTypes::GameConnectivity::Local && GameOptions.flipBoardOnNewTurn && playerSideToPrint == ChessTypes::Player::PlayerTwo))
+                currPosition = getSquareInfo(CHESS_BOARD_HEIGHT - row, CHESS_BOARD_WIDTH - col); // <-- IDK IF THESE ARE RIGHT
+            else
+                currPosition = getSquareInfo(row * 8, col); // <-- IDK IF THESE ARE RIGHT
 
-            if ((GameConnectivity == ChessTypes::GameConnectivity::Online && playerSideToPrint == ChessTypes::Player::PlayerTwo) 
-            || (GameConnectivity == ChessTypes::GameConnectivity::Local && GameOptions.flipBoardOnNewTurn && playerSideToPrint == ChessTypes::Player::PlayerTwo)) {
-                if(currPosition.owner == ChessTypes::Owner::None)
-                    piece = ' ';
-                else if(currPosition.owner == ChessTypes::Owner::PlayerOne){
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][static_cast<int>(currPosition.piece)];
-                    set_terminal_color(GameOptions.p1_color);
-                }else{
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][static_cast<int>(currPosition.piece)];
-                    set_terminal_color(GameOptions.p2_color);
-                }
-            } else {
-                if(currPosition.owner == ChessTypes::Owner::None)
-                    piece = ' ';
-                else if(currPosition.owner == ChessTypes::Owner::PlayerOne){
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][static_cast<int>(currPosition.piece)];
-                    set_terminal_color(GameOptions.p1_color);
-                }else{
-                    piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][static_cast<int>(currPosition.piece)];
-                    set_terminal_color(GameOptions.p2_color);
-                }
-            }
-            //? IDK WHAT THIS SHIT IS, if needed then implement it for bitboard
-            // if (GameOptions.flipBoardOnNewTurn && currentTurn == PlayerTwo) {
-            //     if(GameBoard[7 - row][7 - col].getOwner() == NONE)
-            //         piece = ' ';
-            //     else if(GameBoard[7 - row][7 - col].getOwner() == PONE){
-            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
-            //         set_terminal_color(GameOptions.p1_color);
-            //     }else{
-            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[7 - row][7 - col].getPiece()];
-            //         set_terminal_color(GameOptions.p2_color);
-            //     }
-            // } else {
-            //     if(GameBoard[row][col].getOwner() == NONE)
-            //         piece = ' ';
-            //     else if(GameBoard[row][col].getOwner() == PONE){
-            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][GameBoard[row][col].getPiece()];
-            //         set_terminal_color(GameOptions.p1_color);
-            //     }else{
-            //         piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][GameBoard[row][col].getPiece()];
-            //         set_terminal_color(GameOptions.p2_color);
-            //     }
-            // }
-            
-            std::wcout << piece;
+
+            board += TEXT_PIECE_ART_COLLECTION[currPosition.owner == ChessTypes::Owner::PlayerOne ? GameOptions.whitePlayerArtSelector : GameOptions.blackPlayerArtSelector][static_cast<int>(currPosition.piece)];
+            //! TODO: WINDOWS COLOR
+            //set_terminal_color(currPosition.owner == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
+
             set_terminal_color(DEFAULT);
-            std::wcout << " ";
-            
+            board += " ";
         }
-        std::wcout << "| " << CHESS_BOARD_HEIGHT - row << std::endl;
-        std::wcout << "\t\t\t  +---+---+---+---+---+---+---+---+" << std::endl;
+        board += "| " + std::to_string(CHESS_BOARD_HEIGHT - row) + "\n";
+        board += "\t\t\t  +---+---+---+---+---+---+---+---+\n";
     }
-    std::wcout << "\t\t\t    a   b   c   d   e   f   g   h\n";
+    board += "\t\t\t    a   b   c   d   e   f   g   h\n";
 
     if (!toPrint.empty()) {
-        std::wcout << toPrint << std::endl;
+        board += toPrint;
         toPrint.clear();
     }
+
+    WChessPrint(board.c_str());
+#else
+    if (GameOptions.clearScreenOnBoardPrint) 
+        system("clear");
+
+    std::wstring board;
+    board += L"\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n";
+    board += L"\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    for (int row = 0; row < CHESS_BOARD_HEIGHT; row++)
+    {
+        board += L"\t\t\t";
+        board += std::to_wstring(CHESS_BOARD_HEIGHT - row) + L" ";
+        for (int col = 0; col < CHESS_BOARD_WIDTH; col++)
+        {
+            board += L"| ";
+            wchar_t piece;
+            SquareInfo currPosition; 
+
+            if ((GameConnectivity == ChessTypes::GameConnectivity::Online && playerSideToPrint == ChessTypes::Player::PlayerTwo) || (GameConnectivity == ChessTypes::GameConnectivity::Local && GameOptions.flipBoardOnNewTurn && playerSideToPrint == ChessTypes::Player::PlayerTwo))
+                currPosition = getSquareInfo(CHESS_BOARD_HEIGHT - row, CHESS_BOARD_WIDTH - col); // <-- IDK IF THESE ARE RIGHT
+            else
+                currPosition = getSquareInfo(row * 8, col); // <-- IDK IF THESE ARE RIGHT
+
+            //! TODO: FIX LINUX
+            //board += TEXT_PIECE_ART_COLLECTION[currPosition.owner == ChessTypes::Owner::PlayerOne ? GameOptions.whitePlayerArtSelector : GameOptions.blackPlayerArtSelector][static_cast<int>(currPosition.piece)];
+            set_terminal_color(currPosition.owner == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
+
+            set_terminal_color(DEFAULT);
+            board += L" ";
+        }
+        board += L"| ";
+        board += std::to_wstring(CHESS_BOARD_HEIGHT - row) + L"\n";
+        board += L"\t\t\t  +---+---+---+---+---+---+---+---+\n";
+    }
+    board += L"\t\t\t    a   b   c   d   e   f   g   h\n";
+
+    if (!toPrint.empty()) {
+        board += convertString(toPrint);
+        toPrint.clear();
+    }
+
+    WChessPrint(board.c_str());
+#endif
 }
 
 // -1 invalid input
 // 0 options
 // 1 valid input
-ChessEnums::SanitizeGetMoveResult StandardChessGame::sanitizeGetMove(std::wstring& input) {
+ChessEnums::SanitizeGetMoveResult StandardChessGame::sanitizeGetMove(std::string& input) {
 
     if(!std::iswalpha(input[0])) 
         return ChessEnums::SanitizeGetMoveResult::Invalid; // Ensure [0] is alphabetical character
@@ -265,7 +279,12 @@ ChessTypes::Owner StandardChessGame::piecePresent(Point p){
 
 void StandardChessGame::printBoardWithMoves(ChessTypes::Player playerSideToPrint) {
     if(GameOptions.clearScreenOnBoardPrint)
-        system("clear");
+        #ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+/*
     std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
         std::wcout << "\t\t\t" << CHESS_BOARD_HEIGHT - row << " ";
@@ -338,18 +357,18 @@ void StandardChessGame::printBoardWithMoves(ChessTypes::Player playerSideToPrint
             // Checking for highlighted piece, if flip board option is on then we need to look at the board the opposite way
             // otherwise if flip board is not active then we can always read it 0 - 7, 0 - 7
             //! TODO:
-            /*
-            if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && fromHighlightedPiece == &GameBoard[row][col]) ||
-                currentTurn == PlayerTwo && fromHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
-                !GameOptions.flipBoardOnNewTurn && (fromHighlightedPiece == &GameBoard[row][col]))
-                set_terminal_color(GameOptions.movingPiece_color);
+            
+            // if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && fromHighlightedPiece == &GameBoard[row][col]) ||
+            //     currentTurn == PlayerTwo && fromHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
+            //     !GameOptions.flipBoardOnNewTurn && (fromHighlightedPiece == &GameBoard[row][col]))
+            //     set_terminal_color(GameOptions.movingPiece_color);
 
-            // Exact same thing as above but excpet now checking for toHighlightedPiece
-            else if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && toHighlightedPiece == &GameBoard[row][col]) ||
-                currentTurn == PlayerTwo && toHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
-                !GameOptions.flipBoardOnNewTurn && (toHighlightedPiece == &GameBoard[row][col]))
-                set_terminal_color(GameOptions.movingToPiece_color);
-            */
+            // // Exact same thing as above but excpet now checking for toHighlightedPiece
+            // else if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && toHighlightedPiece == &GameBoard[row][col]) ||
+            //     currentTurn == PlayerTwo && toHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
+            //     !GameOptions.flipBoardOnNewTurn && (toHighlightedPiece == &GameBoard[row][col]))
+                // set_terminal_color(GameOptions.movingToPiece_color);
+            
             std::wcout << piece;    
             set_terminal_color(DEFAULT);
             std::wcout << " ";
@@ -363,6 +382,7 @@ void StandardChessGame::printBoardWithMoves(ChessTypes::Player playerSideToPrint
         std::wcout << toPrint << std::endl;
         toPrint.clear();
     }
+*/
 }
 
 uint64_t StandardChessGame::convertMove(std::wstring move, ChessTypes::Player sideToConvert){

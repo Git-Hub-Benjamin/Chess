@@ -133,17 +133,17 @@ protected:
     ChessEnums::ValidateGameSquareResult validateGameSquare(SquareInfo, ChessTypes::GetMoveType);
 
     // Not pure, bc Server Chess Std game does not need this
-    ChessEnums::SanitizeGetMoveResult sanitizeGetMove(std::wstring &);
+    ChessEnums::SanitizeGetMoveResult sanitizeGetMove(std::string &);
 
     // String to print next while loop iteration after the board is printed
-    std::wstring toPrint;
+    std::string toPrint;
 
     // Game connectivity
     ChessTypes::GameConnectivity GameConnectivity;
 
     // Game clock and input buffer
     ChessClock gameClock;
-    std::wstring inputBuffer;
+    std::string inputBuffer;
 
     // Utility function to convert player to string
     std::wstring playerToString(ChessTypes::Player);

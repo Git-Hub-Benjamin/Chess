@@ -40,8 +40,7 @@ CLIENT_COMPILE_ONLINE = -D COMPILE_ONLINE
 
 #test
 test:
-	g++ -I./src main.cpp
-	./a.out
+	g++ -I./src main.cpp ./src/Util/Terminal/Terminal.cpp ./src/Util/Terminal/TextPieceArt.cpp -D _WIN32 -g
 
 #build run
 buru: game

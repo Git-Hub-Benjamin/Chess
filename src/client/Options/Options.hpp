@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../Util/Terminal/Terminal.hpp"
+#include "../../Util/Terminal/TextPieceArt.hpp"
 #include <iostream>
 
 

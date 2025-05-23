@@ -14,14 +14,14 @@ namespace ChessTypes {
     };
 
     enum class YCoordinate {
-        One = 0,
-        Two,
-        Three,
-        Four,
-        Five,
-        Six,
+        Eight = 0,
         Seven,
-        Eight
+        Six,
+        Five,
+        Four,
+        Three,
+        Two,
+        One  
     };
 
     enum class GamePiece {

@@ -6,12 +6,14 @@
 #include <cstdlib>
 #include <chrono>
 #include <codecvt>
+
 #ifdef COMPILE_ONLINE
 #include "../online-game/online-mode.hpp"
 #endif
+
 #include "../Options/Options.hpp"
 #include "../ConfigFile/ConfigFile.hpp"
-//! Always use wcout, wcout and cout dont mix
+#include "../../Util/Terminal/TextPieceArt.hpp"
 
 bool running = true;
 #ifdef COMPILE_ONLINE
@@ -32,7 +34,7 @@ enum CHESS_CLOCK_SETUP_RET {
 
 CHESS_CLOCK_SETUP_RET setup_chess_clock(ChessClock* obj) {
 	configure_clock_screen();
-	std::wcout << "--> ";
+	WChessPrint("--> ");
 	int clockOption = get_menu_option();
 
 	if (clockOption == GET_MENU_OPTION::ONE)
@@ -41,7 +43,7 @@ CHESS_CLOCK_SETUP_RET setup_chess_clock(ChessClock* obj) {
 		return CLOCK_BACK;
 	if (clockOption == GET_MENU_OPTION::TWO) {
 		clock_presets_screen();
-		std::wcout << "--> ";
+		WChessPrint("--> ");
 		int preset_opt = get_menu_option();
 		if (preset_opt == 4)
 			return CLOCK_BACK;
@@ -54,7 +56,7 @@ CHESS_CLOCK_SETUP_RET setup_chess_clock(ChessClock* obj) {
 			obj->initTime(FIF_TEEN_MIN, FIF_TEEN_MIN); // 300 seconds, 5 mins		
 	} 
 	if (clockOption == GET_MENU_OPTION::THREE) {
-		std::wcout << "Unimplemented..." << std::endl;
+		WChessPrint("Unimplemented...\n");
 		return CLOCK_BACK;
 	}
 
@@ -88,16 +90,24 @@ void changing_option_from_menu(int option_opt){
 				back = true;
 			break;
 		case MAIN_MENU_SETTINGS_OPTIONS::CHANGE_ART:
-			std::wcout << "1. Player one art\n2. Player two art\n3. Back\n--> ";
+			WChessPrint("1. Player one art\n2. Player two art\n3. Back\n--> ");
 			player_opt = get_menu_option();
 			if(player_opt == 1){
-				std::wcout << "1. Unicode    " << TEXT_PIECE_ART_COLLECTION[0][1] << " | "; piece_art_option_active_inactive(STD_PIECE_ART_P1, player_opt); std::wcout << std::endl;
-				std::wcout << "2. Characters P | "; piece_art_option_active_inactive(STD_PIECE_CHAR_P1, player_opt); std::wcout << std::endl;
-				std::wcout << "3. Back\n--> ";
+				WChessPrint("1. Unicode    "); WChessPrint(TEXT_PIECE_ART_COLLECTION[0][1]); WChessPrint(" | ");
+				piece_art_option_active_inactive(STD_PIECE_ART_P1, player_opt);
+				WChessPrint("\n");
+				WChessPrint("2. Characters P | ");
+				piece_art_option_active_inactive(STD_PIECE_CHAR_P1, player_opt);
+				WChessPrint("\n");
+				WChessPrint("3. Back\n--> ");
 			} else if (player_opt == 2) {
-				std::wcout << "1. Unicode    " << TEXT_PIECE_ART_COLLECTION[1][1] << " | "; piece_art_option_active_inactive(STD_PIECE_ART_P2, player_opt); std::wcout << std::endl;
-				std::wcout << "2. Characters P | "; piece_art_option_active_inactive(STD_PIECE_CHAR_P2, player_opt); std::wcout << std::endl;
-				std::wcout << "3. Back\n--> ";
+				WChessPrint("1. Unicode    "); WChessPrint(TEXT_PIECE_ART_COLLECTION[1][1]); WChessPrint(" | ");
+				piece_art_option_active_inactive(STD_PIECE_ART_P2, player_opt);
+				WChessPrint("\n");
+				WChessPrint("2. Characters P | ");
+				piece_art_option_active_inactive(STD_PIECE_CHAR_P2, player_opt);
+				WChessPrint("\n");
+				WChessPrint("3. Back\n--> ");
 			} else {
 				back = true;
 			}
@@ -179,19 +189,16 @@ namespace MAIN_MENU_OPTIONS {
 }
 
 int main() {	
-	std::wcout << "IN PROGRAM" << std::endl;	
-	// Set the global locale to support UTF-8 encoding
-
 #ifdef __linux__
     std::locale::global(std::locale("en_US.UTF-8"));
-#elif _WIN32
+#elif _WIN32 // idk if we even need this
 	std::locale utf8_locale(std::locale(), new std::codecvt_utf8<wchar_t>);
     std::wcout.imbue(utf8_locale);
     std::wcin.imbue(utf8_locale);
 #endif
 	set_terminal_color(DEFAULT);
 
-	std::wcout << "\n\n\n\n\n" << std::endl;
+	WChessPrint("\n\n\n\n\n\n");
 	
 	// SETUP PATH FOR FOREVER USE
 #ifdef __linux__
@@ -204,33 +211,29 @@ int main() {
         // No need to free() for getenv, its memory is managed by the system
     }
 #endif
-
 	
-	std::wcout << convertString(home) << std::endl;
+	WChessPrint(home.c_str()); WChessPrint("\n");
 	CONFIG_PATH = home + CONFIG_FILE_NAME;
-	std::wcout << convertString(CONFIG_PATH) << std::endl;
+	WChessPrint(CONFIG_PATH.c_str()); WChessPrint("\n");
 
 	init_config_load();
 
-	StandardLocalChessGame Game(global_player_option, ChessTypes::Player::PlayerOne, true);
-	Game.startGame();
-
 	while(running){
 		title_screen();
-		std::wcout << "Global things --> " << global_player_option.p1_color << global_player_option.p2_color << global_player_option.whitePlayerArtSelector << global_player_option.blackPlayerArtSelector << global_player_option.moveHighlighting << global_player_option.dynamicMoveHighlighting << global_player_option.boardHistory << global_player_option.flipBoardOnNewTurn << global_player_option.clearScreenOnBoardPrint << std::endl;
+		WChessPrint("Global things --> "); WChessPrint(std::to_string(global_player_option.p1_color).c_str()); WChessPrint(std::to_string(global_player_option.p2_color).c_str()); WChessPrint(std::to_string(global_player_option.whitePlayerArtSelector).c_str()); WChessPrint(std::to_string(global_player_option.blackPlayerArtSelector).c_str()); WChessPrint(std::to_string(global_player_option.moveHighlighting).c_str()); WChessPrint(std::to_string(global_player_option.dynamicMoveHighlighting).c_str()); WChessPrint(std::to_string(global_player_option.boardHistory).c_str()); WChessPrint(std::to_string(global_player_option.flipBoardOnNewTurn).c_str()); WChessPrint(std::to_string(global_player_option.clearScreenOnBoardPrint).c_str()); WChessPrint("\n");
 
-		std::wcout << "--> ";
+		WChessPrint("--> ");
 		int mainMenuOption = get_menu_option();
 		if(mainMenuOption <= MAIN_MENU_OPTIONS::LOCAL_GAME){ // Local Game or Dev Game
 			local_game_screen();
-			std::wcout << "--> ";
+			WChessPrint("--> ");
 			int local_opt = get_menu_option(); // Standard Game or Quit
 			if (local_opt != 2) {
 				ChessClock chessclock;
 				CHESS_CLOCK_SETUP_RET clockOption = setup_chess_clock(&chessclock);
 				if (clockOption != CLOCK_BACK) {
 					inital_turn_screen();
-					std::wcout << "--> ";
+					WChessPrint("--> ");
 					GET_MENU_OPTION turnOption = get_menu_option();
 					if (turnOption != GET_MENU_OPTION::BACK) {
 						if (clockOption == CLOCK_NONE) {
@@ -259,7 +262,7 @@ int main() {
 				changing_option_from_menu(option_opt);	
 		}else if(mainMenuOption == MAIN_MENU_OPTIONS::QUIT){
 			running = false;
-			std::wcout << "Have a good day..." << std::endl;
+			WChessPrint("Have a good day...\n");
 		}
 		// if anything else just run again
 	}
