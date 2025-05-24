@@ -227,6 +227,7 @@ void StandardChessGame::printBoard(ChessTypes::Player playerSideToPrint){
 #endif
 }
 
+//! This may have to have a std::wstring version for linux
 // -1 invalid input
 // 0 options
 // 1 valid input
@@ -238,12 +239,15 @@ ChessEnums::SanitizeGetMoveResult StandardChessGame::sanitizeGetMove(std::string
     // Force to lower case
     input[0] = std::towlower(input[0]); // Force [0] to lower case
     switch(input[0]) {
-        case L'a': case L'b': case L'c': case L'd':
-        case L'e': case L'f': case L'g': case L'h':
+        case 'a': case 'b': case 'c': case 'd':
+        case 'e': case 'f': case 'g': case 'h':
             break;
-        case L'q': // Valid too but for option
-        case L'x': case L'o':
-            return ChessEnums::SanitizeGetMoveResult::OPTIONS;
+        case 'q': // Valid too but for option
+        case 'x': 
+        case 'o':
+            return ChessEnums::SanitizeGetMoveResult::Options;
+        case 'r':
+            return ChessEnums::SanitizeGetMoveResult::ReEnterMove;
         default: // Ensure one of the characters above
             return ChessEnums::SanitizeGetMoveResult::Invalid; // Ensure [0] is alphabetical character
     }
@@ -253,11 +257,11 @@ ChessEnums::SanitizeGetMoveResult StandardChessGame::sanitizeGetMove(std::string
         return ChessEnums::SanitizeGetMoveResult::Invalid; // Move must be length of 2
 
     // Ensure 2nd char is a number
-    if(!std::iswdigit(input[1]) || input[1] == L'0' || input[1] == L'9') // Using std::iswdigit
-        return ChessEnums::SanitizeGetMoveResult::Invalid; // Ensure [1] must be a digit and not '0' or '9'
+    if(!std::isdigit(input[1]) || input[1] == '0' || input[1] == '9') // Using std::iswdigit
+        return ChessEnums::SanitizeGetMoveResult::Invalid; // Ensure [1] must be a digit and not '0' or '9
 
     // Now we know it must be [0] == a-h, [1] == 1 - 8
-    return ChessEnums::SanitizeGetMoveResult::VALID;
+    return ChessEnums::SanitizeGetMoveResult::Valid;
 } 
 
 std::string StandardChessGame::playerToString(ChessTypes::Player p){

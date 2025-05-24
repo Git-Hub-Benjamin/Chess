@@ -66,30 +66,28 @@ CHESS_CLOCK_SETUP_RET setup_chess_clock(ChessClock* obj) {
 
 
 
-namespace MAIN_MENU_SETTINGS_OPTIONS {
-	enum MAIN_MENU_SETTINGS_OPTIONS {
-		CHANGE_COLORS = 1,
-		CHANGE_ART,
-		MOVE_HIGHLIGHTING,
-		DYNAMIC_MOVE_HIGHLIGHTING,
-		BOARD_HISTORY,
-		FLIP_ON_TURN,
-		CLEAR_SCREEN_ON_PRINT,
-		SETTINGS_AFFECT_CONFIG,
-		CONFIG_FILE,
-		BACK
-	};
-}
+enum class TerminalSettingsOptions {
+	ChangeColors = 1,
+	ChangeArt,
+	MoveHighlighting,
+	DynamicMoveHighlighting,
+	BoardHistory,
+	FlipOnTurn,
+	ClearScreenOnPrint,
+	SettingsAffectConfig,
+	ConfigFile,
+	Back
+};
 
-void changing_option_from_menu(int option_opt){
+void changing_option_from_menu(TerminalSettingsOptions option_opt){
 	bool back = false;
 	int player_opt, color_opt;
 	switch(option_opt){
-		case MAIN_MENU_SETTINGS_OPTIONS::CHANGE_COLORS:
+		case TerminalSettingsOptions::ChangeColors:
 			if (!change_player_color_option())
 				back = true;
 			break;
-		case MAIN_MENU_SETTINGS_OPTIONS::CHANGE_ART:
+		case TerminalSettingsOptions::ChangeArt:
 			WChessPrint("1. Player one art\n2. Player two art\n3. Back\n--> ");
 			player_opt = get_menu_option();
 			if(player_opt == 1){
@@ -139,24 +137,24 @@ void changing_option_from_menu(int option_opt){
 				}
 			}
 			break;
-		case MAIN_MENU_SETTINGS_OPTIONS::MOVE_HIGHLIGHTING:
+		case TerminalSettingsOptions::MoveHighlighting:
 			global_player_option.moveHighlighting = !global_player_option.moveHighlighting;
 			global_player_option.dynamicMoveHighlighting = false;
 			break;
-		case MAIN_MENU_SETTINGS_OPTIONS::DYNAMIC_MOVE_HIGHLIGHTING:
+		case TerminalSettingsOptions::DynamicMoveHighlighting:
 			global_player_option.dynamicMoveHighlighting = !global_player_option.dynamicMoveHighlighting;
 			global_player_option.moveHighlighting = false;
 			break;
-		case MAIN_MENU_SETTINGS_OPTIONS::BOARD_HISTORY:
+		case TerminalSettingsOptions::BoardHistory:
 			global_player_option.boardHistory = !global_player_option.boardHistory;
 			break;
-		case MAIN_MENU_SETTINGS_OPTIONS::FLIP_ON_TURN:
+		case TerminalSettingsOptions::FlipOnTurn:
 			global_player_option.flipBoardOnNewTurn = !global_player_option.flipBoardOnNewTurn;
 			break;
-		case MAIN_MENU_SETTINGS_OPTIONS::CLEAR_SCREEN_ON_PRINT:
+		case TerminalSettingsOptions::ClearScreenOnPrint:
 			global_player_option.clearScreenOnPrint = !global_player_option.clearScreenOnPrint;
 			break;
-		case MAIN_MENU_SETTINGS_OPTIONS::SETTINGS_AFFECT_CONFIG:
+		case TerminalSettingsOptions::SettingsAffectConfig:
 			SETTING_CHANGE_AFFECTS_CONFIG_FILE = !SETTING_CHANGE_AFFECTS_CONFIG_FILE;
 			break;
 		default:
@@ -178,28 +176,32 @@ void changing_option_from_menu(int option_opt){
 #ifdef COMPILE_ONLINE
 extern JOIN_GAME_INFO createPrivateLobby2(int);
 #endif
-namespace MAIN_MENU_OPTIONS {
-	enum MAIN_MENU_OPTIONS {
-		DEV = -1,
-		LOCAL_GAME = 1,
-		ONLINE_GAME,
-		OPTIONS,
-		QUIT = 10
-	};
-}
+enum class TerminalMainMenuOptions {
+	Dev = -1,
+	LocalGame = 1,
+	OnlineGame,
+	Options,
+	Quit = 10
+};
 
 int main() {	
 #ifdef __linux__
     std::locale::global(std::locale("en_US.UTF-8"));
-#elif _WIN32 // idk if we even need this
-	std::locale utf8_locale(std::locale(), new std::codecvt_utf8<wchar_t>);
-    std::wcout.imbue(utf8_locale);
-    std::wcin.imbue(utf8_locale);
+#elif _WIN32 //! trying w/o if it doesnt work add it back
+	// std::locale utf8_locale(std::locale(), new std::codecvt_utf8<wchar_t>);
+    // std::wcout.imbue(utf8_locale);
+    // std::wcin.imbue(utf8_locale);
 #endif
 	setTerminalColor(DEFAULT);
 
 	WChessPrint("\n\n\n\n\n\n");
+
+	WChessPrint("Welcome to WChess!\n");
 	
+	setTerminalColor(GREEN);
+	WChessPrint("Testing 123\n");
+	setTerminalColor(DEFAULT);
+
 	// SETUP PATH FOR FOREVER USE
 #ifdef __linux__
     std::string home = getenv("HOME");
@@ -228,7 +230,7 @@ int main() {
 
 		WChessPrint("--> ");
 		int mainMenuOption = get_menu_option();
-		if(mainMenuOption <= MAIN_MENU_OPTIONS::LOCAL_GAME){ // Local Game or Dev Game
+		if(mainMenuOption == static_cast<int>(TerminalMainMenuOptions::LocalGame)){ // Local Game or Dev Game
 			local_game_screen();
 			WChessPrint("--> ");
 			int local_opt = get_menu_option(); // Standard Game or Quit
@@ -241,30 +243,37 @@ int main() {
 					GET_MENU_OPTION turnOption = get_menu_option();
 					if (turnOption != GET_MENU_OPTION::BACK) {
 						if (clockOption == CLOCK_NONE) {
-							StandardLocalChessGame Game(global_player_option, static_cast<ChessTypes::Player>(turnOption == GET_MENU_OPTION::THREE ? 0 : turnOption), mainMenuOption == MAIN_MENU_OPTIONS::DEV ? true : false);
+							StandardLocalChessGame Game(
+								global_player_option, 
+								static_cast<ChessTypes::Player>(turnOption == GET_MENU_OPTION::THREE ? 0 : turnOption), 
+								mainMenuOption == static_cast<int>(TerminalMainMenuOptions::Dev) ? true : false);
 							Game.startGame();
 						} else {
-							StandardLocalChessGame Game(global_player_option, chessclock, static_cast<ChessTypes::Player>(turnOption == GET_MENU_OPTION::THREE ? 0 : turnOption), mainMenuOption == MAIN_MENU_OPTIONS::DEV ? true : false);
+							StandardLocalChessGame Game(
+								global_player_option, 
+								chessclock, 
+								static_cast<ChessTypes::Player>(turnOption == GET_MENU_OPTION::THREE ? 0 : turnOption), 
+								mainMenuOption == static_cast<int>(TerminalMainMenuOptions::Dev) ? true : false);
 							Game.startGame();
 						}
 					}
 				}
 			} 
 			
-		}else if(mainMenuOption == MAIN_MENU_OPTIONS::ONLINE_GAME){
+		}else if(mainMenuOption == static_cast<int>(TerminalMainMenuOptions::OnlineGame)){
 #ifdef COMPILE_ONLINE
 			online_game();
 #else
 			continue;
 #endif
-		}else if(mainMenuOption == MAIN_MENU_OPTIONS::OPTIONS){
+		}else if(mainMenuOption == static_cast<int>(TerminalMainMenuOptions::Options)){
 			option_screen();
 			GET_MENU_OPTION option_opt = get_menu_option();
-			if(option_opt == static_cast<GET_MENU_OPTION>(MAIN_MENU_SETTINGS_OPTIONS::CONFIG_FILE)) // For config file options
+			if(option_opt == static_cast<GET_MENU_OPTION>(TerminalSettingsOptions::ConfigFile)) // For config file options
 				config_file_options();
-			if(option_opt != static_cast<GET_MENU_OPTION>(MAIN_MENU_SETTINGS_OPTIONS::BACK)) // Handle anything else, if 7 then just go back
-				changing_option_from_menu(option_opt);	
-		}else if(mainMenuOption == MAIN_MENU_OPTIONS::QUIT){
+			if(option_opt != static_cast<GET_MENU_OPTION>(TerminalSettingsOptions::Back)) // Handle anything else, if 7 then just go back
+				changing_option_from_menu(static_cast<TerminalSettingsOptions>(option_opt));	
+		}else if(mainMenuOption == static_cast<int>(TerminalMainMenuOptions::Quit)){
 			running = false;
 			WChessPrint("Have a good day...\n");
 		}

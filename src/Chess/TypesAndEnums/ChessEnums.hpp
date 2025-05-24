@@ -20,13 +20,14 @@ namespace ChessEnums {
         TIMER_RAN_OUT,
         UNDO,
         REDO,
-        CHOOSE_MOVE_AGAIN
+        ReEnterMove
     };
 
     enum class SanitizeGetMoveResult {
         Invalid = -1,
-        OPTIONS,
-        VALID
+        ReEnterMove,
+        Options,
+        Valid
     };
 
     enum class GameOptionResult {

@@ -49,7 +49,6 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     ChessEnums::MakeMoveResult LmakeMove(Move&& move);
     void LinitGame();
     int LreflectAxis(int);
-    //! Why is intellisense saying this is not working...
     bool LvalidateMoveset(Move&);
     bool LonBoard(Point&);
 

@@ -292,9 +292,9 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
 
                                 switch (sanitizeGetMove(inputBuffer))
                                 {
-                                case ChessEnums::SanitizeGetMoveResult::INVALID: // Invalid move
+                                case ChessEnums::SanitizeGetMoveResult::Invalid: // Invalid move
                                     continue;
-                                case ChessEnums::SanitizeGetMoveResult::OPTIONS: // Option menu
+                                case ChessEnums::SanitizeGetMoveResult::Options: // Option menu
                                     if (isClock)
                                     { // Stop timer temporarily if enabled
                                         stopTimerDisplay = true;
@@ -359,10 +359,10 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
                 {
                     if (getMoveType == ChessTypes::GetMoveType::From)
                     {
-                        if (sanitizeGetMove(inputBuffer) == ChessEnums::SanitizeGetMoveResult::VALID &&
+                        if (sanitizeGetMove(inputBuffer) == ChessEnums::SanitizeGetMoveResult::Valid &&
                             LvalidateGameSquare(LconvertMove(inputBuffer, currentTurn),
                                                 ChessTypes::GetMoveType::From) ==
-                                ChessEnums::ValidateGameSquareResult::VALID)
+                                ChessEnums::ValidateGameSquareResult::Valid)
                         {
                             // This move is valid (on the board) and belongs to the player
                             fromHighlightedPiece = &LconvertMove(inputBuffer, currentTurn);
@@ -387,10 +387,10 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
                     }
                     else
                     {
-                        if (sanitizeGetMove(inputBuffer) == ChessEnums::SanitizeGetMoveResult::VALID &&
+                        if (sanitizeGetMove(inputBuffer) == ChessEnums::SanitizeGetMoveResult::Valid &&
                             LvalidateGameSquare(LconvertMove(inputBuffer, currentTurn),
                                                 ChessTypes::GetMoveType::To) ==
-                                ChessEnums::ValidateGameSquareResult::VALID)
+                                ChessEnums::ValidateGameSquareResult::Valid)
                         {
                             toHighlightedPiece = &LconvertMove(inputBuffer, currentTurn);
                             validMoveForMoveHighlightingPrintBoard = true;
@@ -462,32 +462,35 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
 
             auto moveResult = sanitizeGetMove(inputBuffer);
             switch (moveResult) {
-            case ChessEnums::SanitizeGetMoveResult::Invalid: // Invalid
-                continue;
-            case ChessEnums::SanitizeGetMoveResult::OPTIONS:
-                if (GameOptions.boardHistory)
-                    WChessPrint("\n\n1. Change Colors\n2. Change Art\n3. Undo Turn\n4. Redo Turn\n5. Continue\n6. Quit\n \n--> ");
-                else 
-                    WChessPrint("\n\n1. Change Colors\n2. Change Art\n3. Continue\n4. Quit\n \n--> ");
-                WChessPrintFlush();
-                inputBuffer.clear();
-                WChessInput(inputBuffer);
-                switch (optionMenu(inputBuffer[0])) {
-                    case ChessEnums::GameOptionResult::Invalid: // Invalid input
-                        continue;
-                    case ChessEnums::GameOptionResult::QUIT: // Quit game
-                        return ChessEnums::GetMoveResult::QUIT;
-                    case ChessEnums::GameOptionResult::CONTINUE: // Continue game
-                        inputBuffer.clear();
-                        continue;
-                    case ChessEnums::GameOptionResult::UNDO: // Undo (unimplemented)
-                        continue;
-                    case ChessEnums::GameOptionResult::REDO: // Redo (unimplemented)
-                        continue;
+                case ChessEnums::SanitizeGetMoveResult::Invalid: // Invalid
+                    continue;
+                case ChessEnums::SanitizeGetMoveResult::Options:
+                    if (GameOptions.boardHistory)
+                        WChessPrint("\n\n1. Change Colors\n2. Change Art\n3. Undo Turn\n4. Redo Turn\n5. Continue\n6. Quit\n \n--> ");
+                    else 
+                        WChessPrint("\n\n1. Change Colors\n2. Change Art\n3. Continue\n4. Quit\n \n--> ");
+                    WChessPrintFlush();
+                    inputBuffer.clear();
+                    WChessInput(inputBuffer);
+                    switch (optionMenu(inputBuffer[0])) {
+                        case ChessEnums::GameOptionResult::Invalid: // Invalid input
+                            continue;
+                        case ChessEnums::GameOptionResult::QUIT: // Quit game
+                            return ChessEnums::GetMoveResult::QUIT;
+                        case ChessEnums::GameOptionResult::CONTINUE: // Continue game
+                            inputBuffer.clear();
+                            continue;
+                        case ChessEnums::GameOptionResult::UNDO: // Undo (unimplemented)
+                            continue;
+                        case ChessEnums::GameOptionResult::REDO: // Redo (unimplemented)
+                            continue;
+                    }
+                case ChessEnums::SanitizeGetMoveResult::ReEnterMove:
+                    inputBuffer.clear();
+                    return ChessEnums::GetMoveResult::ReEnterMove;
+                default:
+                    break;
                 }
-            default:
-                break;
-            }
             break; // Continue to next getmove iteration
         }
         return ChessEnums::GetMoveResult::VALID;

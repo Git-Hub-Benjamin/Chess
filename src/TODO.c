@@ -1,9 +1,9 @@
 //* TODO: (Highest Priority to Lowest)
-// - Fix Pawn movement
 // - Test windows terminal colors & add to print board functions
 // - Implement bitboard
 // - Implement online connectivity
 // - Implement AI
+//// - Fix Pawn movement
 
 //* - Rule Todos:
 // - Implement castling
