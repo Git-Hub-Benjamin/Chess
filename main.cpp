@@ -86,11 +86,11 @@ void LprintBoard()
 
             board += TEXT_PIECE_ART_COLLECTION[GameBoard[row][col].getOwner() == ChessTypes::Owner::PlayerOne ? STD_PIECE_ART_P1 : STD_PIECE_ART_P2][static_cast<int>(GameBoard[row][col].getPiece())];
             if (GameBoard[row][col].getOwner() == ChessTypes::Owner::PlayerOne)
-                set_terminal_color(BRIGHT_GREEN);
+                setTerminalColor(BRIGHT_GREEN);
             else if(GameBoard[row][col].getOwner() == ChessTypes::Owner::PlayerTwo)
-                set_terminal_color(BRIGHT_AQUA);
+                setTerminalColor(BRIGHT_AQUA);
 
-            set_terminal_color(DEFAULT);
+            setTerminalColor(DEFAULT);
             board += " ";
         }
         board += "| " + std::to_string(CHESS_BOARD_HEIGHT - row) + "\n";
@@ -103,40 +103,12 @@ void LprintBoard()
 
 
 
+
+
 int main() {
-    SetConsoleOutputCP(CP_UTF8);
-    WChessPrint("Code page set to UTF-8.\n");
+    setTerminalColor(BRIGHT_GREEN);
+    std::cout << "This text is green." << std::endl;
+    setTerminalColor(DEFAULT);
 
-
-
-
-    LinitGame();
-    LprintBoard();
-/*
-    while(true) {
-        WChessPrint("Row --> ");
-        std::wstring row; 
-        std::wcin >> row;
-        WChessPrint("Col --> ");
-        std::wstring col;
-        std::wcin >> col;
-
-        if (row[0] == L'q' || col[0] == L'q')
-            break;
-
-        wchar_t piece;
-        if (GameBoard[std::stoi(row)][std::stoi(col)].getOwner() == ChessTypes::Owner::None)
-            piece = L' ';
-        else if (GameBoard[std::stoi(row)][std::stoi(col)].getOwner() == ChessTypes::Owner::PlayerOne) {
-            piece = TEXT_PIECE_ART_COLLECTION[playerOneConversion][static_cast<int>(GameBoard[std::stoi(row)][std::stoi(col)].getPiece())];
-            set_terminal_color(DEFAULT);
-        } else {
-            piece = TEXT_PIECE_ART_COLLECTION[playerTwoConversion][static_cast<int>(GameBoard[std::stoi(row)][std::stoi(col)].getPiece())];
-            set_terminal_color(DEFAULT);
-        }
-
-        WChessPrint("Printing piece: "); WChessPrint(&piece); WChessPrint("\n");
-    }
-*/
     return 0;
 }

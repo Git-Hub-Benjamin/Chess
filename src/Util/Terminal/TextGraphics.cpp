@@ -1,13 +1,17 @@
 #include "TextGraphics.hpp"
 
+extern Options global_player_option;
+
+
+
 static void option_active_inactive(bool check){
 	if(check)
-		set_terminal_color(GREEN);
+		setTerminalColor(GREEN);
 	else
-		set_terminal_color(RED);
+		setTerminalColor(RED);
 	
 	std::wcout << (check == true ? "Active" : "Inactive") << std::endl;
-	set_terminal_color(DEFAULT);
+	setTerminalColor(DEFAULT);
 }
 
 
@@ -26,28 +30,34 @@ static enum WRITE_COLOR num_to_enum_write_color(int num){
 void color_option_active_inactive(enum WRITE_COLOR check, int playerNum){
 	enum WRITE_COLOR& colorToChange = playerNum == 1 ? global_player_option.p1_color : global_player_option.p2_color;
 	if(check == colorToChange){
-		set_terminal_color(GREEN);
+		setTerminalColor(GREEN);
 		std::wcout << "Active";
 	}else{
-		set_terminal_color(RED);
+		setTerminalColor(RED);
 		std::wcout << "Inactive";
 	}
-	set_terminal_color(DEFAULT);
+	setTerminalColor(DEFAULT);
 }
 
 void piece_art_option_active_inactive(enum TEXT_PIECE_ART_COLLECTION_SELECTOR check, int playerNum){
 	enum TEXT_PIECE_ART_COLLECTION_SELECTOR artToChange = playerNum == 1 ? global_player_option.whitePlayerArtSelector : global_player_option.blackPlayerArtSelector;
 	if(check == artToChange){
-		set_terminal_color(GREEN);
+		setTerminalColor(GREEN);
 		std::wcout << "Active";
 	}else{
-		set_terminal_color(RED);
+		setTerminalColor(RED);
 		std::wcout << "Inactive";
 	}
-	set_terminal_color(DEFAULT);
+	setTerminalColor(DEFAULT);
+}
+
+void eraseOrNotEraseScreen(){
+	if(global_player_option.clearScreenOnPrint)
+		eraseDisplay();
 }
 
 void online_menu(std::wstring plyr_id){
+    eraseOrNotEraseScreen();
     std::wcout << "\n\n\n\n\n";
 	std::wcout << "\t\t\t|=====================================|\n";
     std::wcout << "\t\t\t|                                     |\n";
@@ -66,6 +76,7 @@ void online_menu(std::wstring plyr_id){
 }
 
 void title_screen(){
+    eraseOrNotEraseScreen();
     // menu when starting;
     std::wcout << "\n\n\n\n\n";
 	std::wcout << "\t\t\t|=====================================|\n";
@@ -85,6 +96,7 @@ void title_screen(){
 }
 
 void local_game_screen() {
+    eraseOrNotEraseScreen();
     std::wcout << "\n\n\n\n\n";
 	std::wcout << "\t\t\t|=====================================|\n";
     std::wcout << "\t\t\t|                                     |\n";
@@ -103,6 +115,7 @@ void local_game_screen() {
 }
 
 void configure_clock_screen(){
+    eraseOrNotEraseScreen();
     std::wcout << "\n\n\n\n\n";
 	std::wcout << "\t\t\t|=====================================|\n";
     std::wcout << "\t\t\t|                                     |\n";
@@ -121,6 +134,7 @@ void configure_clock_screen(){
 }
 
 void clock_presets_screen(){
+    eraseOrNotEraseScreen();
     std::wcout << "\n\n\n\n\n";
 	std::wcout << "\t\t\t|=====================================|\n";
     std::wcout << "\t\t\t|                                     |\n";
@@ -139,6 +153,7 @@ void clock_presets_screen(){
 }
 
 void inital_turn_screen(){
+    eraseOrNotEraseScreen();
     std::wcout << "\n\n\n\n\n";
 	std::wcout << "\t\t\t|=====================================|\n";
     std::wcout << "\t\t\t|                                     |\n";
@@ -157,6 +172,7 @@ void inital_turn_screen(){
 }
 
 void option_screen(){
+    eraseOrNotEraseScreen();
 	std::wcout << "\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = =\n";
 	std::wcout << "1. Change colors" << std::endl;
     std::wcout << "2. Change piece art" << std::endl;
@@ -169,7 +185,7 @@ void option_screen(){
 	std::wcout << "6. Flip board on new turn     (Local only)" << "            | ";
 	option_active_inactive(global_player_option.flipBoardOnNewTurn);
     std::wcout << "7. New board print clears screen" << "                      | ";
-    option_active_inactive(global_player_option.clearScreenOnBoardPrint);
+    option_active_inactive(global_player_option.clearScreenOnPrint);
 	std::wcout << "8. Changes made affect W-Chess Config File            | ";
 	option_active_inactive(SETTING_CHANGE_AFFECTS_CONFIG_FILE);
 	std::wcout << "9. W-Chess Config File" << std::endl;
@@ -177,6 +193,7 @@ void option_screen(){
 }
 
 void enter_private_lobby_code_menu(){
+    eraseOrNotEraseScreen();
     std::wcout << L"\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = =" << std::endl;
     std::wcout << L"(!back) to go back" << std::endl;
     std::wcout << L"Enter lobby code: " << std::endl;
@@ -187,6 +204,7 @@ void enter_private_lobby_code_menu(){
 }
 
 void displayPrivateLobbyCodeMenu(std::wstring& str){
+    eraseOrNotEraseScreen();
     std::wcout << L"\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = =" << std::endl;
     std::wcout << L"(!back) to go back" << std::endl;
     std::wcout << L"Lobby Code: " << str << std::endl;
@@ -198,6 +216,7 @@ void displayPrivateLobbyCodeMenu(std::wstring& str){
 }
 
 void display_rand_queue_menu(){
+    eraseOrNotEraseScreen();
     std::wcout << L"\n\n= = = = = = = = = = = = = = = = = = = = = = = = = = = =" << std::endl;
     std::wcout << L"(!back) to go back" << std::endl;
     std::wcout << L"Searching for another players..." << std::endl;

@@ -5,10 +5,9 @@
 #include <cstdio>   // For putchar on some systems
 
 #ifdef _WIN32
-#include <windows.h>
-#endif
 
-#ifdef _WIN32
+#include <windows.h>
+
 // Windows (Ensuring UTF-8 is used & Chess Piece Art is displayed)
 // 1. Download DejaVu Sans Mono font, Extract, Install
 // 2. "Windows Key + R", type "regedit", press Enter
@@ -21,7 +20,7 @@
 // 9. Administrative, Set system locale, Toggle "Beta: Use Unicode UTF-8 for worldwide language support"
 // 10. Apply, OK, Restart Computer
 void WChessPrint(const char* text){
-    std::cout << text << std::endl;
+    std::cout << text;
 }
 
 void WChessPrintFlush(){
@@ -35,7 +34,7 @@ void WChessInput(std::string& input){
 #else 
 // Last testing I did wcout was needed for linux 
 void WChessPrint(const wchar_t* text){
-     std::wcout << text << std::endl;
+     std::wcout << text;
 }
 
 void WChessPrintFlush(){
@@ -48,10 +47,15 @@ void WChessInput(std::wstring& input){
 
 #endif
 
-void set_terminal_color(enum WRITE_COLOR color) {
+void setTerminalColor(enum WRITE_COLOR color) {
 #ifdef _WIN32
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     WORD attributes = 0;
+
+    CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+    WORD originalAttrs;
+    GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
+    originalAttrs = consoleInfo.wAttributes;
 
     switch (color) {
         case DEFAULT:
@@ -211,68 +215,11 @@ void clearLine() {
 #endif
 }
 
-/*
-erase_display(0): Clears from the cursor to the end of the screen.
-erase_display(1): Clears from the cursor to the beginning of the screen.
-erase_display(2): Clears the entire screen.
-erase_display(3): Clears the entire screen and deletes the scrollback buffer (Windows equivalent is harder).
-*/
-void erase_display(int n) {
-    if (n < 0 || n > 3)
-        return; // Invalid parameter
 
+void eraseDisplay() {
 #ifdef _WIN32
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    DWORD dwWritten;
-    COORD coordScreen = {0, 0};
-    DWORD dwCount;
-
-    // Get the number of character cells in the current buffer.
-    if (!GetConsoleScreenBufferInfo(hConsole, &csbi)) {
-        return; // Error
-    }
-
-    switch (n) {
-        case 0: // Clears from the cursor to the end of the screen.
-            dwCount = csbi.dwSize.X * csbi.dwSize.Y -
-                      (csbi.dwCursorPosition.Y * csbi.dwSize.X +
-                       csbi.dwCursorPosition.X);
-            coordScreen = csbi.dwCursorPosition;
-            break;
-        case 1: // Clears from the cursor to the beginning of the screen.
-            dwCount = csbi.dwCursorPosition.Y * csbi.dwSize.X +
-                      csbi.dwCursorPosition.X + 1; // +1 to include the cursor position
-            coordScreen = {0, 0};
-            break;
-        case 2: // Clears the entire screen.
-            dwCount = csbi.dwSize.X * csbi.dwSize.Y;
-            coordScreen = {0, 0};
-            break;
-        case 3: // Clears the entire screen and deletes the scrollback buffer.
-            // The Windows Console API doesn't have a direct equivalent to
-            // clearing the scrollback buffer in the same way as ANSI escape codes.
-            // We'll perform a full screen clear (case 2) as the closest equivalent.
-            dwCount = csbi.dwSize.X * csbi.dwSize.Y;
-            coordScreen = {0, 0};
-            // Optionally, you could resize the buffer to a minimal size here
-            // but that can be disruptive and is not a direct equivalent.
-            break;
-    }
-
-    // Fill the affected area with spaces
-    FillConsoleOutputCharacterW(hConsole, L' ', dwCount, coordScreen, &dwWritten);
-
-    // Reset the attributes of the cleared area to the current attributes
-    FillConsoleOutputAttribute(hConsole, csbi.wAttributes, dwCount, coordScreen, &dwWritten);
-
-    // Set the cursor to the top-left for full screen clears
-    if (n == 2 || n == 3) {
-        SetConsoleCursorPosition(hConsole, {0, 0});
-    }
-
-#else // Linux and other Unix-like systems
-    std::wstring output = L"\x001b[" + std::to_wstring(n) + L"J";
-    std::wcout << output;
+    system("cls");
+#else
+    system("clear");
 #endif
 }

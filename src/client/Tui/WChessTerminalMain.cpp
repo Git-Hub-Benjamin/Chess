@@ -154,7 +154,7 @@ void changing_option_from_menu(int option_opt){
 			global_player_option.flipBoardOnNewTurn = !global_player_option.flipBoardOnNewTurn;
 			break;
 		case MAIN_MENU_SETTINGS_OPTIONS::CLEAR_SCREEN_ON_PRINT:
-			global_player_option.clearScreenOnBoardPrint = !global_player_option.clearScreenOnBoardPrint;
+			global_player_option.clearScreenOnPrint = !global_player_option.clearScreenOnPrint;
 			break;
 		case MAIN_MENU_SETTINGS_OPTIONS::SETTINGS_AFFECT_CONFIG:
 			SETTING_CHANGE_AFFECTS_CONFIG_FILE = !SETTING_CHANGE_AFFECTS_CONFIG_FILE;
@@ -196,7 +196,7 @@ int main() {
     std::wcout.imbue(utf8_locale);
     std::wcin.imbue(utf8_locale);
 #endif
-	set_terminal_color(DEFAULT);
+	setTerminalColor(DEFAULT);
 
 	WChessPrint("\n\n\n\n\n\n");
 	
@@ -222,7 +222,7 @@ int main() {
 		title_screen();
 		WChessPrint("Global things --> "); 
 
-		std::string globals = std::to_string(global_player_option.p1_color) + std::to_string(global_player_option.p2_color) + std::to_string(global_player_option.whitePlayerArtSelector) + std::to_string(global_player_option.blackPlayerArtSelector) + std::to_string(global_player_option.moveHighlighting) + std::to_string(global_player_option.dynamicMoveHighlighting) + std::to_string(global_player_option.boardHistory) + std::to_string(global_player_option.flipBoardOnNewTurn) + std::to_string(global_player_option.clearScreenOnBoardPrint);
+		std::string globals = std::to_string(global_player_option.p1_color) + std::to_string(global_player_option.p2_color) + std::to_string(global_player_option.whitePlayerArtSelector) + std::to_string(global_player_option.blackPlayerArtSelector) + std::to_string(global_player_option.moveHighlighting) + std::to_string(global_player_option.dynamicMoveHighlighting) + std::to_string(global_player_option.boardHistory) + std::to_string(global_player_option.flipBoardOnNewTurn) + std::to_string(global_player_option.clearScreenOnPrint);
 		WChessPrint(globals.c_str());
 		WChessPrint("\n");
 

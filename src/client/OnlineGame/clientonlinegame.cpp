@@ -77,9 +77,9 @@ void loading_connecting_to_server(){
 
 
 void error_connecting(std::wstring&& msg, std::thread& animation_t) {
-    set_terminal_color(RED);
+    setTerminalColor(RED);
     std::wcout << msg << std::endl;
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     status = ERROR_CONNECTING;
     if (animation_t.joinable())
         animation_t.join();

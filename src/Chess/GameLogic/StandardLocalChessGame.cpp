@@ -458,13 +458,10 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
                 }
             }
 
-            std::string temp = inputBuffer;
-            WChessInput(temp);
+            WChessInput(inputBuffer);
 
-            std::string temp2;  // Moved declaration here
             auto moveResult = sanitizeGetMove(inputBuffer);
-            switch (moveResult)
-            {
+            switch (moveResult) {
             case ChessEnums::SanitizeGetMoveResult::Invalid: // Invalid
                 continue;
             case ChessEnums::SanitizeGetMoveResult::OPTIONS:
@@ -474,21 +471,19 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
                     WChessPrint("\n\n1. Change Colors\n2. Change Art\n3. Continue\n4. Quit\n \n--> ");
                 WChessPrintFlush();
                 inputBuffer.clear();
-                temp2 = inputBuffer;  // Assignment instead of declaration
-                WChessInput(temp2);
-                switch (optionMenu(inputBuffer[0]))
-                {
-                case ChessEnums::GameOptionResult::Invalid: // Invalid input
-                    continue;
-                case ChessEnums::GameOptionResult::QUIT: // Quit game
-                    return ChessEnums::GetMoveResult::QUIT;
-                case ChessEnums::GameOptionResult::CONTINUE: // Continue game
-                    inputBuffer.clear();
-                    continue;
-                case ChessEnums::GameOptionResult::UNDO: // Undo (unimplemented)
-                    continue;
-                case ChessEnums::GameOptionResult::REDO: // Redo (unimplemented)
-                    continue;
+                WChessInput(inputBuffer);
+                switch (optionMenu(inputBuffer[0])) {
+                    case ChessEnums::GameOptionResult::Invalid: // Invalid input
+                        continue;
+                    case ChessEnums::GameOptionResult::QUIT: // Quit game
+                        return ChessEnums::GetMoveResult::QUIT;
+                    case ChessEnums::GameOptionResult::CONTINUE: // Continue game
+                        inputBuffer.clear();
+                        continue;
+                    case ChessEnums::GameOptionResult::UNDO: // Undo (unimplemented)
+                        continue;
+                    case ChessEnums::GameOptionResult::REDO: // Redo (unimplemented)
+                        continue;
                 }
             default:
                 break;

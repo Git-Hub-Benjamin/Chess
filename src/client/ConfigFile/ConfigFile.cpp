@@ -41,7 +41,7 @@ enum CFG_FILE_RET load_config_file(Options& temp){
 		}else if(option.compare("flip_on_turn") == 0){
 			superTemp.flipBoardOnNewTurn = val == 0 ? false : true;
 		} else if (option.compare("print_clear_screen") == 0){
-			superTemp.clearScreenOnBoardPrint = val == 0 ? false : true;
+			superTemp.clearScreenOnPrint = val == 0 ? false : true;
 		}else{
 			// Tampered, unknown option
 			res = TAMPERED;

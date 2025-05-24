@@ -452,7 +452,7 @@ static void display_type_clients(enum CLIENT_STATUS status){
         } 
     }
 
-    set_terminal_color(BOLD);
+    setTerminalColor(BOLD);
     if(count == 0)
         if(status != UNBOUND)
             std::wcout << "No clients found with " << (status == WAITING ? "\"Waiting\"" : "\"Playing\"") << " status" << std::endl;
@@ -463,7 +463,7 @@ static void display_type_clients(enum CLIENT_STATUS status){
             std::wcout << count << " client" << (count == 1 ? "" : "s") << " found with " << (status == WAITING ? "\"Waiting\"" : "\"Playing\"") << " status" << std::endl;
         else
             std::wcout << count << " client" << (count == 1 ? "" : "s") << " found on the server..." << std::endl;
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
 }
 
 static void display_game_lobbies(){
@@ -479,12 +479,12 @@ static void display_private_lobbies_and_owner(){
         std::wcout << "- - - - - - -" << std::endl;
         count++;
     } 
-    set_terminal_color(BOLD);
+    setTerminalColor(BOLD);
     if(count == 0)
         std::wcout << "No client private lobbies found..." << std::endl;
     else
         std::wcout << count << " client private lobbies found..." << std::endl;
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
 }
 
 void handle_command(std::string command){
@@ -612,9 +612,9 @@ void dispatch_and_send_waiting_updates(){
             pair.first.RES_TO_CLIENT_WAITING = SERVER_CLIENT_MAX_CAPACITY;
             pair.second.RES_TO_CLIENT_WAITING = SERVER_CLIENT_MAX_CAPACITY;
 
-            set_terminal_color(RED);
+            setTerminalColor(RED);
             std::wcout << "Nevermind... No lobbies available..." << std::endl;
-            set_terminal_color(DEFAULT);
+            setTerminalColor(DEFAULT);
 
             continue;
         }

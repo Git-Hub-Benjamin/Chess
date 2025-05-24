@@ -162,10 +162,10 @@ void Online_ChessGame::gameloop(){
 
     while(!Lobby_Game.gameover){
 
-        set_terminal_color(GREEN);
+        setTerminalColor(GREEN);
         std::wcout << "Current Turn Client: " << convertString(current_turn_client.CLIENT_STRING_ID) << std::endl;
         std::wcout << "Not Current Turn Client: " << convertString(non_current_turn_client.CLIENT_STRING_ID) << std::endl;
-        set_terminal_color(DEFAULT);
+        setTerminalColor(DEFAULT);
 
         print_board(Lobby_Game);
 
@@ -193,9 +193,9 @@ void Online_ChessGame::gameloop(){
         std::wcout << "Server sending pre check in" << std::endl;
         if(!send_preturn_check_in(pre_turn_check_in)){
             // Tell clients there was a socket error, Server fault
-            set_terminal_color(RED);
+            setTerminalColor(RED);
             std::wcout << "ERROR -- SOCKET ERROR" << std::endl;
-            set_terminal_color(DEFAULT);
+            setTerminalColor(DEFAULT);
         }
         std::wcout << "Server sent pre turn check in" << std::endl;
 

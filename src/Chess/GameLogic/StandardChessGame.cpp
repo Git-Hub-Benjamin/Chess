@@ -146,10 +146,9 @@ ChessEnums::ValidateGameSquareResult StandardChessGame::validateGameSquare(Squar
 }
 
 void StandardChessGame::printBoard(ChessTypes::Player playerSideToPrint){
+    if (GameOptions.clearScreenOnPrint) 
+        eraseDisplay();
 #ifdef _WIN32
-    if (GameOptions.clearScreenOnBoardPrint) 
-        system("cls");
-
     std::string board;
     board += "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n";
     board += "\t\t\t  +---+---+---+---+---+---+---+---+\n";
@@ -170,9 +169,9 @@ void StandardChessGame::printBoard(ChessTypes::Player playerSideToPrint){
 
             board += TEXT_PIECE_ART_COLLECTION[currPosition.owner == ChessTypes::Owner::PlayerOne ? GameOptions.whitePlayerArtSelector : GameOptions.blackPlayerArtSelector][static_cast<int>(currPosition.piece)];
             //! TODO: WINDOWS COLOR
-            //set_terminal_color(currPosition.owner == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
+            //setTerminalColor(currPosition.owner == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
 
-            set_terminal_color(DEFAULT);
+            setTerminalColor(DEFAULT);
             board += " ";
         }
         board += "| " + std::to_string(CHESS_BOARD_HEIGHT - row) + "\n";
@@ -187,8 +186,6 @@ void StandardChessGame::printBoard(ChessTypes::Player playerSideToPrint){
 
     WChessPrint(board.c_str());
 #else
-    if (GameOptions.clearScreenOnBoardPrint) 
-        system("clear");
 
     std::wstring board;
     board += L"\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n";
@@ -210,9 +207,9 @@ void StandardChessGame::printBoard(ChessTypes::Player playerSideToPrint){
 
             //! TODO: FIX LINUX
             //board += TEXT_PIECE_ART_COLLECTION[currPosition.owner == ChessTypes::Owner::PlayerOne ? GameOptions.whitePlayerArtSelector : GameOptions.blackPlayerArtSelector][static_cast<int>(currPosition.piece)];
-            set_terminal_color(currPosition.owner == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
+            setTerminalColor(currPosition.owner == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
 
-            set_terminal_color(DEFAULT);
+            setTerminalColor(DEFAULT);
             board += L" ";
         }
         board += L"| ";
@@ -278,12 +275,8 @@ ChessTypes::Owner StandardChessGame::piecePresent(Point p){
 }
 
 void StandardChessGame::printBoardWithMoves(ChessTypes::Player playerSideToPrint) {
-    if(GameOptions.clearScreenOnBoardPrint)
-        #ifdef _WIN32
-    system("cls");
-#else
-    system("clear");
-#endif
+    if(GameOptions.clearScreenOnPrint)
+        eraseDisplay();
 /*
     std::wcout << "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n" << "\t\t\t  +---+---+---+---+---+---+---+---+\n";
     for(int row = 0; row < CHESS_BOARD_HEIGHT; row++){
@@ -301,10 +294,10 @@ void StandardChessGame::printBoardWithMoves(ChessTypes::Player playerSideToPrint
                     piece = ' ';
                 else if(currPosition.owner == ChessTypes::Owner::PlayerOne){
                     piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][static_cast<int>(currPosition.piece)];
-                    set_terminal_color(GameOptions.p1_color);
+                    setTerminalColor(GameOptions.p1_color);
                 }else{
                     piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][static_cast<int>(currPosition.piece)];
-                    set_terminal_color(GameOptions.p2_color);
+                    setTerminalColor(GameOptions.p2_color);
                 }
 
                 // checking if the current square can be acctacked by piece
@@ -316,10 +309,10 @@ void StandardChessGame::printBoardWithMoves(ChessTypes::Player playerSideToPrint
                     piece = ' ';
                 else if(currPosition.owner == ChessTypes::Owner::PlayerOne){
                     piece = TEXT_PIECE_ART_COLLECTION[GameOptions.whitePlayerArtSelector][static_cast<int>(currPosition.piece)];
-                    set_terminal_color(GameOptions.p1_color);
+                    setTerminalColor(GameOptions.p1_color);
                 }else{
                     piece = TEXT_PIECE_ART_COLLECTION[GameOptions.blackPlayerArtSelector][static_cast<int>(currPosition.piece)];
-                    set_terminal_color(GameOptions.p2_color);
+                    setTerminalColor(GameOptions.p2_color);
                 }
 
                 // checking if the current square can be acctacked by piece
@@ -351,7 +344,7 @@ void StandardChessGame::printBoardWithMoves(ChessTypes::Player playerSideToPrint
                         color = WRITE_COLOR::BLACK;
                         break;
                 }
-                set_terminal_color(color);
+                setTerminalColor(color);
             }
 
             // Checking for highlighted piece, if flip board option is on then we need to look at the board the opposite way
@@ -361,16 +354,16 @@ void StandardChessGame::printBoardWithMoves(ChessTypes::Player playerSideToPrint
             // if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && fromHighlightedPiece == &GameBoard[row][col]) ||
             //     currentTurn == PlayerTwo && fromHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
             //     !GameOptions.flipBoardOnNewTurn && (fromHighlightedPiece == &GameBoard[row][col]))
-            //     set_terminal_color(GameOptions.movingPiece_color);
+            //     setTerminalColor(GameOptions.movingPiece_color);
 
             // // Exact same thing as above but excpet now checking for toHighlightedPiece
             // else if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == PlayerOne && toHighlightedPiece == &GameBoard[row][col]) ||
             //     currentTurn == PlayerTwo && toHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
             //     !GameOptions.flipBoardOnNewTurn && (toHighlightedPiece == &GameBoard[row][col]))
-                // set_terminal_color(GameOptions.movingToPiece_color);
+                // setTerminalColor(GameOptions.movingToPiece_color);
             
             std::wcout << piece;    
-            set_terminal_color(DEFAULT);
+            setTerminalColor(DEFAULT);
             std::wcout << " ";
               
         }

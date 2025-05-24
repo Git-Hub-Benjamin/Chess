@@ -64,7 +64,7 @@ void overwrite_option_file(){
 		"dynamic_move_highlighting:" << global_player_option.dynamicMoveHighlighting << "\n" <<
 		"board_history:" << global_player_option.boardHistory << "\n" << 
 		"flip_on_turn:" << global_player_option.flipBoardOnNewTurn << "\n" <<
-        "print_clear_screen:" << global_player_option.clearScreenOnBoardPrint << "\n";
+        "print_clear_screen:" << global_player_option.clearScreenOnPrint << "\n";
 	}
 }
 

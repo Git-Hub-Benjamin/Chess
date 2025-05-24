@@ -337,7 +337,7 @@ void WChessServer::fifo_displayTypeClient(CLIENT_STATUS status) {
         }
     }
 
-    set_terminal_color(BOLD);
+    setTerminalColor(BOLD);
     if(count == 0)
         if(status != UNBOUND)
             std::wcout << "No clients found with " << (status == WAITING ? "\"Waiting\"" : "\"Playing\"") << " status" << std::endl;
@@ -348,7 +348,7 @@ void WChessServer::fifo_displayTypeClient(CLIENT_STATUS status) {
             std::wcout << count << " client" << (count == 1 ? "" : "s") << " found with " << (status == WAITING ? "\"Waiting\"" : "\"Playing\"") << " status" << std::endl;
         else
             std::wcout << count << " client" << (count == 1 ? "" : "s") << " found on the server..." << std::endl;
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
 }
 
 void WChessServer::fifo_displayLobbies(){
@@ -373,12 +373,12 @@ void WChessServer::fifo_displayPrivateLobbies(){
         std::wcout << "- - - - - - -" << std::endl;
         count++;
     } 
-    set_terminal_color(BOLD);
+    setTerminalColor(BOLD);
     if(count == 0)
         std::wcout << "No client private lobbies found..." << std::endl;
     else
         std::wcout << count << " client private lobbies found..." << std::endl;
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
 }
 
 void WChessServer::fifo_handleCommand(std::string command){

@@ -36,15 +36,20 @@ class Options {
     TEXT_PIECE_ART_COLLECTION_SELECTOR whitePlayerArtSelector = STD_PIECE_ART_P1;
     TEXT_PIECE_ART_COLLECTION_SELECTOR blackPlayerArtSelector = STD_PIECE_ART_P2;
 
+    // This setting updates and prints gameboard everytime a character is typed so its very complex and computationally expensive, also hell to implement in windows terminal
     bool dynamicMoveHighlighting = false;
+    // This setting calls LprintBoardWithMoves instead of LprintBoard to show possible moves after choose fromPiece
     bool moveHighlighting = false;
+    // This setting allows for undo and redo, not implemented 
     bool boardHistory = false; // UNDO / REDO basically
+    // This will flip the board on new turn, half implemented
     bool flipBoardOnNewTurn = false;
-    bool clearScreenOnBoardPrint = false;
+    // Clears the screen every time a new (options screen, game screen, or board) is printed
+    bool clearScreenOnPrint = false;
 
     Options() {}
     Options(const Options &copy) : p1_color(copy.p1_color), p2_color(copy.p2_color),
-                                   moveHighlighting(copy.moveHighlighting), clearScreenOnBoardPrint(copy.clearScreenOnBoardPrint), dynamicMoveHighlighting(copy.dynamicMoveHighlighting), boardHistory(copy.boardHistory), flipBoardOnNewTurn(copy.flipBoardOnNewTurn),
+                                   moveHighlighting(copy.moveHighlighting), clearScreenOnPrint(copy.clearScreenOnPrint), dynamicMoveHighlighting(copy.dynamicMoveHighlighting), boardHistory(copy.boardHistory), flipBoardOnNewTurn(copy.flipBoardOnNewTurn),
                                    whitePlayerArtSelector(copy.whitePlayerArtSelector), blackPlayerArtSelector(copy.blackPlayerArtSelector) {};
 
     void print() const

@@ -39,7 +39,7 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     bool LkingSafe();
     bool LkingSafeAfterMove(GameSquare& to);
     bool LcheckMate();
-    GameSquare& LconvertMove(std::string move, ChessTypes::Player sideToConvert);
+    GameSquare& LconvertMove(std::string move);
     ChessEnums::ValidateGameSquareResult LvalidateGameSquare(GameSquare& square, ChessTypes::GetMoveType getMoveType);
     ChessEnums::PossibleMovesResult LreadPossibleMoves(GameSquare& to);
     void LstartGame();

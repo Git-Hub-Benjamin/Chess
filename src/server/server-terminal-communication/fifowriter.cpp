@@ -16,57 +16,57 @@ void toLowercase(std::string& str) {
 }
 
 void printCommands() {
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     std::printf("Command                         ");
-    set_terminal_color(AQUA);
+    setTerminalColor(AQUA);
     std::printf("Description\n");
     
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     std::printf("---------------------------------");
-    set_terminal_color(AQUA);
+    setTerminalColor(AQUA);
     std::printf(" -------------------------------------------------\n");
 
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     std::printf("kill                            ");
-    set_terminal_color(AQUA);
+    setTerminalColor(AQUA);
     std::printf("Terminate the server.\n");
 
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     std::printf("all-clients (alias: aclients)   ");
-    set_terminal_color(AQUA);
+    setTerminalColor(AQUA);
     std::printf("Displays all clients.\n");
 
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     std::printf("wait-clients (alias: wclients)  ");
-    set_terminal_color(AQUA);
+    setTerminalColor(AQUA);
     std::printf("Displays all clients in waiting state.\n");
 
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     std::printf("play-clients (alias: pclients)  ");
-    set_terminal_color(AQUA);
+    setTerminalColor(AQUA);
     std::printf("Displays all clients in playing state.\n");
 
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     std::printf("game-clients (alias: lclients)  ");
-    set_terminal_color(AQUA);
+    setTerminalColor(AQUA);
     std::printf("Displays active games and the players in them.\n");
 
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     std::printf("private-lobby-clients (alias: privclients) ");
-    set_terminal_color(AQUA);
+    setTerminalColor(AQUA);
     std::printf("Displays created private lobbies and their clients.\n");
 
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     std::printf("kill-lobbies (alias: kthlobby)  ");
-    set_terminal_color(AQUA);
+    setTerminalColor(AQUA);
     std::printf("Kills all lobbies and terminates the associated thread.\n");
 
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
     std::printf("poll-clients (alias: plclients) ");
-    set_terminal_color(AQUA);
+    setTerminalColor(AQUA);
     std::printf("Displays polling clients and their file descriptors.\n");
 
-    set_terminal_color(DEFAULT);
+    setTerminalColor(DEFAULT);
 }
 
 static int static_fd;

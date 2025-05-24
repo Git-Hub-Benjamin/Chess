@@ -503,7 +503,7 @@ restore_king:
     return LcanDefendKing(teamPieces) == nullptr; // If any of the team pieces can defend the king then this will result in NO checkmate, otherwise checkmate
 }
 
-GameSquare &StandardLocalChessGame::LconvertMove(std::string move, ChessTypes::Player sideToConvert)
+GameSquare &StandardLocalChessGame::LconvertMove(std::string move)
 {
     // convert letter to number (a = 0, b = 1 etc)
     // convert char number to number ('0' = 0 etc)
@@ -512,8 +512,8 @@ GameSquare &StandardLocalChessGame::LconvertMove(std::string move, ChessTypes::P
     int row = 8 - (move[1] - 48);
     int col = move[0] - 97;
 
-    if ((GameConnectivity == ChessTypes::GameConnectivity::Online && sideToConvert == ChessTypes::Player::PlayerTwo) ||
-        (GameConnectivity == ChessTypes::GameConnectivity::Local && GameOptions.flipBoardOnNewTurn && sideToConvert == ChessTypes::Player::PlayerTwo))
+    if ((GameConnectivity == ChessTypes::GameConnectivity::Online && currentTurn == ChessTypes::Player::PlayerTwo) ||
+        (GameConnectivity == ChessTypes::GameConnectivity::Local && GameOptions.flipBoardOnNewTurn && currentTurn == ChessTypes::Player::PlayerTwo))
         return GameBoard[LreflectAxis(row)][LreflectAxis(col)];
 
     return GameBoard[row][col];
@@ -618,15 +618,15 @@ void StandardLocalChessGame::LstartGame()
                 moveFrom = inputBuffer;
                 inputBuffer.clear();
 
-                res = static_cast<int>(LvalidateGameSquare(LconvertMove(moveFrom, currentTurn), ChessTypes::GetMoveType::From));
+                res = static_cast<int>(LvalidateGameSquare(LconvertMove(moveFrom), ChessTypes::GetMoveType::From));
                 if (static_cast<ChessEnums::ValidateGameSquareResult>(res) == ChessEnums::ValidateGameSquareResult::NO_PIECE)
                 {
-                    toPrint = "No piece present.";
+                    toPrint = "No piece present.\n";
                     continue;
                 }
                 else if (static_cast<ChessEnums::ValidateGameSquareResult>(res) == ChessEnums::ValidateGameSquareResult::PIECE_NOT_YOURS)
                 {
-                    toPrint = "This piece does not belong to you.";
+                    toPrint = "This piece does not belong to you.\n";
                     continue;
                 }
 
@@ -634,12 +634,12 @@ void StandardLocalChessGame::LstartGame()
                 // if dynamic move highlighting is enabled this is already done in getMove
                 if (!GameOptions.dynamicMoveHighlighting)
                 {
-                    if (!LpopulatePossibleMoves(LconvertMove(moveFrom, currentTurn)))
+                    if (!LpopulatePossibleMoves(LconvertMove(moveFrom)))
                     {
                         if (currTurnInCheck)
-                            toPrint = "You need to protect your king.";
+                            toPrint = "You need to protect your king.\n";
                         else
-                            toPrint = "No moves with that piece.";
+                            toPrint = "No moves with that piece.\n";
                         continue;
                     }
                     if (GameOptions.moveHighlighting)
@@ -657,40 +657,36 @@ void StandardLocalChessGame::LstartGame()
 
             int res = static_cast<int>(getMove(ChessTypes::GetMoveType::To));
 
-            if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::QUIT)
-            { // Quit
+            if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::QUIT) { // Quit
                 GameOver = true;
                 break;
-            }
-            else if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::TIMER_RAN_OUT)
-            { // Timer ran out, end game, win for other player
+            } else if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::TIMER_RAN_OUT) { // Timer ran out, end game, win for other player
                 WChessPrint("Timer ran out...\n");
                 GameOver = true;
                 break;
-            }
-            else if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::CHOOSE_MOVE_AGAIN)
+            } else if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::CHOOSE_MOVE_AGAIN)
                 continue;
-
-            res = static_cast<int>(LvalidateGameSquare(LconvertMove(moveTo, currentTurn), ChessTypes::GetMoveType::To));
-            if (static_cast<ChessEnums::ValidateGameSquareResult>(res) == ChessEnums::ValidateGameSquareResult::CANNOT_TAKE_OWN)
-            {
-                toPrint = "Cannot take your own piece.";
-                continue;
-            }
 
             moveTo = inputBuffer;
 
+            res = static_cast<int>(LvalidateGameSquare(LconvertMove(moveTo), ChessTypes::GetMoveType::To));
+            if (static_cast<ChessEnums::ValidateGameSquareResult>(res) == ChessEnums::ValidateGameSquareResult::CANNOT_TAKE_OWN){
+                toPrint = "Cannot take your own piece.\n";
+                continue;
+            }
+
+
             // ---------------------------------- //
 
-            res = static_cast<int>(LmakeMove(Move(oneMoveFromCheck == nullptr ? LconvertMove(moveFrom, currentTurn) : *oneMoveFromCheck, LconvertMove(moveTo, currentTurn))));
+            res = static_cast<int>(LmakeMove(Move(oneMoveFromCheck == nullptr ? LconvertMove(moveFrom) : *oneMoveFromCheck, LconvertMove(moveTo))));
             if (static_cast<ChessEnums::MakeMoveResult>(res) == ChessEnums::MakeMoveResult::KING_IN_HARM)
-                toPrint = "This puts your king in danger!";
+                toPrint = "This puts your king in danger!\n";
             else if (static_cast<ChessEnums::MakeMoveResult>(res) == ChessEnums::MakeMoveResult::INVALID_MOVE)
-                toPrint = "Invalid move.";
+                toPrint = "Invalid move.\n";
             else if (static_cast<ChessEnums::MakeMoveResult>(res) == ChessEnums::MakeMoveResult::PIECE_TAKEN)
-                toPrint = "Piece taken.";
+                toPrint = "Piece taken.\n";
             else
-                toPrint = "Piece moved.";
+                toPrint = "Piece moved.\n";
 
             if (res < 1)
                 continue; // Redo turn
@@ -709,9 +705,9 @@ void StandardLocalChessGame::LstartGame()
 //* may just override in the future, but having L "giving itself its own function" is fine for now
 void StandardLocalChessGame::LprintBoard(ChessTypes::Player playerSideToPrint)
 {
+    if (GameOptions.clearScreenOnPrint) 
+        eraseDisplay();
 #ifdef _WIN32
-    if (GameOptions.clearScreenOnBoardPrint) 
-        system("cls");
 
     std::string board;
     board += "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n";
@@ -731,10 +727,9 @@ void StandardLocalChessGame::LprintBoard(ChessTypes::Player playerSideToPrint)
                 currSquare = &GameBoard[row][col];
 
             board += TEXT_PIECE_ART_COLLECTION[(*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.whitePlayerArtSelector : GameOptions.blackPlayerArtSelector][static_cast<int>((*currSquare).getPiece())];
-            //! TODO: Implement color changing in windows terminal
-            //set_terminal_color((*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
+            setTerminalColor((*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
 
-            set_terminal_color(DEFAULT);
+            setTerminalColor(DEFAULT);
             board += " ";
         }
         board += "| " + std::to_string(CHESS_BOARD_HEIGHT - row) + "\n";
@@ -749,13 +744,7 @@ void StandardLocalChessGame::LprintBoard(ChessTypes::Player playerSideToPrint)
 
     WChessPrint(board.c_str());
 #else //! Linux, FINISH THIS
-    if (GameOptions.clearScreenOnBoardPrint) {
-#ifdef _WIN32
-    system("cls");
-#else
-    system("clear");
-#endif
-    }
+
     std::string board;
     board += "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n";
     board += "\t\t\t  +---+---+---+---+---+---+---+---+\n";
@@ -776,10 +765,10 @@ void StandardLocalChessGame::LprintBoard(ChessTypes::Player playerSideToPrint)
 #ifdef _WIN32
             board += TEXT_PIECE_ART_COLLECTION[(*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.whitePlayerArtSelector : GameOptions.blackPlayerArtSelector][static_cast<int>((*currSquare).getPiece())];
 #else
-            set_terminal_color((*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
+            setTerminalColor((*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
 #endif
 
-            set_terminal_color(DEFAULT);
+            setTerminalColor(DEFAULT);
             board += " ";
         }
         board += "| " + std::to_string(CHESS_BOARD_HEIGHT - row) + "\n";
@@ -824,9 +813,9 @@ int StandardLocalChessGame::LreflectAxis(int val)
 //! Not working currently...
 void StandardLocalChessGame::LprintBoardWithMoves(ChessTypes::Player playerSideToPrint)
 {
+    if (GameOptions.clearScreenOnPrint)
+        eraseDisplay();
 #ifdef _WIN32
-    if (GameOptions.clearScreenOnBoardPrint)
-        system("cls");
 
     std::string board;
     board += "\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n";
@@ -838,7 +827,7 @@ void StandardLocalChessGame::LprintBoardWithMoves(ChessTypes::Player playerSideT
         {
             board += "| ";
 
-            char piece; //! want to remove this, but this is required for LprintBoardWithMoves specifically because we dont know if the if we change 
+            std::string piece;
             ChessEnums::PossibleMovesResult possibleMoveTypeSelector;
             GameSquare* currSquare;
 
@@ -847,15 +836,14 @@ void StandardLocalChessGame::LprintBoardWithMoves(ChessTypes::Player playerSideT
             else
                 currSquare = &GameBoard[row][col];
 
-            //piece = TEXT_PIECE_ART_COLLECTION[(*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? STD_PIECE_CHAR_P1 : STD_PIECE_CHAR_P2][static_cast<int>((*currSquare).getPiece())];
+            piece = TEXT_PIECE_ART_COLLECTION[(*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.whitePlayerArtSelector : GameOptions.blackPlayerArtSelector][static_cast<int>((*currSquare).getPiece())];
       
             possibleMoveTypeSelector = LreadPossibleMoves(*currSquare);
 
             if (possibleMoveTypeSelector != ChessEnums::PossibleMovesResult::NOT_FOUND)
             {
-                if (piece == ' ')
-                    piece = 'X';
-#ifdef TODO //! IMPLEMENT COLOR CHANGING IN WINDOWS TERMINAL
+                if (piece == " ")
+                    piece = "X";
                 WRITE_COLOR color;
                 switch (possibleMoveTypeSelector)
                 {
@@ -878,27 +866,24 @@ void StandardLocalChessGame::LprintBoardWithMoves(ChessTypes::Player playerSideT
                     color = WRITE_COLOR::BLACK;
                     break;
                 }
-                set_terminal_color(color);
-#endif
+                setTerminalColor(color);
             }
 
             // Checking for highlighted piece, if flip board option is on then we need to look at the board the opposite way
             // otherwise if flip board is not active then we can always read it 0 - 7, 0 - 7
-#ifndef TODO //! HERE TOO
             if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == ChessTypes::Player::PlayerOne && fromHighlightedPiece == &GameBoard[row][col]) ||
                                                     currentTurn == ChessTypes::Player::PlayerTwo && fromHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
                 !GameOptions.flipBoardOnNewTurn && (fromHighlightedPiece == &GameBoard[row][col]))
-                set_terminal_color(GameOptions.movingPiece_color);
+                setTerminalColor(GameOptions.movingPiece_color);
 
             // Exact same thing as above but excpet now checking for toHighlightedPiece
             else if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == ChessTypes::Player::PlayerOne && toHighlightedPiece == &GameBoard[row][col]) ||
                                                          currentTurn == ChessTypes::Player::PlayerTwo && toHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
                      !GameOptions.flipBoardOnNewTurn && (toHighlightedPiece == &GameBoard[row][col]))
-                set_terminal_color(GameOptions.movingToPiece_color);
-#endif
+                setTerminalColor(GameOptions.movingToPiece_color);
 
             board += piece;
-            set_terminal_color(DEFAULT);
+            setTerminalColor(DEFAULT);
             board += " ";
         }
         board += "| " + std::to_string(CHESS_BOARD_HEIGHT - row) + "\n";
@@ -912,8 +897,6 @@ void StandardLocalChessGame::LprintBoardWithMoves(ChessTypes::Player playerSideT
     }
     WChessPrint(board.c_str());
 #else
-    if (GameOptions.clearScreenOnBoardPrint)
-        system("clear");
     std::wstring board;
     board += L"\n\n\n\t\t\t    a   b   c   d   e   f   g   h\n";
     board += L"\t\t\t  +---+---+---+---+---+---+---+---+\n";
@@ -924,7 +907,7 @@ void StandardLocalChessGame::LprintBoardWithMoves(ChessTypes::Player playerSideT
         {
             board += L"| ";
             
-            wchar_t piece;
+            std::wstring piece;
             ChessEnums::PossibleMovesResult possibleMoveTypeSelector;
             GameSquare* currSquare;
 
@@ -934,14 +917,14 @@ void StandardLocalChessGame::LprintBoardWithMoves(ChessTypes::Player playerSideT
                 currSquare = &GameBoard[row][col];
 
             piece = TEXT_PIECE_ART_COLLECTION[(*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.whitePlayerArtSelector : GameOptions.blackPlayerArtSelector][static_cast<int>((*currSquare).getPiece())];
-            set_terminal_color((*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
+            setTerminalColor((*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.p1_color : GameOptions.p2_color);
 
             possibleMoveTypeSelector = LreadPossibleMoves(*currSquare);
 
             if (possibleMoveTypeSelector != ChessEnums::PossibleMovesResult::NOT_FOUND)
             {
-                if (piece == L' ')
-                    piece = L'X';
+                if (piece == L" ")
+                    piece = L"X";
                 WRITE_COLOR color;
                 switch (possibleMoveTypeSelector)
                 {
@@ -964,7 +947,7 @@ void StandardLocalChessGame::LprintBoardWithMoves(ChessTypes::Player playerSideT
                     color = WRITE_COLOR::BLACK;
                     break;
                 }
-                set_terminal_color(color);
+                setTerminalColor(color);
             }
 
             // Checking for highlighted piece, if flip board option is on then we need to look at the board the opposite way
@@ -972,16 +955,16 @@ void StandardLocalChessGame::LprintBoardWithMoves(ChessTypes::Player playerSideT
             if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == ChessTypes::Player::PlayerOne && fromHighlightedPiece == &GameBoard[row][col]) ||
                                                     currentTurn == ChessTypes::Player::PlayerTwo && fromHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
                 !GameOptions.flipBoardOnNewTurn && (fromHighlightedPiece == &GameBoard[row][col]))
-                set_terminal_color(GameOptions.movingPiece_color);
+                setTerminalColor(GameOptions.movingPiece_color);
 
             // Exact same thing as above but excpet now checking for toHighlightedPiece
             else if ((GameOptions.flipBoardOnNewTurn && ((currentTurn == ChessTypes::Player::PlayerOne && toHighlightedPiece == &GameBoard[row][col]) ||
                                                          currentTurn == ChessTypes::Player::PlayerTwo && toHighlightedPiece == &GameBoard[7 - row][7 - col])) ||
                      !GameOptions.flipBoardOnNewTurn && (toHighlightedPiece == &GameBoard[row][col]))
-                set_terminal_color(GameOptions.movingToPiece_color);
+                setTerminalColor(GameOptions.movingToPiece_color);
 
             board += piece;
-            set_terminal_color(DEFAULT);
+            setTerminalColor(DEFAULT);
             board += L" ";
         }
         board += L"| " + std::to_wstring(CHESS_BOARD_HEIGHT - row) + L"\n";

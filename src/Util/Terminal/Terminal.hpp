@@ -33,9 +33,9 @@ enum WRITE_COLOR {
 };
 
 
-void set_terminal_color(enum WRITE_COLOR color);
+void setTerminalColor(enum WRITE_COLOR color);
 void clearLine();
-void erase_display(int n);
+void eraseDisplay();
 
 void WChessPrintFlush();
 void WChessPrint(const char* text);
