@@ -43,12 +43,11 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     ChessEnums::ValidateGameSquareResult LvalidateGameSquare(GameSquare& square, ChessTypes::GetMoveType getMoveType);
     ChessEnums::PossibleMovesResult LreadPossibleMoves(GameSquare& to);
     void LstartGame();
-    void LprintBoard(ChessTypes::Player playerSideToPrint);
-    void LprintBoardWithMoves(ChessTypes::Player);
+    void LprintBoard();
+    void LprintBoardWithMoves();
     GameSquare *LisolateFromInCheckMoves();
     ChessEnums::MakeMoveResult LmakeMove(Move&& move);
     void LinitGame();
-    int LreflectAxis(int);
     bool LvalidateMoveset(Move&);
     bool LonBoard(Point&);
 

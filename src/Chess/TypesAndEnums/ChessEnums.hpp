@@ -20,12 +20,14 @@ namespace ChessEnums {
         TIMER_RAN_OUT,
         UNDO,
         REDO,
-        ReEnterMove
+        ReEnterMove,
+        RePrintBoard
     };
 
     enum class SanitizeGetMoveResult {
         Invalid = -1,
         ReEnterMove,
+        RePrintBoard,
         Options,
         Valid
     };
@@ -33,7 +35,7 @@ namespace ChessEnums {
     enum class GameOptionResult {
         Invalid = -1,
         QUIT,
-        CONTINUE,
+        Continue,
         UNDO,
         REDO
     };

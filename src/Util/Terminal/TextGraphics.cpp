@@ -125,7 +125,7 @@ void configure_clock_screen(){
     std::wcout << "\t\t\t|                                     |\n";
     std::wcout << "\t\t\t|        2. Chess Clock Presets       |\n";
     std::wcout << "\t\t\t|                                     |\n";
-    std::wcout << "\t\t\t|        3. Chess CLock Custom        |\n";
+    std::wcout << "\t\t\t|        3. Chess Clock Custom        |\n";
     std::wcout << "\t\t\t|                                     |\n";
     std::wcout << "\t\t\t|        X. Quit                      |\n";
     std::wcout << "\t\t\t|                                     |\n";

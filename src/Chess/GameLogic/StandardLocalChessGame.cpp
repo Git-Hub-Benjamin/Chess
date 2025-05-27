@@ -57,7 +57,7 @@ StandardLocalChessGame::StandardLocalChessGame(Options gOptions, ChessTypes::Pla
 
 // -1 Invalid
 // 0 QUIT
-// 1 CONTINUE
+// 1 Continue
 // 2 Undo (Game state change)
 // 3 Redo (Game state change)
 ChessEnums::GameOptionResult StandardLocalChessGame::optionMenu(char ch)
@@ -71,11 +71,11 @@ ChessEnums::GameOptionResult StandardLocalChessGame::optionMenu(char ch)
     {
     case '1':
         change_player_color_option();
-        res = ChessEnums::GameOptionResult::CONTINUE;
+        res = ChessEnums::GameOptionResult::Continue;
         break;
     case '2':
         WChessPrint("Not implemented.");
-        return ChessEnums::GameOptionResult::CONTINUE; // NOT IMPLEMENTED
+        return ChessEnums::GameOptionResult::Continue; // NOT IMPLEMENTED
     case '3':                                          // Undo
         /*
         if (!undoTurn.empty())
@@ -83,12 +83,12 @@ ChessEnums::GameOptionResult StandardLocalChessGame::optionMenu(char ch)
             StandardChessGameHistoryState state = undoTurn.top();
             loadGameState(state);
             redoTurn.push(state);
-            return ChessEnums::GameOptionResult::CONTINUE;
+            return ChessEnums::GameOptionResult::Continue;
         }
         else
             WChessPrint(L"No moves to undo...");
         */
-        return ChessEnums::GameOptionResult::CONTINUE;
+        return ChessEnums::GameOptionResult::Continue;
     case '4': // Redo
         /*
         if (!redoTurn.empty())
@@ -96,14 +96,14 @@ ChessEnums::GameOptionResult StandardLocalChessGame::optionMenu(char ch)
             StandardChessGameHistoryState state = redoTurn.top();
             loadGameState(state);
             undoTurn.push(state);
-            return ChessEnums::GameOptionResult::CONTINUE;
+            return ChessEnums::GameOptionResult::Continue;
         }
         else
             WChessPrint(L"No moves to redo...");
         */
-        return ChessEnums::GameOptionResult::CONTINUE;
+        return ChessEnums::GameOptionResult::Continue;
     case '5':
-        return ChessEnums::GameOptionResult::CONTINUE; // NOT IMPLEMENTED
+        return ChessEnums::GameOptionResult::Continue; // NOT IMPLEMENTED
     case '6':
     case 'q':
         return ChessEnums::GameOptionResult::QUIT;
@@ -150,7 +150,7 @@ private:
 
 // -1 Invalid
 // 0 QUIT
-// 1 CONTINUE
+// 1 Continue
 // 2 Undo (Game state change)
 // 3 Redo (Game state change)
 ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveType getMoveType)
@@ -240,7 +240,7 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
                                     continue;
                                 case ChessEnums::GameOptionResult::QUIT: // Quit game
                                     return ChessEnums::GetMoveResult::QUIT;
-                                case ChessEnums::GameOptionResult::CONTINUE: // Continue game
+                                case ChessEnums::GameOptionResult::Continue: // Continue game
                                     inputBuffer.clear();
                                     inOptionMenu = false;
 
@@ -477,7 +477,7 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
                             continue;
                         case ChessEnums::GameOptionResult::QUIT: // Quit game
                             return ChessEnums::GetMoveResult::QUIT;
-                        case ChessEnums::GameOptionResult::CONTINUE: // Continue game
+                        case ChessEnums::GameOptionResult::Continue: // Continue game
                             inputBuffer.clear();
                             continue;
                         case ChessEnums::GameOptionResult::UNDO: // Undo (unimplemented)
@@ -486,8 +486,16 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
                             continue;
                     }
                 case ChessEnums::SanitizeGetMoveResult::ReEnterMove:
-                    inputBuffer.clear();
+                    if (getMoveType == ChessTypes::GetMoveType::From)
+                        continue;
                     return ChessEnums::GetMoveResult::ReEnterMove;
+                case ChessEnums::SanitizeGetMoveResult::RePrintBoard:
+                    if (getMoveType == ChessTypes::GetMoveType::From)
+                        printBoard(currentTurn);
+                    else if (getMoveType == ChessTypes::GetMoveType::To && GameOptions.moveHighlighting)
+                        printBoardWithMoves(currentTurn);
+                    inputBuffer.clear();
+                    continue;
                 default:
                     break;
                 }

@@ -248,6 +248,8 @@ ChessEnums::SanitizeGetMoveResult StandardChessGame::sanitizeGetMove(std::string
             return ChessEnums::SanitizeGetMoveResult::Options;
         case 'r':
             return ChessEnums::SanitizeGetMoveResult::ReEnterMove;
+        case 'p':
+            return ChessEnums::SanitizeGetMoveResult::RePrintBoard;
         default: // Ensure one of the characters above
             return ChessEnums::SanitizeGetMoveResult::Invalid; // Ensure [0] is alphabetical character
     }
