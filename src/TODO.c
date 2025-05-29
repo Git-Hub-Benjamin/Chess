@@ -1,10 +1,11 @@
 //* TODO: (Highest Priority to Lowest)
-// - Test windows terminal colors & add to print board functions
 // - Fix getMove infinite loop glitch / bug
 // - Implement bitboard
 // - Implement online connectivity
 // - Implement AI
 // - Implement gui (maybe via web)
+// - Add game saving / loading for local games
+//// - Test windows terminal colors & add to print board functions
 //// - Fix Pawn movement
 
 //* - Rule Todos:

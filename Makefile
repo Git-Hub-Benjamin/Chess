@@ -71,7 +71,8 @@ endif
 
 
 wintclient:
-	g++ -I./src $(DEV_FILES) $(LOCAL_FILES) $(CHESS_FILES) $(COMMON_FILES) -o ./build/tchess.exe -g $(ZERO_OPTIMIZATION) $(WINDOWS_DEF) $(LEGACY_GAMEBOARD)
+	@echo "Building w/o legacy gameboard"
+	g++ -I./src $(DEV_FILES) $(LOCAL_FILES) $(CHESS_FILES) $(COMMON_FILES) -o ./build/tchess.exe -g $(ZERO_OPTIMIZATION) $(WINDOWS_DEF)
 
 wintcliento:
 	clang++ -I./src $(DEV_FILES) $(CLIENT_FILES) $(CHESS_FILES) $(COMMON_FILES) $(SOCKET) -o ./build/tchess.out -g $(ZERO_OPTIMIZATION) -D _WIN32 -lws2_32 -lmingw32

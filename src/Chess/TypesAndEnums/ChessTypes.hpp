@@ -55,4 +55,9 @@ namespace ChessTypes {
         To
     };
 
+    enum class CastlingType {
+        KingSide,
+        QueenSide
+    };
+
 } // namespace ChessTypes

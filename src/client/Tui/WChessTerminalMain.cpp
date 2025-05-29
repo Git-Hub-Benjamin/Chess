@@ -194,14 +194,16 @@ int main() {
 #endif
 	setTerminalColor(DEFAULT);
 
+#ifdef LEGACY_ARRAY_GAMEBOARD
+	WChessPrint("Legacy array gameboard selected\n");
+#else
+	WChessPrint("Bitboard gameboard selected\n");
+#endif
+
 	WChessPrint("\n\n\n\n\n\n");
 
 	WChessPrint("Welcome to WChess!\n");
 	
-	setTerminalColor(GREEN);
-	WChessPrint("Testing 123\n");
-	setTerminalColor(DEFAULT);
-
 	// SETUP PATH FOR FOREVER USE
 #ifdef __linux__
     std::string home = getenv("HOME");
@@ -214,10 +216,7 @@ int main() {
     }
 #endif
 	
-	WChessPrint(home.c_str()); WChessPrint("\n");
 	CONFIG_PATH = home + CONFIG_FILE_NAME;
-	WChessPrint(CONFIG_PATH.c_str()); WChessPrint("\n");
-
 	init_config_load();
 
 	while(running){
@@ -230,7 +229,7 @@ int main() {
 
 		WChessPrint("--> ");
 		int mainMenuOption = get_menu_option();
-		if(mainMenuOption == static_cast<int>(TerminalMainMenuOptions::LocalGame)){ // Local Game or Dev Game
+		if(mainMenuOption == static_cast<int>(TerminalMainMenuOptions::LocalGame) || mainMenuOption == static_cast<int>(TerminalMainMenuOptions::Dev)){ // Local Game or Dev Game
 			local_game_screen();
 			WChessPrint("--> ");
 			int local_opt = get_menu_option(); // Standard Game or Quit

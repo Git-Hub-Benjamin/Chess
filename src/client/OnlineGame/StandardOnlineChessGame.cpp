@@ -366,7 +366,7 @@ int StandardOnlineChessGame::serverSaidValidMove(){
     return -1;
 }
 
-int StandardOnlineChessGame::makeMove(Move&& move) {
+int StandardOnlineChessGame::makeMove(LMove&& move) {
     bool pieceTake = false;
 
     if(move.getMoveTo().getPiece() != OPEN)

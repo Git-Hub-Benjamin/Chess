@@ -40,13 +40,6 @@ namespace ChessEnums {
         REDO
     };
 
-    enum class MakeMoveResult {
-        KING_IN_HARM = -1,
-        INVALID_MOVE,
-        PIECE_TAKEN,
-        PIECE_MOVED
-    };
-
     enum class PossibleMovesResult {
         NOT_FOUND = -1, // used as a return type in readPossibleMoves
         MOVING_PIECE = 0, // piece moving from
@@ -57,6 +50,13 @@ namespace ChessEnums {
         POSSIBLE_MOVE_PROTECT_KING_PIECE, // possible to protect the king (in check) by taking a piece
         POSSIBLE_MOVE_SPECIAL_MOVE, // castling, enpassant
         POSSIBLE_MOVE_KING_IN_DANGER // possible move for the king to make when in danger
+    };
+
+    enum class MakeMoveResult {
+        KingInDanger = -1,
+        InvalidMove,
+        PieceTaken,
+        PieceMoved
     };
 
 } // namespace ChessEnums

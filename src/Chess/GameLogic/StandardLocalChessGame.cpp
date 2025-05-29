@@ -6,6 +6,7 @@
 #include "../../Util/Terminal/Terminal.hpp"
 #include "../Utils/ChessClock.hpp"
 #include "../../Util/Terminal/TextPieceArt.hpp"
+#include "../Utils/Move.hpp"
 
 StandardLocalChessGame::StandardLocalChessGame(Options gOptions, ChessClock clock, ChessTypes::Player firstTurn, bool dev_mode)
     : DEV_MODE_ENABLE(dev_mode),
@@ -491,9 +492,9 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
                     return ChessEnums::GetMoveResult::ReEnterMove;
                 case ChessEnums::SanitizeGetMoveResult::RePrintBoard:
                     if (getMoveType == ChessTypes::GetMoveType::From)
-                        printBoard(currentTurn);
+                        printBoard();
                     else if (getMoveType == ChessTypes::GetMoveType::To && GameOptions.moveHighlighting)
-                        printBoardWithMoves(currentTurn);
+                        printBoardWithMoves();
                     inputBuffer.clear();
                     continue;
                 default:
@@ -536,12 +537,134 @@ void StandardLocalChessGame::currTurnChessClock(bool &stop_display, int writePip
 
 void StandardLocalChessGame::startGame()
 {
-#ifdef LEGACY_ARRAY_GAMEBOARD
-    LstartGame();
-    return;
-#else
-    WChessPrint("BITBOARD NOT IMPLEMENTED YET...\n");
-    exit(EXIT_SUCCESS);
-#endif
+    int game_loop_iteration = 0;
+
+    while (!GameOver) {
+        // Reset check
+        currTurnInCheck = false;
+        kingCanMakeMove = true;
+
+        // Check for check
+        if (!kingSafe()) {
+            // Check for checkmate
+            if (checkMate()) { // Note: Renamed from LcheckMate to checkMate
+                printBoard(); // Print the final board
+                GameOver = true;
+                WChessPrint("Checkmate! ");
+                // Determine the winner based on whose turn it was
+                WChessPrint(playerToString(currentTurn).c_str());
+                WChessPrint(" loses.\n");
+                break;
+            } else {
+                currTurnInCheck = true;
+                // Inform the player they are in check
+                WChessPrint(playerToString(currentTurn).c_str());
+                WChessPrint(" is in check!\n");
+            }
+        }
+
+        printBoard(); // Print the board at the start of the turn
+
+        // Get player move
+        // You'll need to implement logic here to get the 'from' and 'to' squares
+        // using getMove.
+        // For example:
+        std::string from_square_input;
+        std::string to_square_input;
+
+        // Get the 'from' square
+        while(true) {
+
+                int res = static_cast<int>(getMove(ChessTypes::GetMoveType::From));
+
+                if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::QUIT) { // Quit
+                    GameOver = true;
+                    break;
+                } else if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::TIMER_RAN_OUT) { // Timer ran out, end game, win for other player
+                    WChessPrint("Timer ran out...\n");
+                    GameOver = true;
+                    break;
+                }
+
+                HalfMove fromSquare = convertMove(inputBuffer);
+
+                res = static_cast<int>(validateGameSquare(fromSquare.square, ChessTypes::GetMoveType::From));
+                if (static_cast<ChessEnums::ValidateGameSquareResult>(res) == ChessEnums::ValidateGameSquareResult::NO_PIECE)
+                {
+                    toPrint = "No piece present.\n";
+                    continue;
+                }
+                else if (static_cast<ChessEnums::ValidateGameSquareResult>(res) == ChessEnums::ValidateGameSquareResult::PIECE_NOT_YOURS)
+                {
+                    toPrint = "This piece does not belong to you.\n";
+                    continue;
+                }
+
+                // ---------------------------------- //
+
+                res = static_cast<int>(getMove(ChessTypes::GetMoveType::To));
+
+                if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::QUIT) { // Quit
+                    GameOver = true;
+                    break;
+                } else if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::TIMER_RAN_OUT) { // Timer ran out, end game, win for other player
+                    WChessPrint("Timer ran out...\n");
+                    GameOver = true;
+                    break;
+                } else if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::ReEnterMove)
+                        continue;
+
+                HalfMove toSquare = convertMove(inputBuffer);
+
+                res = static_cast<int>(validateGameSquare(toSquare.square, ChessTypes::GetMoveType::To));
+                if (static_cast<ChessEnums::ValidateGameSquareResult>(res) == ChessEnums::ValidateGameSquareResult::CANNOT_TAKE_OWN){
+                    toPrint = "Cannot take your own piece.\n";
+                    continue;
+                }
+
+                // ---------------------------------- //
+
+                res = static_cast<int>(makeMove(Move(fromSquare, toSquare)));
+                if (static_cast<ChessEnums::MakeMoveResult>(res) == ChessEnums::MakeMoveResult::KingInDanger)
+                    toPrint = "This puts your king in danger!\n";
+                else if (static_cast<ChessEnums::MakeMoveResult>(res) == ChessEnums::MakeMoveResult::InvalidMove)
+                    toPrint = "Invalid move.\n";
+                else if (static_cast<ChessEnums::MakeMoveResult>(res) == ChessEnums::MakeMoveResult::PieceTaken)
+                    toPrint = "Piece taken.\n";
+                else
+                    toPrint = "Piece moved.\n";
+
+                if (res < 1)
+                    continue; // Redo turn
+
+                break; // Next turn
+
+        }
+
+        // Get the 'to' square
+        while(true) {
+            WChessPrint(playerToString(currentTurn).c_str()); WChessPrint(", Enter destination (e.g., e4): "); WChessPrintFlush();
+            // Add validation logic for the 'to' square
+            // Convert input to bit index using convertMove
+            // Check if it's a valid destination (empty or opponent's piece)
+            // Check if the move is legal for the selected piece (you'll need move generation logic)
+            // If valid, break the loop
+        }
+
+        // Attempt to make the move
+        // You'll need to implement a makeMove function that updates the bitboards
+        // and handles captures, en passant, castling, etc.
+        // For example:
+        // int move_result = makeMove(from_square_bit_index, to_square_bit_index);
+
+        // Check move_result and handle accordingly (e.g., invalid move, piece moved, piece taken)
+
+        // Switch turns (if a valid move was made)
+        // currentTurn = (currentTurn == ChessTypes::Player::PlayerOne) ? ChessTypes::Player::PlayerTwo : ChessTypes::Player::PlayerOne;
+
+        game_loop_iteration++;
+
+        // Add game over conditions (e.g., stalemate, resignation, time out)
+    }
 }
 

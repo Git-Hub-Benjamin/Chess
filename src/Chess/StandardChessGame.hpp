@@ -8,6 +8,7 @@
 #include "Utils/Point.hpp"
 #include "Utils/ChessClock.hpp"
 #include "../Client/Options/Options.hpp"
+#include "Utils/Move.hpp"
 
 // To be inherited by Local Game and Online Game
 class StandardChessGame
@@ -18,7 +19,7 @@ protected:
     bool currTurnInCheck;
     // 0 is default value, if not changed then the constructor will randomly choose someone to go first,
 
-    SquareInfo getSquareInfo(int, int);
+    SquareInfo getSquareInfo(int);
     uint64_t white_pawns;
     uint64_t white_knights;
     uint64_t white_bishops;
@@ -102,10 +103,10 @@ protected:
 
     // Move conversion functions
     // generic convert
-    uint64_t convertMove(std::wstring, ChessTypes::Player);
+    HalfMove convertMove(std::string);
 
     // calls generic
-    virtual int makeMove(); // basic implementation, can override tho
+    virtual ChessEnums::MakeMoveResult makeMove(Move&& move); // basic implementation, can override tho
 
     // Options regarding game
     Options GameOptions;
@@ -120,10 +121,10 @@ protected:
 
     // Board printing functions
     // print the standard board
-    virtual void printBoard(ChessTypes::Player);
+    virtual void printBoard();
 
     // print the standard board but with moves from the movefrom
-    virtual void printBoardWithMoves(ChessTypes::Player);
+    virtual void printBoardWithMoves();
 
     // Game square validation
     // No Piece Present - 0

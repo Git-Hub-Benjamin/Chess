@@ -1,6 +1,7 @@
 #include <string>
 #include "ChessHelperFunctions.hpp"
 #include "../TypesAndEnums/ChessTypes.hpp"
+#include "../../Util/Terminal/Terminal.hpp"
 
 
 // Conversion from string to wstring
@@ -13,24 +14,24 @@ std::string convertWString(std::wstring& passed){
     return std::string(passed.begin(), passed.end());
 }
 
-std::wstring enumPiece_toString(ChessTypes::GamePiece piece) {
+std::string pieceToString(ChessTypes::GamePiece piece) {
     switch (piece) {
         case ChessTypes::GamePiece::None:
-            return L"None";
+            return "None";
         case ChessTypes::GamePiece::Pawn:
-            return L"Pawn";
+            return "Pawn";
         case ChessTypes::GamePiece::Knight:
-            return L"KNIGHT";
+            return "KNIGHT";
         case ChessTypes::GamePiece::Bishop:
-            return L"BISHOP";
+            return "BISHOP";
         case ChessTypes::GamePiece::Rook:
-            return L"ROOK";
+            return "ROOK";
         case ChessTypes::GamePiece::King:
-            return L"KING";
+            return "KING";
         case ChessTypes::GamePiece::Queen:
-            return L"QUEEN";
+            return "QUEEN";
         default:
-            return L"UNKNOWN";
+            return "UNKNOWN";
     }
 }
 
@@ -51,9 +52,9 @@ std::string toLowercase(const std::string& str) {
 
 // Helper function to get the bit index from a rank and file
 // Rank 1 is row 0, File 'a' is col 0
-int rank_file_to_bit_index(int rank, int file) {
+int row_col_to_bit_index(int row, int col) {
     // Ranks are 1-8, Files are 0-7 (a=0, h=7)
-    return (rank - 1) * 8 + file;
+    return (row - 1) * 8 + col;
 }
 
 // Function to set a bit at a given index in a bitboard
@@ -61,3 +62,13 @@ void set_bit(uint64_t& bitboard, int bit_index) {
     bitboard |= (1ULL << bit_index);
 }
 
+void bitprint(uint64_t num){
+    for (int i = 0; i < 64; i++) {
+        if (num & (1ULL << i)) {
+            WChessPrint("1");
+        } else {
+            WChessPrint("0");
+        }
+    }
+    WChessPrint("\n");
+}

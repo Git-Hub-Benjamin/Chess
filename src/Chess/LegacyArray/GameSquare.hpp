@@ -43,9 +43,15 @@ public:
     }
 
     void print() const {
-        std::wcout << "Pos: {" << mPosition.m_x << ", " << mPosition.m_y << "}, Piece: " 
-                   << enumPiece_toString(mPiece) << ", Owner: " 
-                   << (mOwner == ChessTypes::Owner::None ? "None" : mOwner == ChessTypes::Owner::PlayerOne ? "Player one" : "Player two");
+        WChessPrint("Pos: {");
+        WChessPrint(std::to_string(mPosition.m_x).c_str());
+        WChessPrint(", ");
+        WChessPrint(std::to_string(mPosition.m_y).c_str());
+        WChessPrint("}, Piece: ");
+        WChessPrint(pieceToString(mPiece).c_str());
+        WChessPrint(", Owner: ");
+        WChessPrint((mOwner == ChessTypes::Owner::None ? "None" : 
+                     mOwner == ChessTypes::Owner::PlayerOne ? "Player one" : "Player two"));
     }
 
     void setOwner(ChessTypes::Owner o) { mOwner = o; }

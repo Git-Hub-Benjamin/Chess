@@ -9,7 +9,7 @@
 #include "Utils/ChessConstants.hpp"
 #include "LegacyArray/GameSquare.hpp"
 #include "LegacyArray/possibleMoveType.hpp"
-#include "LegacyArray/Move.hpp"
+#include "LegacyArray/LMove.hpp"
 #include <vector>
 
 class StandardLocalChessGame : private StandardChessGame, public ClientChessGame{
@@ -29,12 +29,12 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
 
     bool LpopulatePossibleMoves(GameSquare& moveFrom);
     bool LpiecePresent(Point);
-    bool LverifyMove(Move& move);
-    bool LverifyMove(Move&& move);
-    bool LrookClearPath(Move& move);
-    bool LbishopClearPath(Move& move);
-    bool LpawnMoveCheck(Move& move);
-    bool LunobstructedPathCheck(Move& move);
+    bool LverifyMove(LMove& move);
+    bool LverifyMove(LMove&& move);
+    bool LrookClearPath(LMove& move);
+    bool LbishopClearPath(LMove& move);
+    bool LpawnMoveCheck(LMove& move);
+    bool LunobstructedPathCheck(LMove& move);
     GameSquare* LcanDefendKing(std::vector<GameSquare*>& teamPieces);
     bool LkingSafe();
     bool LkingSafeAfterMove(GameSquare& to);
@@ -46,10 +46,11 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     void LprintBoard();
     void LprintBoardWithMoves();
     GameSquare *LisolateFromInCheckMoves();
-    ChessEnums::MakeMoveResult LmakeMove(Move&& move);
+    ChessEnums::MakeMoveResult LmakeMove(LMove&& move);
     void LinitGame();
-    bool LvalidateMoveset(Move&);
+    bool LvalidateMoveset(LMove&);
     bool LonBoard(Point&);
+    bool LcastlingCheck(LMove &, ChessTypes::CastlingType);
 
 
     // Regardless of whether or not legacy
