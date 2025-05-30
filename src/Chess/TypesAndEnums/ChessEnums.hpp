@@ -41,15 +41,15 @@ namespace ChessEnums {
     };
 
     enum class PossibleMovesResult {
-        NOT_FOUND = -1, // used as a return type in readPossibleMoves
-        MOVING_PIECE = 0, // piece moving from
-        MOVING_TO_SQAURE, // piece / square moving to
-        POSSIBLE_MOVE_OPEN_SQAURE, // possible move to open square
-        POSSIBLE_MOVE_ENEMY_PIECE, // possible move to enemy piece
-        POSSIBLE_MOVE_PROTECT_KING_SQUARE, // possible move to protect the king (in check) square
-        POSSIBLE_MOVE_PROTECT_KING_PIECE, // possible to protect the king (in check) by taking a piece
-        POSSIBLE_MOVE_SPECIAL_MOVE, // castling, enpassant
-        POSSIBLE_MOVE_KING_IN_DANGER // possible move for the king to make when in danger
+        NotFound = -1, // used as a return type in readPossibleMoves
+        MovingPiece = 0, // piece moving from
+        MovingToSquare, // piece / square moving to
+        PossibleMoveOpenSquare, // possible move to open square
+        PossibleMoveEnemyPiece, // possible move to enemy piece
+        PossibleMoveProtectKingSquare, // possible move to protect the king (in check) square
+        PossibleMoveProtectKingPiece, // possible to protect the king (in check) by taking a piece
+        PossibleMoveSpecialMove, // castling, enpassant
+        PossibleMoveKingInDanger // possible move for the king to make when in danger
     };
 
     enum class MakeMoveResult {

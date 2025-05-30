@@ -149,11 +149,8 @@ private:
 };
 #endif
 
-// -1 Invalid
-// 0 QUIT
-// 1 Continue
-// 2 Undo (Game state change)
-// 3 Redo (Game state change)
+
+//! TODO: Add pawn promotion to dynamic move highlighting & clock area
 ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveType getMoveType)
 {
     // Needs non canonical mode
@@ -441,23 +438,23 @@ ChessEnums::GetMoveResult StandardLocalChessGame::getMove(ChessTypes::GetMoveTyp
     {
         while (true)
         {
-            if (getMoveType == ChessTypes::GetMoveType::From)
-            {
+            if (getMoveType == ChessTypes::GetMoveType::From) {
                 if (!currTurnInCheck) {
                     WChessPrint(playerToString(currentTurn).c_str()); WChessPrint(", Move: ");
                 } else {
                     WChessPrint(playerToString(currentTurn).c_str()); WChessPrint(", You're in check! Move: ");
                 }
-            }
-            else
-            {
+            } else if (getMoveType == ChessTypes::GetMoveType::To) {
                 if (!currTurnInCheck) {
                     WChessPrint(playerToString(currentTurn).c_str()); 
                     WChessPrint(", To: ");
                 } else {
                     WChessPrint(playerToString(currentTurn).c_str()); WChessPrint(", You're in check! To: ");
                 }
+            } else { // Pawn promotion
+                WChessPrint("Pawn promotion: ");
             }
+            
 
             WChessInput(inputBuffer);
 
@@ -563,17 +560,13 @@ void StandardLocalChessGame::startGame()
             }
         }
 
-        printBoard(); // Print the board at the start of the turn
-
-        // Get player move
-        // You'll need to implement logic here to get the 'from' and 'to' squares
-        // using getMove.
-        // For example:
         std::string from_square_input;
         std::string to_square_input;
 
-        // Get the 'from' square
         while(true) {
+
+                printBoard();
+                possibleMoves.clear();
 
                 int res = static_cast<int>(getMove(ChessTypes::GetMoveType::From));
 
@@ -586,6 +579,7 @@ void StandardLocalChessGame::startGame()
                     break;
                 }
 
+                from_square_input = inputBuffer;
                 HalfMove fromSquare = convertMove(inputBuffer);
 
                 res = static_cast<int>(validateGameSquare(fromSquare.square, ChessTypes::GetMoveType::From));
@@ -598,6 +592,15 @@ void StandardLocalChessGame::startGame()
                 {
                     toPrint = "This piece does not belong to you.\n";
                     continue;
+                }
+
+                if (GameOptions.moveHighlighting) {
+                    if (populatePossibleMoves(fromSquare))
+                        printBoardWithMoves();
+                    else {
+                        toPrint = "No moves from this piece.\n";
+                        continue;
+                    }
                 }
 
                 // ---------------------------------- //
@@ -614,6 +617,7 @@ void StandardLocalChessGame::startGame()
                 } else if (static_cast<ChessEnums::GetMoveResult>(res) == ChessEnums::GetMoveResult::ReEnterMove)
                         continue;
 
+                to_square_input = inputBuffer;
                 HalfMove toSquare = convertMove(inputBuffer);
 
                 res = static_cast<int>(validateGameSquare(toSquare.square, ChessTypes::GetMoveType::To));
@@ -624,7 +628,13 @@ void StandardLocalChessGame::startGame()
 
                 // ---------------------------------- //
 
-                res = static_cast<int>(makeMove(Move(fromSquare, toSquare)));
+                Move move(fromSquare, toSquare);
+
+                if (isPawnPromotion(move)) {
+                    getMove(ChessTypes::GetMoveType::Promotion);
+                }
+
+                res = static_cast<int>(makeMove(move));
                 if (static_cast<ChessEnums::MakeMoveResult>(res) == ChessEnums::MakeMoveResult::KingInDanger)
                     toPrint = "This puts your king in danger!\n";
                 else if (static_cast<ChessEnums::MakeMoveResult>(res) == ChessEnums::MakeMoveResult::InvalidMove)
@@ -641,26 +651,9 @@ void StandardLocalChessGame::startGame()
 
         }
 
-        // Get the 'to' square
-        while(true) {
-            WChessPrint(playerToString(currentTurn).c_str()); WChessPrint(", Enter destination (e.g., e4): "); WChessPrintFlush();
-            // Add validation logic for the 'to' square
-            // Convert input to bit index using convertMove
-            // Check if it's a valid destination (empty or opponent's piece)
-            // Check if the move is legal for the selected piece (you'll need move generation logic)
-            // If valid, break the loop
-        }
+        currTurnInCheck = false;
 
-        // Attempt to make the move
-        // You'll need to implement a makeMove function that updates the bitboards
-        // and handles captures, en passant, castling, etc.
-        // For example:
-        // int move_result = makeMove(from_square_bit_index, to_square_bit_index);
-
-        // Check move_result and handle accordingly (e.g., invalid move, piece moved, piece taken)
-
-        // Switch turns (if a valid move was made)
-        // currentTurn = (currentTurn == ChessTypes::Player::PlayerOne) ? ChessTypes::Player::PlayerTwo : ChessTypes::Player::PlayerOne;
+        currentTurn = (currentTurn == ChessTypes::Player::PlayerOne) ? ChessTypes::Player::PlayerTwo : ChessTypes::Player::PlayerOne;
 
         game_loop_iteration++;
 

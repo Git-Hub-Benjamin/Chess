@@ -51,10 +51,9 @@ std::string toLowercase(const std::string& str) {
 }
 
 // Helper function to get the bit index from a rank and file
-// Rank 1 is row 0, File 'a' is col 0
+// 0 indexed to 7 just like array
 int row_col_to_bit_index(int row, int col) {
-    // Ranks are 1-8, Files are 0-7 (a=0, h=7)
-    return (row - 1) * 8 + col;
+    return row * 8 + col;
 }
 
 // Function to set a bit at a given index in a bitboard

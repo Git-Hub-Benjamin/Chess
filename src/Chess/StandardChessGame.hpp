@@ -9,6 +9,7 @@
 #include "Utils/ChessClock.hpp"
 #include "../Client/Options/Options.hpp"
 #include "Utils/Move.hpp"
+#include "Utils/PossibleMoveType.hpp"
 
 // To be inherited by Local Game and Online Game
 class StandardChessGame
@@ -36,53 +37,95 @@ protected:
     uint64_t black_occupancy;
     uint64_t all_occupancy;
 
+    // Test if the king is safe after a move is made
+    // Returns:
+    // - True - King is safe
+    // - False - King is not safe
+    bool testKingSafe(Move& move);
+
     // Moveset validation functions
     // True - Valid move
     // False - Invalid move
-    // bool validateMoveset(Move&);
+    bool validateMoveset(Move& move);
 
-    // True valid move
-    // False invalid move
-    bool verifyMove();
+    // Verifies the move via moveset, path clearance check, and king safety check
+    // Returns:
+    // - True - Valid move
+    // - False - Invalid move
+    bool verifyMove(Move& move);
 
     // Path clearance check functions
-    // True - All good
-    // False - Piece in way
-    bool unobstructedPathCheck();
-    bool rookClearPath();
-    bool bishopClearPath();
+    // Returns:
+    // - True - All good
+    // - False - Piece in way
+    bool unobstructedPathCheck(Move& move);
+
+    // Returns:
+    // - True - All good
+    // - False - Piece in way
+    bool rookClearPath(Move& move);
+
+    // Returns:
+    // - True - All good
+    // - False - Piece in way
+    bool bishopClearPath(Move& move);
 
     // Pawn movement check
     // True - All good
     // False - Not good
-    bool pawnMoveCheck();
+    bool pawnMoveCheck(Move& move);
+
+    // Print bitboards
+    // Returns:
+    // - None
+    void printBitboards();
+
+    // Move piece
+    // Returns:
+    // - PieceMoved: Piece moved successfully
+    // - PieceTaken: Piece taken successfully
+    // - InvalidMove: Invalid move
+    // - KingInDanger: King is in danger
+    // - PawnPromotion: Pawn promotion
+    ChessEnums::MakeMoveResult movePiece(Move&);
+
+    // isPawnPromotion
+    // Returns:
+    // - True - Pawn promotion
+    // - False - Not pawn promotion
+    bool isPawnPromotion(Move&);
 
     // Piece presence check
-    // returns owner at point
+    // Returns:
+    // - Owner of piece at point
     ChessTypes::Owner piecePresent(Point);
 
     // Checkmate functions
-    // True, Gameover
-    // False not checkmate
+    // Returns:
+    // - True - Checkmate
+    // - False - Not checkmate
     bool checkMate();
 
     // Board boundary check
-    // True on board
-    // False not on board
-    bool onBoard(Point &);
+    // Returns:
+    // - True - On board
+    // - False - Not on board
+    bool onBoard(Point& p);
 
-    // King safety checks
-    // True - King is safe
-    // False - King is NOT safe
+    // King safety check
+    // Returns:
+    // - True - King is safe
+    // - False - King is NOT safe
     bool kingSafe();
 
     // True king is safe after this move is made
     // False king is not safe
     bool kingSafeAfterMove();
 
-    // Defense functions
-    // True can defend so not checkmate
-    // False cannot defend king, so checkmate
+    // canDefendKing
+    // Returns:
+    // - True - Can defend so not checkmate
+    // - False - Cannot defend king, so checkmate
     bool canDefendKing();
 
     // used in only local chess game, but it is used in canDefend king so it's needed here
@@ -106,18 +149,20 @@ protected:
     HalfMove convertMove(std::string);
 
     // calls generic
-    virtual ChessEnums::MakeMoveResult makeMove(Move&& move); // basic implementation, can override tho
+    virtual ChessEnums::MakeMoveResult makeMove(Move& move); // basic implementation, can override tho
 
     // Options regarding game
     Options GameOptions;
 
-    //! Potentially remove 
-    // Possible move functions
-    // populates the possible move vec
-    virtual bool populatePossibleMoves();
+    // Populates the possible moves vector
+    // Returns:
+    // - True - There is at least one move
+    // - False - No moves from this piece
+    virtual bool populatePossibleMoves(HalfMove& fromSquare);
 
-    // reads the possible moves and compares to a move
-    // ChessEnums::PossibleMovesResult readPossibleMoves();
+    std::vector<int> possibleMoves;
+
+    bool readPossibleMoves(int);
 
     // Board printing functions
     // print the standard board
@@ -126,11 +171,12 @@ protected:
     // print the standard board but with moves from the movefrom
     virtual void printBoardWithMoves();
 
-    // Game square validation
-    // No Piece Present - 0
-    // This Piece Does not belong to you - 1
-    // Cannot take your own piece - 2
-    // Valid - 3
+    // Validates the game square
+    // Returns:
+    // - No Piece Present - 0
+    // - This Piece Does not belong to you - 1
+    // - Cannot take your own piece - 2
+    // - Valid - 3
     ChessEnums::ValidateGameSquareResult validateGameSquare(SquareInfo, ChessTypes::GetMoveType);
 
     // Not pure, bc Server Chess Std game does not need this

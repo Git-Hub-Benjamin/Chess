@@ -8,7 +8,7 @@
 
 #include "Utils/ChessConstants.hpp"
 #include "LegacyArray/GameSquare.hpp"
-#include "LegacyArray/possibleMoveType.hpp"
+#include "Utils/PossibleMoveType.hpp"
 #include "LegacyArray/LMove.hpp"
 #include <vector>
 
@@ -22,7 +22,7 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     GameSquare* pieceCausingKingCheck = nullptr; 
 
     // Vector to hold possible moves
-    std::vector<possibleMoveType> possibleMoves; 
+    std::vector<PossibleMoveType> possibleMoves; 
     // For move highlighting
     GameSquare* fromHighlightedPiece = nullptr;
     GameSquare* toHighlightedPiece = nullptr;
@@ -53,8 +53,14 @@ class StandardLocalChessGame : private StandardChessGame, public ClientChessGame
     bool LcastlingCheck(LMove &, ChessTypes::CastlingType);
 
 
-    // Regardless of whether or not legacy
-    // Get move
+
+    // getMove
+    // Returns:
+    // - Invalid (-1): Invalid input received
+    // - QUIT (0): User requested to quit
+    // - Continue (1): Valid input, continue game
+    // - Undo (2): User requested undo (changes game state)
+    // - Redo (3): User requested redo (changes game state)
     ChessEnums::GetMoveResult getMove(ChessTypes::GetMoveType) override;
     void currTurnChessClock(bool&, int, const std::string&) override;
     ChessEnums::GameOptionResult optionMenu(char);

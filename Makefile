@@ -16,7 +16,8 @@ LOCAL_FILES = ./src/Client/Tui/WChessTerminalMain.cpp \
 			  ./src/Client/ConfigFile/ConfigFile.cpp \
               ./src/Client/Options/Options.cpp \
               ./src/Util/Terminal/TextGraphics.cpp \
-              ./src/Util/Terminal/Terminal.cpp 
+              ./src/Util/Terminal/Terminal.cpp \
+              ./src/Chess/Utils/Movesets.cpp
 
 # Updated paths for Chess-related source files
 CHESS_FILES = ./src/Util/Terminal/TextPieceArt.cpp \
@@ -41,7 +42,7 @@ CLIENT_COMPILE_ONLINE = -D COMPILE_ONLINE
 
 #test
 test:
-	g++ -I./src main.cpp ./src/Util/Terminal/Terminal.cpp ./src/Util/Terminal/TextPieceArt.cpp -D _WIN32 -g
+	g++ -I./src main.cpp ./src/Util/Terminal/Terminal.cpp ./src/Util/Terminal/TextPieceArt.cpp ./src/Chess/Utils/ChessHelperFunctions.cpp -D _WIN32 -g
 
 #build run
 buru: game

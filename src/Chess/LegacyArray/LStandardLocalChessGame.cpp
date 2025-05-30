@@ -7,8 +7,8 @@
 
 #include "GameSquare.hpp"
 #include "LMove.hpp"
-#include "PossibleMoveType.hpp"
-#include "Movesets.hpp"
+#include "../Utils/PossibleMoveType.hpp"
+#include "../Utils/Movesets.hpp"
 #include "../Utils/ChessConstants.hpp"
 
 bool StandardLocalChessGame::LonBoard(Point& p) {
@@ -81,10 +81,10 @@ bool StandardLocalChessGame::LpopulatePossibleMoves(GameSquare &moveFrom) {
 
 
     ChessTypes::GamePiece fromPiece = moveFrom.getPiece();
-    short possibleMoveCounter = PIECE_MOVE_COUNTS[static_cast<int>(fromPiece) - 1];
+    short possibleMoveCounter = PieceMoveCounts[static_cast<int>(fromPiece) - 1];
 
     if (fromPiece == ChessTypes::GamePiece::Pawn && currentTurn == ChessTypes::Player::PlayerTwo)
-        fromPiece = ChessTypes::GamePiece::None; // Might seem weird but this is just so that it indexes into the first array into pieceMovePtrs which is PawnDown
+        fromPiece = ChessTypes::GamePiece::None; // Might seem weird but this is just so that it indexes into the first array into PieceMovePtrs which is PawnDown
 
     for (int move_set_count = 0; move_set_count < possibleMoveCounter; move_set_count++)
     {
@@ -96,9 +96,9 @@ bool StandardLocalChessGame::LpopulatePossibleMoves(GameSquare &moveFrom) {
         // 3. piece at square owner is not equal to current turn (except speical moves!)
         // 3. if its a king then making sure nothing can reach that square
 
-        ChessEnums::PossibleMovesResult moveType = ChessEnums::PossibleMovesResult::NOT_FOUND; // default
+        ChessEnums::PossibleMovesResult moveType = ChessEnums::PossibleMovesResult::NotFound; // default
 
-        Point pTemp(moveFrom.getPosition().m_x + pieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][0], moveFrom.getPosition().m_y + pieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][1]);
+        Point pTemp(moveFrom.getPosition().m_x + PieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][0], moveFrom.getPosition().m_y + PieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][1]);
 
         if (!LonBoard(pTemp))
             continue;
@@ -122,18 +122,18 @@ bool StandardLocalChessGame::LpopulatePossibleMoves(GameSquare &moveFrom) {
                     if (!LcastlingCheck(mTemp, move_set_count == 8 ? ChessTypes::CastlingType::KingSide : ChessTypes::CastlingType::QueenSide))
                         continue;
                     else
-                        moveType = ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_SPECIAL_MOVE;
+                        moveType = ChessEnums::PossibleMovesResult::PossibleMoveSpecialMove;
                 }
                 if (!LkingSafeAfterMove(mTemp.getMoveTo()))
                     continue;
             }
 
             // We have checked that this piece belongs to you (before this function), is on the board, unobstructed, not attacking yourself, and if a king then its safe after move
-            possibleMoves.push_back(possibleMoveType(
+            possibleMoves.push_back(PossibleMoveType(
                 // pointer to the square that the piece COULD move to 
                 &mTemp.getMoveTo(), 
                 // type of move it is (just for color printing purposes), if moveType is its default value then just do the default behavior if not its castling or a special move
-                moveType == ChessEnums::PossibleMovesResult::NOT_FOUND ? (mTemp.getMoveTo().getPiece() == ChessTypes::GamePiece::None ? ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_OPEN_SQAURE : ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_ENEMY_PIECE) : moveType));
+                moveType == ChessEnums::PossibleMovesResult::NotFound ? (mTemp.getMoveTo().getPiece() == ChessTypes::GamePiece::None ? ChessEnums::PossibleMovesResult::PossibleMoveOpenSquare : ChessEnums::PossibleMovesResult::PossibleMoveEnemyPiece) : moveType));
             
         } else { 
             if (move_set_count == 8 || move_set_count == 9)
@@ -159,7 +159,7 @@ bool StandardLocalChessGame::LpopulatePossibleMoves(GameSquare &moveFrom) {
             }
 
             if (LkingSafe())
-                possibleMoves.push_back(possibleMoveType(&mTemp.getMoveTo(), isKingMove ? ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_KING_IN_DANGER : mTemp.getMoveTo().getPiece() == ChessTypes::GamePiece::None ? ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_PROTECT_KING_SQUARE : ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_PROTECT_KING_PIECE));
+                possibleMoves.push_back(PossibleMoveType(&mTemp.getMoveTo(), isKingMove ? ChessEnums::PossibleMovesResult::PossibleMoveKingInDanger : mTemp.getMoveTo().getPiece() == ChessTypes::GamePiece::None ? ChessEnums::PossibleMovesResult::PossibleMoveProtectKingSquare : ChessEnums::PossibleMovesResult::PossibleMoveProtectKingPiece));
 
             // Revert
             mTemp.getMoveFrom().setPiece(saveOldFrom.getPiece());
@@ -197,13 +197,13 @@ bool StandardLocalChessGame::LverifyMove(LMove &&move) { return LverifyMove(move
 // False - invalid moveset
 bool StandardLocalChessGame::LvalidateMoveset(LMove& move) {
     ChessTypes::GamePiece fromPiece = move.getMoveFrom().getPiece();
-    short possibleMoveCounter = PIECE_MOVE_COUNTS[static_cast<int>(fromPiece) - 1];
+    short possibleMoveCounter = PieceMoveCounts[static_cast<int>(fromPiece) - 1];
 
     if (fromPiece == ChessTypes::GamePiece::Pawn && currentTurn == ChessTypes::Player::PlayerTwo)
         fromPiece = ChessTypes::GamePiece::None; 
 
     for(int move_set_count = 0; move_set_count < possibleMoveCounter; move_set_count++)
-        if (move.getMoveFrom().getPosition() + Point(pieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][0], pieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][1]) == move.getMoveTo().getPosition())
+        if (move.getMoveFrom().getPosition() + Point(PieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][0], PieceMovePtrs[static_cast<int>(fromPiece)][move_set_count][1]) == move.getMoveTo().getPosition())
             return true;
     return false;
 }
@@ -505,7 +505,7 @@ bool StandardLocalChessGame::LcheckMate()
     for (int move_set_count = 0; move_set_count < kingPossibleMoves; move_set_count++)
     {
 
-        Point currKingPosAroundKing(kingToCheckSafteyFor.getPosition().m_x + pieceMovePtrs[static_cast<int>(ChessTypes::GamePiece::King)][move_set_count][0], kingToCheckSafteyFor.getPosition().m_y + pieceMovePtrs[static_cast<int>(ChessTypes::GamePiece::King)][move_set_count][1]);
+        Point currKingPosAroundKing(kingToCheckSafteyFor.getPosition().m_x + PieceMovePtrs[static_cast<int>(ChessTypes::GamePiece::King)][move_set_count][0], kingToCheckSafteyFor.getPosition().m_y + PieceMovePtrs[static_cast<int>(ChessTypes::GamePiece::King)][move_set_count][1]);
 
         if (!LonBoard(currKingPosAroundKing))
             continue;
@@ -615,10 +615,10 @@ ChessEnums::ValidateGameSquareResult StandardLocalChessGame::LvalidateGameSquare
 // False not found
 ChessEnums::PossibleMovesResult StandardLocalChessGame::LreadPossibleMoves(GameSquare &to)
 {
-    for (possibleMoveType &possibleMove : possibleMoves)
+    for (PossibleMoveType &possibleMove : possibleMoves)
         if (to == *possibleMove.m_boardSquare)
-            return possibleMove.possibleMoveTypeSelector;
-    return ChessEnums::PossibleMovesResult::NOT_FOUND;
+            return possibleMove.PossibleMoveTypeSelector;
+    return ChessEnums::PossibleMovesResult::NotFound;
 }
 
 void StandardLocalChessGame::LstartGame()
@@ -862,7 +862,7 @@ void StandardLocalChessGame::LprintBoardWithMoves()
             WChessPrint(L"| ");
             std::wstring piece;
 #endif
-            ChessEnums::PossibleMovesResult possibleMoveTypeSelector;
+            ChessEnums::PossibleMovesResult PossibleMoveTypeSelector;
             GameSquare* currSquare;
             WRITE_COLOR color = DEFAULT;
 
@@ -873,9 +873,9 @@ void StandardLocalChessGame::LprintBoardWithMoves()
 
             piece = TEXT_PIECE_ART_COLLECTION[(*currSquare).getOwner() == ChessTypes::Owner::PlayerOne ? GameOptions.whitePlayerArtSelector : GameOptions.blackPlayerArtSelector][static_cast<int>((*currSquare).getPiece())];
       
-            possibleMoveTypeSelector = LreadPossibleMoves(*currSquare);
+            PossibleMoveTypeSelector = LreadPossibleMoves(*currSquare);
 
-            if (possibleMoveTypeSelector != ChessEnums::PossibleMovesResult::NOT_FOUND) {
+            if (PossibleMoveTypeSelector != ChessEnums::PossibleMovesResult::NotFound) {
 #ifdef _WIN32
                 if (piece == " ")
                     piece = "X";
@@ -883,20 +883,20 @@ void StandardLocalChessGame::LprintBoardWithMoves()
                 if (piece == L" ")
                     piece = L"X";
 #endif
-                switch (possibleMoveTypeSelector) {
-                    case ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_ENEMY_PIECE:
+                switch (PossibleMoveTypeSelector) {
+                    case ChessEnums::PossibleMovesResult::PossibleMoveEnemyPiece:
                         color = GameOptions.possibleMove_color;
                         break;
-                    case ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_OPEN_SQAURE:
+                    case ChessEnums::PossibleMovesResult::PossibleMoveOpenSquare:
                         color = GameOptions.possibleMove_color;
                         break;
-                    case ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_PROTECT_KING_PIECE:
+                    case ChessEnums::PossibleMovesResult::PossibleMoveProtectKingPiece:
                         color = WRITE_COLOR::BRIGHT_MAGENTA;
                         break;
-                    case ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_PROTECT_KING_SQUARE:
+                    case ChessEnums::PossibleMovesResult::PossibleMoveProtectKingSquare:
                         color = WRITE_COLOR::BRIGHT_YELLOW;
                         break;
-                    case ChessEnums::PossibleMovesResult::POSSIBLE_MOVE_KING_IN_DANGER:
+                    case ChessEnums::PossibleMovesResult::PossibleMoveKingInDanger:
                         color = WRITE_COLOR::YELLOW;
                         break;
                     default:
@@ -1023,7 +1023,7 @@ GameSquare *StandardLocalChessGame::LisolateFromInCheckMoves()
 ChessEnums::MakeMoveResult StandardLocalChessGame::LmakeMove(LMove &&move)
 {
 
-    if (LreadPossibleMoves(move.getMoveTo()) == ChessEnums::PossibleMovesResult::NOT_FOUND)
+    if (LreadPossibleMoves(move.getMoveTo()) == ChessEnums::PossibleMovesResult::NotFound)
         return ChessEnums::MakeMoveResult::InvalidMove;
 
     // Check if making this move will put their king in check

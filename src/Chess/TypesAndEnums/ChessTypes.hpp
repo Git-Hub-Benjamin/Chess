@@ -52,7 +52,8 @@ namespace ChessTypes {
 
     enum class GetMoveType {
         From,
-        To
+        To,
+        Promotion
     };
 
     enum class CastlingType {
