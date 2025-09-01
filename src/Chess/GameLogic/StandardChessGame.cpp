@@ -715,7 +715,7 @@ bool StandardChessGame::validateMoveset(Move& move) {
         pieceIndex = (currentTurn == ChessTypes::Player::PlayerTwo) ? 0 : 1;
     } else {
         // For other pieces, use their regular index
-        pieceIndex = static_cast<int>(fromPiece) + 1; // +1 to skip the two pawn movesets
+        pieceIndex = static_cast<int>(fromPiece); 
     }
 
     // Check each possible move for the piece
