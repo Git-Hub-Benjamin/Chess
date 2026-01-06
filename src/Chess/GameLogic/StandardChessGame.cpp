@@ -168,7 +168,6 @@ bool StandardChessGame::populatePossibleMoves(HalfMove& fromSquare) {
 
 ChessEnums::ValidateGameSquareResult StandardChessGame::validateGameSquare(SquareInfo square, ChessTypes::GetMoveType getMoveType){
     if (getMoveType == ChessTypes::GetMoveType::From) {
-
         if(square.owner == ChessTypes::Owner::None)
             return ChessEnums::ValidateGameSquareResult::NO_PIECE;
 
